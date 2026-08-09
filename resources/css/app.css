@@ -1,0 +1,750 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.87 0 0);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.87 0 0);
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.145 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.145 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.396 0.141 25.723);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: oklch(0.269 0 0);
+    --input: oklch(0.269 0 0);
+    --ring: oklch(0.439 0 0);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(0.269 0 0);
+    --sidebar-ring: oklch(0.439 0 0);
+}
+
+/*
+ * Jetons de visualisation de données.
+ *
+ * Les deux modes sont choisis, pas déduits l'un de l'autre : la teinte est
+ * re-calée pour le fond sombre. Les valeurs sont validées (bande de clarté,
+ * chroma, contrastes) face aux fonds réels de l'application.
+ */
+:root {
+    --viz-series-1: #2a78d6;
+    --viz-series-2: #eb6834;
+    --viz-grid: #e1e0d9;
+    --viz-axis: #c3c2b7;
+    --viz-surface: #ffffff;
+    --viz-good: #0ca30c;
+    --viz-warning: #fab219;
+    --viz-critical: #d03b3b;
+
+    /*
+     * Rampe ordonnée : le palier 1 est le plus récent (il s'efface), le 4 le
+     * plus ancien (il ressort). Sur fond sombre l'ordre s'inverse, sinon le
+     * palier le plus marquant se confondrait avec le fond.
+     */
+    --viz-seq-1: #86b6ef;
+    --viz-seq-2: #5598e7;
+    --viz-seq-3: #2a78d6;
+    --viz-seq-4: #184f95;
+}
+
+.dark {
+    --viz-series-1: #3987e5;
+    --viz-series-2: #d95926;
+    --viz-grid: #2c2c2a;
+    --viz-axis: #383835;
+    --viz-surface: #0a0a0a;
+    --viz-good: #0ca30c;
+    --viz-warning: #fab219;
+    --viz-critical: #d03b3b;
+
+    --viz-seq-1: #2a78d6;
+    --viz-seq-2: #5598e7;
+    --viz-seq-3: #9ec5f4;
+    --viz-seq-4: #cde2fb;
+}
+
+/*
+ * Mouvement.
+ *
+ * Tout est court et discret. Une animation doit dire « ceci vient d'arriver »
+ * ou « ceci a changé », jamais se faire remarquer : au-delà de 300 ms sur une
+ * interface de caisse, on attend le logiciel au lieu de servir le client.
+ *
+ * La courbe est la même partout — une sortie douce, sans rebond.
+ */
+:root {
+    --ease-doux: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes sv-entree {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@keyframes sv-fondu {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes sv-barre-h {
+    from {
+        transform: scaleX(0);
+    }
+}
+
+@keyframes sv-barre-v {
+    from {
+        transform: scaleY(0);
+    }
+}
+
+@keyframes sv-trace {
+    from {
+        stroke-dashoffset: 1;
+    }
+}
+
+@keyframes sv-cellule {
+    from {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+}
+
+@layer components {
+    /*
+     * `backwards` plutôt que `both` : une fois l'animation finie, aucune
+     * transformation ne subsiste. Un `transform` résiduel créerait un bloc
+     * conteneur et décrocherait les éléments en position fixe à l'intérieur.
+     */
+    .anim-page {
+        animation: sv-entree 260ms var(--ease-doux) backwards;
+    }
+
+    .anim-entree {
+        animation: sv-entree 300ms var(--ease-doux) backwards;
+    }
+
+    .anim-fondu {
+        animation: sv-fondu 300ms var(--ease-doux) backwards;
+    }
+
+    /* Barre horizontale : elle pousse depuis son point d'ancrage, à gauche. */
+    .anim-barre-h {
+        transform-origin: left center;
+        animation: sv-barre-h 520ms var(--ease-doux) backwards;
+    }
+
+    /* Barre verticale : elle monte depuis la ligne de base. */
+    .anim-barre-v {
+        transform-origin: bottom center;
+        animation: sv-barre-v 520ms var(--ease-doux) backwards;
+    }
+
+    /* Tracé d'une courbe. Le chemin porte pathLength="1", d'où le pointillé unité. */
+    .anim-trace {
+        stroke-dasharray: 1;
+        animation: sv-trace 900ms var(--ease-doux) backwards;
+    }
+
+    .anim-cellule {
+        animation: sv-cellule 260ms var(--ease-doux) backwards;
+    }
+
+    /*
+     * Les lignes d'un tableau arrivent en cascade — l'œil suit l'ordre de
+     * lecture. Le décalage est plafonné : sur cinquante lignes, une cascade
+     * complète ferait attendre.
+     */
+    [data-slot='table-body'] > tr {
+        animation: sv-entree 240ms var(--ease-doux) backwards;
+    }
+
+    [data-slot='table-body'] > tr:nth-child(1) {
+        animation-delay: 0ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(2) {
+        animation-delay: 20ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(3) {
+        animation-delay: 40ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(4) {
+        animation-delay: 60ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(5) {
+        animation-delay: 80ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(6) {
+        animation-delay: 100ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(7) {
+        animation-delay: 120ms;
+    }
+    [data-slot='table-body'] > tr:nth-child(n + 8) {
+        animation-delay: 140ms;
+    }
+}
+
+/*
+ * La vitrine.
+ *
+ * Le logiciel de gestion est sobre et arrondi — on y passe la journée. La
+ * boutique en ligne, elle, doit accrocher en trois secondes : angles vifs,
+ * images à fond perdu, titres lourds, capitales espacées. Deux registres
+ * différents parce que ce sont deux métiers différents, et un même jeu de
+ * couleurs pour que ça reste la même maison.
+ */
+@keyframes sv-defile {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes sv-revele {
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Le zoom évite de découvrir un bord blanc quand l'image se décale. */
+@keyframes sv-parallaxe {
+    from {
+        transform: translateY(-3.5%) scale(1.08);
+    }
+    to {
+        transform: translateY(3.5%) scale(1.08);
+    }
+}
+
+@keyframes sv-entete {
+    from {
+        box-shadow: 0 0 0 0 rgb(20 33 61 / 0);
+    }
+    to {
+        box-shadow: 0 14px 34px -22px rgb(20 33 61 / 0.55);
+    }
+}
+
+@keyframes sv-jauge {
+    from {
+        transform: scaleX(0);
+    }
+}
+
+/*
+ * Teintes de la vitrine, reprises de l'enseigne.
+ *
+ * Le bleu roi et le jaune d'or viennent du logo ; l'encre n'est pas un noir
+ * mais un bleu nuit de la même famille, pour que le texte appartienne à la
+ * marque plutôt que de flotter à côté. Le fond est un blanc à peine cassé —
+ * le blanc pur donne un rendu d'écran, un vrai crème jurerait avec le bleu.
+ *
+ * Une règle à ne pas franchir : **le jaune ne porte jamais de texte**. Sur
+ * fond clair il tombe à 1,9:1 de contraste, illisible. Il sert aux pastilles,
+ * aux filets et aux aplats, jamais aux mots.
+ */
+:root {
+    --vitrine-papier: #f8f8f5;
+    --vitrine-encre: #14213d;
+    --vitrine-bleu: #1e3fa8;
+    --vitrine-or: #f2b01e;
+    --vitrine-trait: #dcdcd6;
+
+    /*
+     * Hauteur cumulée du bandeau d'annonces et de la barre de navigation.
+     * Le héros s'en sert pour occuper exactement ce qui reste de l'écran ;
+     * une valeur nommée évite d'avoir à retrouver le nombre magique le jour
+     * où l'en-tête change de taille.
+     */
+    --vitrine-entete: 6.5rem;
+}
+
+.dark {
+    /*
+     * Sur fond sombre le bleu du logo devient illisible : on remonte sa
+     * clarté sans changer sa teinte, de sorte qu'on reconnaisse la même
+     * couleur. Le jaune, lui, tient déjà.
+     */
+    --vitrine-papier: #0e1526;
+    --vitrine-encre: #eef1f8;
+    --vitrine-bleu: #7c9cf0;
+    --vitrine-or: #f5bd42;
+    --vitrine-trait: #26314b;
+}
+
+@layer components {
+    /* Bandeau d'annonces. Le contenu est dupliqué, d'où le -50 %. */
+    .vitrine-defile {
+        animation: sv-defile 40s linear infinite;
+    }
+
+    /*
+     * Animations pilotées par le défilement.
+     *
+     * `anim-entree` se déclenche au chargement de la page. Sur une page
+     * d'accueil de dix écrans, tout ce qui est en bas a donc fini de jouer
+     * avant même qu'on y arrive : on descend dans une page morte. Ici c'est
+     * la position de l'élément dans la fenêtre qui pilote l'animation — elle
+     * se joue au moment où on le découvre.
+     *
+     * Rien en JavaScript : pas d'`IntersectionObserver`, pas de rendu React
+     * supplémentaire, tout se passe sur le fil de composition du navigateur.
+     *
+     * Le garde `@supports` n'est pas une précaution de style. Là où
+     * `animation-timeline` n'existe pas — Firefox à ce jour — aucune règle ne
+     * s'applique et le contenu reste simplement visible. Sans ce garde, une
+     * moitié du site serait invisible sur ces navigateurs.
+     *
+     * Corollaire à retenir : ces classes ne vont que sur des éléments du flux
+     * normal. Dans un ancêtre `fixed`, `view()` n'a pas de conteneur de
+     * défilement, la chronologie reste inactive et l'élément se fige sur son
+     * image de départ — c'est-à-dire invisible.
+     */
+    @supports (animation-timeline: view()) {
+        @media (prefers-reduced-motion: no-preference) {
+            .anim-revele {
+                animation: sv-revele auto var(--ease-doux) both;
+                animation-timeline: view();
+
+                /*
+                 * Les éléments d'une même rangée entrent dans l'écran
+                 * ensemble : la cascade ne peut pas venir d'un
+                 * `animation-delay`, qu'une chronologie de défilement ignore.
+                 * Elle vient de `--pas`, qui repousse le début de la plage.
+                 */
+                animation-range: entry calc(4% + var(--pas, 0%)) entry 72%;
+            }
+
+            .anim-parallaxe {
+                animation: sv-parallaxe auto linear both;
+                animation-timeline: view();
+                animation-range: cover 0% cover 100%;
+            }
+        }
+    }
+
+    @supports (animation-timeline: scroll()) {
+        @media (prefers-reduced-motion: no-preference) {
+            /* L'en-tête se décolle du contenu dès qu'on quitte le haut. */
+            .vitrine-entete-flottante {
+                animation: sv-entete auto linear both;
+                animation-timeline: scroll(root block);
+                animation-range: 0 5rem;
+            }
+
+            /* Filet de progression, sur toute la hauteur de la page. */
+            .vitrine-jauge {
+                transform-origin: left center;
+                animation: sv-jauge auto linear both;
+                animation-timeline: scroll(root block);
+            }
+        }
+    }
+
+    /*
+     * Angles vifs.
+     *
+     * La vitrine est dessinée sans aucun arrondi. Les composants partagés
+     * (bouton, champ, boîte de dialogue) tirent leur rayon des variables
+     * `--radius-*`, qu'on remet ici à zéro pour tout le sous-arbre : c'est le
+     * seul moyen de les redresser sans les dupliquer, et l'application de
+     * gestion garde ses angles adoucis.
+     *
+     * Les trois paliers sont redéclarés un par un : `--radius-md` vaut
+     * `calc(var(--radius) - 2px)` calculé à la racine, il ne se recalcule pas
+     * plus bas dans l'arbre.
+     */
+    .vitrine-anguleux {
+        --radius: 0px;
+        --radius-lg: 0px;
+        --radius-md: 0px;
+        --radius-sm: 0px;
+    }
+
+    /*
+     * Sélection de texte aux couleurs de l'enseigne. Détail minuscule, mais
+     * c'est le genre de chose qu'on ne remarque que par son absence.
+     */
+    .vitrine-anguleux ::selection {
+        background: color-mix(in oklab, var(--vitrine-bleu) 22%, transparent);
+    }
+
+    /*
+     * Anneau de focus visible sur les liens de la vitrine.
+     *
+     * Seulement les liens : les champs et les boutons partagés ont déjà le
+     * leur, et deux anneaux superposés se voient. `:focus-visible` ne se
+     * déclenche pas au clic de souris — c'est ce qui permet de le rendre net
+     * sans qu'il gêne personne.
+     */
+    .vitrine-anguleux a:focus-visible {
+        outline: 2px solid var(--vitrine-bleu);
+        outline-offset: 3px;
+    }
+
+    /*
+     * Le fond de la vitrine : trois halos très diffus, dans les couleurs de
+     * l'enseigne.
+     *
+     * Sans lui, le verre dépoli ne se voit pas — un panneau translucide posé
+     * sur du blanc uni reste du blanc uni. Il faut quelque chose de coloré
+     * derrière pour que le flou ait un sujet.
+     *
+     * Le motif se répète tous les 64 rem : sur une page d'accueil longue, des
+     * halos posés une seule fois laisseraient tout le bas sans couleur, et le
+     * verre y redeviendrait du blanc.
+     */
+    .vitrine-halo {
+        background-color: var(--vitrine-papier);
+        background-repeat: repeat-y;
+        background-size: 100% 64rem;
+        background-image:
+            radial-gradient(
+                42rem 32rem at 12% 8%,
+                color-mix(in oklab, var(--vitrine-bleu) 22%, transparent),
+                transparent 70%
+            ),
+            radial-gradient(
+                38rem 30rem at 88% 34%,
+                color-mix(in oklab, var(--vitrine-or) 20%, transparent),
+                transparent 70%
+            ),
+            radial-gradient(
+                50rem 36rem at 42% 78%,
+                color-mix(in oklab, var(--vitrine-bleu) 12%, transparent),
+                transparent 72%
+            );
+    }
+
+    /*
+     * Panneau de verre.
+     *
+     * Trois ingrédients, et les trois comptent : le flou d'arrière-plan, une
+     * translucidité qui laisse passer la couleur, et un filet clair sur
+     * l'arête haute — c'est lui qui donne l'épaisseur, sans lui le panneau
+     * paraît plat.
+     *
+     * La saturation est poussée parce que le flou délave : sans elle, le
+     * verre grise ce qu'il laisse voir.
+     */
+    .verre {
+        background: rgb(255 255 255 / 0.55);
+        border: 1px solid rgb(255 255 255 / 0.65);
+        box-shadow:
+            0 1px 0 0 rgb(255 255 255 / 0.6) inset,
+            0 8px 32px -12px rgb(20 33 61 / 0.18);
+    }
+
+    .dark .verre {
+        background: rgb(20 28 48 / 0.55);
+        border-color: rgb(255 255 255 / 0.1);
+        box-shadow:
+            0 1px 0 0 rgb(255 255 255 / 0.08) inset,
+            0 8px 32px -12px rgb(0 0 0 / 0.5);
+    }
+
+    /* Verre plus dense, pour ce qui doit rester lisible par-dessus tout. */
+    .verre-dense {
+        background: rgb(255 255 255 / 0.78);
+        border: 1px solid rgb(255 255 255 / 0.7);
+        box-shadow: 0 8px 32px -14px rgb(20 33 61 / 0.22);
+    }
+
+    .dark .verre-dense {
+        background: rgb(14 21 38 / 0.8);
+        border-color: rgb(255 255 255 / 0.09);
+    }
+
+    /*
+     * Le flou n'est appliqué que là où le navigateur sait le faire. Sans
+     * `@supports`, Firefox avec la fonctionnalité désactivée afficherait des
+     * panneaux à moitié transparents et illisibles.
+     */
+    @supports (backdrop-filter: blur(1px)) or
+        (-webkit-backdrop-filter: blur(1px)) {
+        .verre,
+        .verre-dense {
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(20px) saturate(180%);
+        }
+
+        .verre {
+            background: rgb(255 255 255 / 0.42);
+        }
+
+        .dark .verre {
+            background: rgb(20 28 48 / 0.42);
+        }
+
+        .verre-dense {
+            background: rgb(255 255 255 / 0.62);
+        }
+
+        .dark .verre-dense {
+            background: rgb(14 21 38 / 0.66);
+        }
+    }
+
+    /*
+     * L'échelle typographique de la vitrine.
+     *
+     * Une seule famille, comme demandé : ce qui sépare les niveaux, c'est la
+     * graisse, le corps et l'interlettrage. Trois rôles, trois classes, et
+     * aucune ne fixe la couleur — ça reste l'affaire de l'élément.
+     *
+     * Les corps sont fluides plutôt que définis par paliers. Un titre en
+     * `text-3xl sm:text-4xl` reste bloqué à la même taille de 640 px à
+     * 1024 px alors que sa colonne, elle, ne cesse de s'élargir : la ligne
+     * s'allonge et le titre paraît rapetisser. Le `clamp()` suit la fenêtre
+     * en continu, avec un plancher et un plafond.
+     *
+     * `text-wrap: balance` répartit les mots sur les lignes d'un titre au
+     * lieu d'abandonner un mot seul en dernière ligne. Là où il n'existe
+     * pas, le titre revient au retour à la ligne ordinaire — rien ne casse.
+     */
+    .vitrine-serif {
+        font-weight: 700;
+        letter-spacing: -0.032em;
+        line-height: 1.03;
+        text-wrap: balance;
+    }
+
+    /* Accroche du héros : le seul texte de cette taille sur tout le site. */
+    .vitrine-affiche {
+        font-size: clamp(2.5rem, 1.4rem + 4.6vw, 4.5rem);
+        font-weight: 700;
+        letter-spacing: -0.038em;
+        line-height: 1.01;
+        text-wrap: balance;
+    }
+
+    /*
+     * Titre de section.
+     *
+     * Plus de capitales ici. Le surtitre juste au-dessus est déjà en
+     * capitales espacées : quand les deux le sont, la hiérarchie qu'on
+     * cherchait à créer s'annule, et un titre capitalisé de 2,5 rem dans une
+     * linéale perd la silhouette des mots, celle qui permet de lire vite.
+     * Le corps et la graisse suffisent à le poser.
+     */
+    .vitrine-titre {
+        font-size: clamp(1.65rem, 1.15rem + 1.9vw, 2.75rem);
+        font-weight: 800;
+        letter-spacing: -0.028em;
+        line-height: 1.08;
+        text-wrap: balance;
+    }
+
+    /*
+     * Micro-libellé : mentions sur photo, index, références d'édition.
+     * À 11 px, c'est l'interlettrage qui rend les capitales lisibles.
+     */
+    .vitrine-mono {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+    }
+
+    /*
+     * Surtitre : ce qui annonce une section. Même dessin que le micro-libellé
+     * mais un cran plus discret — il précède le titre, il ne le concurrence
+     * pas.
+     */
+    .vitrine-surtitre {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+    }
+
+    /* Libellé de bouton et de navigation. */
+    .vitrine-libelle {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    /*
+     * Paragraphes de la vitrine. `pretty` s'occupe des dernières lignes :
+     * sans lui, un texte se termine régulièrement sur un mot isolé.
+     */
+    .vitrine-texte {
+        text-wrap: pretty;
+    }
+
+    /*
+     * Le voile posé au bas d'une image pour y écrire.
+     * Sans lui, un texte blanc sur une photo claire devient illisible — et on
+     * ne choisit pas la photo que le gérant téléversera.
+     */
+    .vitrine-voile {
+        background: linear-gradient(
+            to top,
+            rgb(0 0 0 / 0.75) 0%,
+            rgb(0 0 0 / 0.35) 40%,
+            transparent 100%
+        );
+    }
+}
+
+/* Fondu au changement de thème (bascule clair / sombre). */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 220ms;
+}
+
+/*
+ * Le système d'exploitation a le dernier mot. Quand l'utilisateur a demandé
+ * moins d'animations — vertiges, migraines, troubles de l'attention — tout est
+ * neutralisé, y compris ce que les bibliothèques ajoutent de leur côté.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* Un lien d'ancre amène en douceur plutôt que de téléporter. */
+    html {
+        scroll-behavior: smooth;
+    }
+}

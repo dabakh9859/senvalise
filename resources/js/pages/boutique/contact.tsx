@@ -53,7 +53,7 @@ export default function Contact({
                     <h1 className="text-2xl font-semibold tracking-tight">
                         Nous contacter
                     </h1>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--vitrine-encre)]/60">
                         Une question sur une valise, une commande, un coffre ?
                         Écrivez-nous.
                     </p>
@@ -155,7 +155,7 @@ export default function Contact({
                         {shop.phone ? (
                             <a
                                 href={`tel:${shop.phone.replace(/\s/g, '')}`}
-                                className="flex items-start gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                                className="flex items-start gap-2 text-[var(--vitrine-encre)]/60 transition-colors hover:text-[var(--vitrine-encre)]"
                             >
                                 <Phone className="mt-0.5 size-4 shrink-0" />
                                 {shop.phone}
@@ -165,7 +165,7 @@ export default function Contact({
                         {shop.email ? (
                             <a
                                 href={`mailto:${shop.email}`}
-                                className="flex items-start gap-2 break-all text-muted-foreground transition-colors hover:text-foreground"
+                                className="flex items-start gap-2 break-all text-[var(--vitrine-encre)]/60 transition-colors hover:text-[var(--vitrine-encre)]"
                             >
                                 <Mail className="mt-0.5 size-4 shrink-0" />
                                 {shop.email}
@@ -173,7 +173,7 @@ export default function Contact({
                         ) : null}
 
                         {shop.address ? (
-                            <p className="flex items-start gap-2 text-muted-foreground">
+                            <p className="flex items-start gap-2 text-[var(--vitrine-encre)]/60">
                                 <MapPin className="mt-0.5 size-4 shrink-0" />
                                 {shop.address}
                             </p>

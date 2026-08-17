@@ -1,22 +1,9 @@
 import { Link } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useRef } from 'react';
+import { Cascade, Palier, Revele } from '@/components/boutique/mouvement';
 import { cn } from '@/lib/utils';
-
-/**
- * Décalage de cascade pour `.anim-revele`.
- *
- * Les éléments d'une rangée entrent tous ensemble dans l'écran : sans ce
- * décalage ils apparaîtraient d'un bloc. Il est plafonné, sinon le dernier
- * carreau d'une grille de douze attendrait d'avoir presque traversé l'écran
- * avant de se montrer.
- */
-export function cascade(index: number, plafond = 5): CSSProperties {
-    return {
-        '--pas': `${Math.min(index, plafond) * 4}%`,
-    } as CSSProperties;
-}
 
 /**
  * Les pièces communes de la vitrine.
@@ -40,6 +27,15 @@ export function SectionHeader({
     align?: 'left' | 'center';
     action?: ReactNode;
 }) {
+    /*
+     * La `Cascade` porte directement les `Palier`.
+     *
+     * Les variantes de motion ne traversent que des composants motion : un
+     * `div` ordinaire inséré entre les deux coupe la chaîne, et les enfants
+     * restent à leur état initial — invisibles. D'où l'échelonnement posé sur
+     * la colonne de texte plutôt que sur l'enveloppe, et l'action animée à
+     * part, avec le retard qu'elle aurait eu comme quatrième palier.
+     */
     return (
         <div
             className={cn(
@@ -47,44 +43,45 @@ export function SectionHeader({
                 align === 'center' && 'flex-col items-center text-center',
             )}
         >
-            <div className={cn('space-y-3', align === 'center' && 'max-w-2xl')}>
+            <Cascade
+                pas={0.06}
+                className={cn('space-y-3', align === 'center' && 'max-w-2xl')}
+            >
                 {kicker ? (
                     /*
-                     * Le filet doré, c'est le seul endroit où la couleur du
-                     * logo sert vraiment. Elle ne porte jamais de texte — à
-                     * 1,9:1 sur fond clair elle serait illisible — mais en
-                     * trait de 1 px elle marque chaque début de chapitre.
+                     * Le filet de terre cuite marque chaque début de chapitre.
+                     * Contrairement à l'or qu'il remplace, cet accent tient
+                     * 4,9:1 sur le papier : le surtitre pourrait le porter en
+                     * texte. On s'en tient au trait — le surtitre reste gris,
+                     * c'est le titre qui doit prendre le regard.
                      */
-                    <p
+                    <Palier
+                        balise="p"
                         className={cn(
-                            'vitrine-surtitre anim-revele flex items-center gap-3 text-[var(--vitrine-encre)]/50',
+                            'vitrine-surtitre flex items-center gap-3 text-[var(--vitrine-encre)]/50',
                             align === 'center' && 'justify-center',
                         )}
                     >
                         <span
                             aria-hidden
-                            className="h-px w-6 bg-[var(--vitrine-or)]"
+                            className="h-px w-6 bg-[var(--vitrine-terre)]"
                         />
                         {kicker}
-                    </p>
+                    </Palier>
                 ) : null}
-                <h2 style={cascade(1)} className="vitrine-titre anim-revele">
+                <Palier balise="h2" className="vitrine-titre">
                     {title}
-                </h2>
+                </Palier>
                 {subtitle ? (
-                    <p
-                        style={cascade(2)}
-                        className="vitrine-texte anim-revele max-w-xl text-[15px] leading-relaxed text-[var(--vitrine-encre)]/60 sm:text-base"
+                    <Palier
+                        balise="p"
+                        className="vitrine-texte max-w-xl text-[15px] leading-relaxed text-[var(--vitrine-encre)]/60 sm:text-base"
                     >
                         {subtitle}
-                    </p>
+                    </Palier>
                 ) : null}
-            </div>
-            {action ? (
-                <div style={cascade(2)} className="anim-revele">
-                    {action}
-                </div>
-            ) : null}
+            </Cascade>
+            {action ? <Revele delai={0.18}>{action}</Revele> : null}
         </div>
     );
 }
@@ -118,23 +115,34 @@ export function ShopButton({
 }) {
     const plein = variant === 'pilule' || variant === 'verre';
 
+    /*
+     * Toutes les teintes viennent des jetons de la vitrine.
+     *
+     * Deux pièges corrigés ici. D'abord une couleur Tailwind écrite en dur,
+     * restée bleue quand le reste du site a changé de famille. Ensuite des
+     * survols en `foreground` / `background` : ce sont les jetons du logiciel
+     * de gestion, ils s'inversent avec le mode sombre du système. Sur une
+     * vitrine restée claire, le survol serait devenu blanc sur blanc chez un
+     * visiteur en thème sombre — un bouton qui disparaît quand on le vise.
+     */
     const classes = cn(
-        'inline-flex items-center justify-center gap-2.5 transition-[background-color,color,border-color,transform,opacity,box-shadow] duration-200 ease-out outline-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--vitrine-bleu)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2.5 transition-[background-color,color,border-color,transform,opacity,box-shadow] duration-200 ease-out outline-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--vitrine-terre)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
         plein
             ? 'px-7 py-3.5 text-sm font-medium'
             : 'vitrine-libelle px-7 py-3.5',
         variant === 'primary' &&
-            'bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500',
-        variant === 'inverse' && 'bg-white text-neutral-900 hover:bg-white/90',
+            'bg-[var(--vitrine-encre)] text-[var(--vitrine-papier)] hover:-translate-y-0.5 hover:bg-[color-mix(in_oklab,var(--vitrine-encre)_88%,var(--vitrine-terre))]',
+        variant === 'inverse' &&
+            'bg-[var(--vitrine-papier)] text-[var(--vitrine-encre)] hover:bg-white',
         variant === 'outline' &&
-            'border border-current bg-transparent hover:bg-foreground hover:text-background',
+            'border border-current bg-transparent hover:bg-[var(--vitrine-encre)] hover:text-[var(--vitrine-papier)]',
         /*
          * L'action principale porte une ombre teintée de sa propre couleur
          * plutôt qu'un gris : c'est ce qui la décolle du fond sans qu'elle
          * paraisse posée sur du carton.
          */
         variant === 'pilule' &&
-            'bg-[var(--vitrine-bleu)] text-white shadow-[0_10px_28px_-14px_var(--vitrine-bleu)] hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-14px_var(--vitrine-bleu)]',
+            'bg-[var(--vitrine-terre)] text-white shadow-[0_10px_28px_-14px_var(--vitrine-terre)] hover:-translate-y-0.5 hover:bg-[var(--vitrine-braise)] hover:shadow-[0_16px_34px_-14px_var(--vitrine-terre)]',
         variant === 'verre' &&
             'verre text-[var(--vitrine-encre)] hover:opacity-80',
         className,
@@ -192,12 +200,12 @@ export function Rail({
     }
 
     /*
-     * `anim-revele` va sur l'enveloppe, jamais sur les cartes : la piste est
-     * un conteneur de défilement, et `view()` s'y accrocherait au lieu de
-     * s'accrocher à la page.
+     * La révélation va sur l'enveloppe, jamais sur les cartes : la piste est
+     * un conteneur de défilement, et une carte animée à l'intérieur se
+     * déclencherait selon sa position dans le rail plutôt que dans la page.
      */
     return (
-        <div className={cn('anim-revele relative', className)}>
+        <Revele className={cn('relative', className)}>
             <div className="mb-4 flex justify-end gap-2">
                 <RailButton
                     onClick={() => scroll(-1)}
@@ -220,7 +228,7 @@ export function Rail({
             >
                 {children}
             </div>
-        </div>
+        </Revele>
     );
 }
 
@@ -238,7 +246,7 @@ function RailButton({
             type="button"
             onClick={onClick}
             aria-label={label}
-            className="flex size-10 items-center justify-center border transition-[background-color,color,transform] duration-150 ease-out hover:bg-foreground hover:text-background active:scale-95"
+            className="flex size-10 items-center justify-center border border-[var(--vitrine-trait)] text-[var(--vitrine-encre)] transition-[background-color,color,border-color,transform] duration-150 ease-out hover:border-[var(--vitrine-encre)] hover:bg-[var(--vitrine-encre)] hover:text-[var(--vitrine-papier)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vitrine-terre)] active:scale-95"
         >
             {icon}
         </button>

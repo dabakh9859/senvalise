@@ -161,6 +161,57 @@ class BarcodeAndDocumentTest extends TestCase
         $this->assertSame('application/pdf', $pdf->headers->get('content-type'));
     }
 
+    /**
+     * Une facture longue tient sur plusieurs pages, et la numerotation est
+     * ajoutee apres coup sur le canevas : ce chemin de code ne s'execute que
+     * la, il merite d'etre parcouru au moins une fois.
+     */
+    public function test_a_long_invoice_is_paginated(): void
+    {
+        $user = User::factory()->create();
+
+        $lines = [];
+
+        for ($i = 1; $i <= 30; $i++) {
+            $lines[] = [
+                'designation' => "Valise modele {$i}",
+                'quantity' => 1,
+                'unit_price' => 75000,
+            ];
+        }
+
+        $invoice = app(DocumentService::class)->create(DocumentType::Facture, [
+            'issue_date' => now()->toDateString(),
+            'customer_name' => 'Boutique Sahel',
+        ], $lines);
+
+        $response = $this->actingAs($user)->get("/documents/{$invoice->id}/pdf");
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
+    /** Le gabarit porte les couleurs de la marque : bleu de fond, jaune en filet. */
+    public function test_the_printable_document_carries_the_brand_colours(): void
+    {
+        $user = User::factory()->create();
+
+        $invoice = app(DocumentService::class)->create(DocumentType::Facture, [
+            'issue_date' => now()->toDateString(),
+            'customer_name' => 'Moussa Diop',
+        ], [
+            ['designation' => 'Valise 75cm', 'quantity' => 1, 'unit_price' => 75000],
+        ]);
+
+        $this->actingAs($user)
+            ->get("/documents/{$invoice->id}/impression")
+            ->assertOk()
+            ->assertSee('#1f3fe0', escape: false)
+            ->assertSee('#efac10', escape: false)
+            ->assertSee('Total à payer');
+    }
+
     public function test_the_label_sheet_renders_the_selected_barcodes(): void
     {
         $user = User::factory()->create();

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import {
     Table,
@@ -52,7 +52,13 @@ export function DataList<T>({
     columns: Array<Column<T>>;
     /** Contenu de la tuile sur téléphone et tablette. */
     tile: (row: T) => ReactNode;
-    /** Rend la tuile entière cliquable — la cible de touche fait toute la carte. */
+    /**
+     * Rend la ligne entière cliquable, en tuile comme en tableau.
+     *
+     * Le nom dit « tile » pour des raisons d'histoire : au départ seule la
+     * tuile mobile en tenait compte, et les tableaux n'avaient aucune cible de
+     * clic en dehors du lien posé dans la première cellule.
+     */
     tileHref?: (row: T) => string | null;
     empty?: ReactNode;
     footer?: ReactNode;
@@ -60,7 +66,9 @@ export function DataList<T>({
 }) {
     if (rows.length === 0) {
         return (
-            <div className={cn('rounded-xl border bg-card shadow-sm', className)}>
+            <div
+                className={cn('rounded-xl border bg-card shadow-sm', className)}
+            >
                 {empty}
                 {footer ? <div className="px-4 pb-3">{footer}</div> : null}
             </div>
@@ -116,24 +124,74 @@ export function DataList<T>({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rows.map((row) => (
-                            <TableRow key={getKey(row)}>
-                                {columns.map((column) => (
-                                    <TableCell
-                                        key={column.key}
-                                        className={cn(
-                                            column.align === 'right' &&
-                                                'text-right tabular-nums',
-                                            column.hideBelow === 'xl' &&
-                                                'hidden xl:table-cell',
-                                            column.className,
-                                        )}
-                                    >
-                                        {column.cell(row)}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
+                        {rows.map((row) => {
+                            const href = tileHref?.(row) ?? null;
+
+                            return (
+                                <TableRow
+                                    key={getKey(row)}
+                                    className={cn(href && 'cursor-pointer')}
+                                    onClick={
+                                        href
+                                            ? (event) => {
+                                                  /*
+                                                   * Un clic posé sur un bouton, un
+                                                   * lien ou un champ appartient à
+                                                   * cet élément : la ligne ne le
+                                                   * lui prend pas. Sans ce garde,
+                                                   * supprimer une fiche ouvrirait
+                                                   * la fiche au lieu de la
+                                                   * supprimer.
+                                                   */
+                                                  const cible =
+                                                      event.target as HTMLElement;
+
+                                                  if (
+                                                      cible.closest(
+                                                          'a, button, input, select, textarea, [role="button"]',
+                                                      )
+                                                  ) {
+                                                      return;
+                                                  }
+
+                                                  /*
+                                                   * Sélectionner un numéro de
+                                                   * téléphone pour le copier
+                                                   * finit par un relâchement de
+                                                   * souris sur la ligne : sans
+                                                   * ce garde, la page changerait
+                                                   * au moment de copier.
+                                                   */
+                                                  if (
+                                                      window
+                                                          .getSelection()
+                                                          ?.toString()
+                                                  ) {
+                                                      return;
+                                                  }
+
+                                                  router.visit(href);
+                                              }
+                                            : undefined
+                                    }
+                                >
+                                    {columns.map((column) => (
+                                        <TableCell
+                                            key={column.key}
+                                            className={cn(
+                                                column.align === 'right' &&
+                                                    'text-right tabular-nums',
+                                                column.hideBelow === 'xl' &&
+                                                    'hidden xl:table-cell',
+                                                column.className,
+                                            )}
+                                        >
+                                            {column.cell(row)}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>
@@ -189,7 +247,9 @@ export function TileHeader({
                     </p>
                 ) : null}
             </div>
-            {trailing ? <div className="shrink-0 text-right">{trailing}</div> : null}
+            {trailing ? (
+                <div className="shrink-0 text-right">{trailing}</div>
+            ) : null}
         </div>
     );
 }

@@ -12,7 +12,7 @@ import {
 import { useState } from 'react';
 import { ProductCard } from '@/components/boutique/product-card';
 import type { ProductCardData } from '@/components/boutique/product-card';
-import { cascade, ShopButton } from '@/components/boutique/vitrine';
+import { ShopButton } from '@/components/boutique/vitrine';
 import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -82,7 +82,7 @@ export default function Produit({
             <div className="mx-auto max-w-[1600px] px-4 py-6 sm:py-10">
                 <Link
                     href="/boutique/catalogue"
-                    className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--vitrine-encre)]/60 transition-colors hover:text-[var(--vitrine-encre)]"
                 >
                     <ArrowLeft className="size-4" />
                     Retour au catalogue
@@ -91,7 +91,7 @@ export default function Produit({
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* -------------------------------------- Photos */}
                     <div className="space-y-3">
-                        <div className="anim-fondu aspect-square overflow-hidden bg-muted">
+                        <div className="anim-fondu aspect-square overflow-hidden bg-[var(--vitrine-sable)]">
                             {image ? (
                                 <img
                                     key={image.url}
@@ -100,7 +100,7 @@ export default function Produit({
                                     className="anim-fondu size-full object-cover"
                                 />
                             ) : (
-                                <span className="flex size-full items-center justify-center text-muted-foreground">
+                                <span className="flex size-full items-center justify-center text-[var(--vitrine-encre)]/60">
                                     <ImageIcon className="size-10" />
                                 </span>
                             )}
@@ -114,7 +114,7 @@ export default function Produit({
                                         type="button"
                                         onClick={() => setImageIndex(index)}
                                         className={cn(
-                                            'aspect-square overflow-hidden bg-muted transition-[opacity,outline] duration-150 active:scale-95',
+                                            'aspect-square overflow-hidden bg-[var(--vitrine-sable)] transition-[opacity,outline] duration-150 active:scale-95',
                                             index === imageIndex
                                                 ? 'outline outline-2 outline-offset-2 outline-foreground'
                                                 : 'opacity-60 hover:opacity-100',
@@ -136,7 +136,7 @@ export default function Produit({
                     <div className="space-y-5">
                         <div className="space-y-2">
                             {product.brand || product.category ? (
-                                <p className="vitrine-surtitre text-muted-foreground">
+                                <p className="vitrine-surtitre text-[var(--vitrine-encre)]/60">
                                     {[product.brand, product.category]
                                         .filter(Boolean)
                                         .join(' · ')}
@@ -152,7 +152,7 @@ export default function Produit({
                                 </span>
                                 {variant?.compareAt &&
                                 variant.compareAt > variant.price ? (
-                                    <span className="text-base text-muted-foreground tabular-nums line-through">
+                                    <span className="text-base text-[var(--vitrine-encre)]/60 tabular-nums line-through">
                                         {money(variant.compareAt)}
                                     </span>
                                 ) : null}
@@ -178,10 +178,10 @@ export default function Produit({
                                             className={cn(
                                                 'vitrine-libelle border px-4 py-2.5 text-[11px] transition-[background-color,border-color,transform] duration-150 active:scale-[0.97]',
                                                 candidate.id === variantId
-                                                    ? 'border-foreground bg-foreground text-background'
-                                                    : 'border-border hover:border-foreground',
+                                                    ? 'border-[var(--vitrine-encre)] bg-[var(--vitrine-encre)] text-[var(--vitrine-papier)]'
+                                                    : 'border-[var(--vitrine-trait)] hover:border-[var(--vitrine-encre)]',
                                                 candidate.available <= 0 &&
-                                                    'cursor-not-allowed text-muted-foreground line-through opacity-50',
+                                                    'cursor-not-allowed text-[var(--vitrine-encre)]/60 line-through opacity-50',
                                             )}
                                         >
                                             {candidate.label}
@@ -199,7 +199,7 @@ export default function Produit({
                                     onClick={() =>
                                         setQuantity((q) => Math.max(1, q - 1))
                                     }
-                                    className="flex size-12 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-accent active:scale-90"
+                                    className="flex size-12 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-[var(--vitrine-sable)] active:scale-90"
                                     aria-label="Retirer un"
                                 >
                                     <Minus className="size-4" />
@@ -217,7 +217,7 @@ export default function Produit({
                                             ),
                                         )
                                     }
-                                    className="flex size-12 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-accent active:scale-90"
+                                    className="flex size-12 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-[var(--vitrine-sable)] active:scale-90"
                                     aria-label="Ajouter un"
                                 >
                                     <Plus className="size-4" />
@@ -237,7 +237,7 @@ export default function Produit({
                         {variant &&
                         variant.available > 0 &&
                         variant.available <= 3 ? (
-                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                            <p className="text-sm text-[var(--vitrine-alerte)]">
                                 Plus que {variant.available} en stock.
                             </p>
                         ) : null}
@@ -245,18 +245,18 @@ export default function Produit({
                         {/* Réassurance */}
                         <ul className="grid gap-2 border-y py-4 text-sm">
                             <li className="flex items-center gap-2">
-                                <Truck className="size-4 text-muted-foreground" />
+                                <Truck className="size-4 text-[var(--vitrine-encre)]/60" />
                                 Livraison partout au Sénégal, payable à la
                                 réception.
                             </li>
                             {product.warrantyMonths ? (
                                 <li className="flex items-center gap-2">
-                                    <ShieldCheck className="size-4 text-muted-foreground" />
+                                    <ShieldCheck className="size-4 text-[var(--vitrine-encre)]/60" />
                                     Garantie {product.warrantyMonths} mois.
                                 </li>
                             ) : null}
                             <li className="flex items-center gap-2">
-                                <PiggyBank className="size-4 text-muted-foreground" />
+                                <PiggyBank className="size-4 text-[var(--vitrine-encre)]/60" />
                                 <span>
                                     Trop cher d’un coup ?{' '}
                                     <Link
@@ -275,7 +275,7 @@ export default function Produit({
                                 <p className="text-sm font-medium">
                                     Description
                                 </p>
-                                <p className="text-sm whitespace-pre-line text-muted-foreground">
+                                <p className="text-sm whitespace-pre-line text-[var(--vitrine-encre)]/60">
                                     {product.description}
                                 </p>
                             </div>
@@ -307,7 +307,7 @@ export default function Produit({
                                             key={label}
                                             className="flex justify-between gap-3 border-b py-1.5"
                                         >
-                                            <dt className="text-muted-foreground">
+                                            <dt className="text-[var(--vitrine-encre)]/60">
                                                 {label}
                                             </dt>
                                             <dd className="text-right">
@@ -331,7 +331,7 @@ export default function Produit({
                                     key={produit.id}
                                     product={produit}
                                     revele
-                                    style={cascade(index)}
+                                    delay={index * 45}
                                 />
                             ))}
                         </div>

@@ -39,7 +39,10 @@ type BoutiqueShared = {
 function ColonneTitre({ children }: { children: ReactNode }) {
     return (
         <p className="vitrine-surtitre flex items-center gap-3 text-white/45">
-            <span aria-hidden className="h-px w-5 bg-[var(--vitrine-or)]" />
+            <span
+                aria-hidden
+                className="h-px w-5 bg-[var(--vitrine-terre-clair)]"
+            />
             {children}
         </p>
     );
@@ -96,7 +99,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
     return (
         <div className="vitrine-anguleux vitrine-halo flex min-h-svh flex-col text-[var(--vitrine-encre)]">
             <Head>
-                <meta name="theme-color" content="#1e3fa8" />
+                <meta name="theme-color" content="#1c1815" />
             </Head>
 
             {/*
@@ -120,7 +123,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                                     className="vitrine-mono flex items-center px-6 text-[10px] whitespace-nowrap text-white/80"
                                 >
                                     {annonce}
-                                    <span className="ml-6 size-1 bg-[var(--vitrine-or)]" />
+                                    <span className="ml-6 size-1 bg-[var(--vitrine-terre-clair)]" />
                                 </span>
                             ))}
                         </div>
@@ -171,7 +174,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                                         courante. */}
                                     <span
                                         className={cn(
-                                            'absolute inset-x-0 -bottom-1 h-0.5 origin-left bg-[var(--vitrine-bleu)] transition-transform duration-300 ease-out',
+                                            'absolute inset-x-0 -bottom-1 h-0.5 origin-left bg-[var(--vitrine-terre)] transition-transform duration-300 ease-out',
                                             actif
                                                 ? 'scale-x-100'
                                                 : 'scale-x-0 group-hover:scale-x-100',
@@ -216,7 +219,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                             {panier > 0 ? (
                                 <span
                                     key={panier}
-                                    className="anim-cellule absolute top-0.5 right-0.5 flex size-4 items-center justify-center bg-[var(--vitrine-bleu)] text-[10px] font-bold text-white tabular-nums"
+                                    className="anim-cellule absolute top-0.5 right-0.5 flex size-4 items-center justify-center bg-[var(--vitrine-terre)] text-[10px] font-bold text-white tabular-nums"
                                 >
                                     {panier}
                                 </span>
@@ -269,7 +272,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                  */}
                 <span
                     aria-hidden
-                    className="vitrine-jauge absolute inset-x-0 bottom-0 h-0.5 scale-x-0 bg-[var(--vitrine-bleu)]"
+                    className="vitrine-jauge absolute inset-x-0 bottom-0 h-0.5 scale-x-0 bg-[var(--vitrine-terre)]"
                 />
             </header>
 
@@ -290,8 +293,8 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                     aria-hidden
                     className="pointer-events-none absolute inset-0 opacity-35"
                 >
-                    <div className="absolute -top-40 left-1/4 size-[34rem] bg-[var(--vitrine-bleu)] blur-[130px]" />
-                    <div className="absolute -right-32 -bottom-40 size-[26rem] bg-[var(--vitrine-or)] blur-[150px]" />
+                    <div className="absolute -top-40 left-1/4 size-[34rem] bg-[var(--vitrine-terre)] blur-[130px]" />
+                    <div className="absolute -right-32 -bottom-40 size-[26rem] bg-[var(--vitrine-sable)] blur-[150px]" />
                 </div>
 
                 <div className="relative mx-auto max-w-[1500px] px-5 sm:px-8">
@@ -359,7 +362,7 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                             </p>
                             <Link
                                 href="/boutique/coffre"
-                                className="inline-block border-b border-white/50 pb-0.5 text-sm text-white transition-colors hover:border-[var(--vitrine-or)]"
+                                className="inline-block border-b border-white/50 pb-0.5 text-sm text-white transition-colors hover:border-[var(--vitrine-terre-clair)]"
                             >
                                 En savoir plus
                             </Link>
@@ -421,14 +424,14 @@ export default function BoutiqueLayout({ children }: PropsWithChildren) {
                                 className={cn(
                                     'relative flex flex-col items-center gap-1 py-2.5 text-[10px] transition-colors',
                                     actif
-                                        ? 'font-medium text-[var(--vitrine-bleu)]'
+                                        ? 'font-medium text-[var(--vitrine-terre)]'
                                         : 'text-[var(--vitrine-encre)]/55',
                                 )}
                             >
                                 <raccourci.icon className="size-[18px]" />
                                 {raccourci.label}
                                 {raccourci.label === 'Panier' && panier > 0 ? (
-                                    <span className="absolute top-1.5 right-[22%] flex size-4 items-center justify-center bg-[var(--vitrine-bleu)] text-[9px] font-bold text-white tabular-nums">
+                                    <span className="absolute top-1.5 right-[22%] flex size-4 items-center justify-center bg-[var(--vitrine-terre)] text-[9px] font-bold text-white tabular-nums">
                                         {panier}
                                     </span>
                                 ) : null}

@@ -1,5 +1,22 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AlertTriangle, PackageX, RefreshCw, ShoppingCart } from 'lucide-react';
+import {
+    AlertTriangle,
+    Banknote,
+    BarChart3,
+    FileText,
+    PackageCheck,
+    PackagePlus,
+    PackageX,
+    QrCode,
+    RefreshCw,
+    RotateCcw,
+    ShoppingCart,
+    Truck,
+    Users,
+    Wallet,
+    Warehouse,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { AgeingChart } from '@/components/charts/ageing-chart';
 import type { AgeingBucket } from '@/components/charts/ageing-chart';
 import { BarList } from '@/components/charts/bar-list';
@@ -37,6 +54,35 @@ type Period = {
     options: Array<{ value: string; label: string }>;
 };
 
+type QuickAction = {
+    key: string;
+    label: string;
+    hint: string;
+    href: string;
+    icon: string;
+    primary?: boolean;
+};
+
+/*
+ * Le serveur envoie un nom d'icône, pas un composant : la bibliothèque vit
+ * ici. Un nom inconnu retombe sur une icône neutre plutôt que de casser la
+ * page entière.
+ */
+const ACTION_ICONS: Record<string, LucideIcon> = {
+    'shopping-cart': ShoppingCart,
+    wallet: Wallet,
+    banknote: Banknote,
+    'rotate-ccw': RotateCcw,
+    users: Users,
+    'file-text': FileText,
+    warehouse: Warehouse,
+    'package-plus': PackagePlus,
+    truck: Truck,
+    'package-check': PackageCheck,
+    'bar-chart': BarChart3,
+    'qr-code': QrCode,
+};
+
 type LowStockRow = {
     id: number;
     productId: number;
@@ -48,6 +94,7 @@ type LowStockRow = {
 
 export default function Dashboard({
     isGerant,
+    quickActions,
     period,
     hero,
     kpis,
@@ -61,6 +108,7 @@ export default function Dashboard({
     lowStock,
 }: {
     isGerant: boolean;
+    quickActions: QuickAction[];
     period: Period;
     hero: { revenue: number; delta: number | null; salesCount: number };
     kpis: Kpi[];
@@ -125,9 +173,9 @@ export default function Dashboard({
                         </Button>
 
                         <Button asChild size="sm">
-                            <Link href="/caisse">
+                            <Link href="/documents?vente=1">
                                 <ShoppingCart className="size-4" />
-                                Ouvrir la caisse
+                                Encaisser une vente
                             </Link>
                         </Button>
                     </div>
@@ -165,15 +213,15 @@ export default function Dashboard({
                 <div
                     className={cn(
                         'grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3',
-                        kpis.length === 6
-                            ? 'xl:grid-cols-6'
-                            : 'xl:grid-cols-5',
+                        kpis.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5',
                     )}
                 >
                     {kpis.map((kpi, index) => (
                         <KpiTile key={kpi.key} kpi={kpi} delay={index * 50} />
                     ))}
                 </div>
+
+                <QuickActions actions={quickActions} />
 
                 <ChartCard
                     title="Évolution des ventes"
@@ -199,7 +247,12 @@ export default function Dashboard({
                     }
                     table={{
                         head: daily.showMargin
-                            ? ['Période', 'Ventes', 'Chiffre d’affaires', 'Marge']
+                            ? [
+                                  'Période',
+                                  'Ventes',
+                                  'Chiffre d’affaires',
+                                  'Marge',
+                              ]
                             : ['Période', 'Ventes', 'Chiffre d’affaires'],
                         rows: daily.points.map((point) => ({
                             key: point.date,
@@ -326,7 +379,11 @@ export default function Dashboard({
                         delay={360}
                         description="Où se fait le chiffre d'affaires."
                         table={{
-                            head: ['Catégorie', 'Articles', 'Chiffre d’affaires'],
+                            head: [
+                                'Catégorie',
+                                'Articles',
+                                'Chiffre d’affaires',
+                            ],
                             rows: byCategory.map((row) => ({
                                 key: row.label,
                                 cells: [
@@ -447,6 +504,63 @@ const HINT_TONE: Record<Kpi['tone'], string> = {
 };
 
 /** Tuile de chiffre clé : libellé discret, valeur en gras, une précision dessous. */
+/**
+ * Accès rapides.
+ *
+ * Placés sous les chiffres et non au-dessus : on ouvre l'accueil pour savoir
+ * où on en est, puis on agit. L'inverse ferait de la page un menu.
+ */
+function QuickActions({ actions }: { actions: QuickAction[] }) {
+    if (actions.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="anim-entree">
+            <p className="mb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                Accès rapides
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+                {actions.map((action) => {
+                    const Icon = ACTION_ICONS[action.icon] ?? ShoppingCart;
+
+                    return (
+                        <Link
+                            key={action.key}
+                            href={action.href}
+                            className={cn(
+                                'group flex items-center gap-3 rounded-xl border p-3 shadow-sm transition-colors',
+                                action.primary
+                                    ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
+                                    : 'bg-card hover:bg-accent',
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                                    action.primary
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground',
+                                )}
+                            >
+                                <Icon className="size-4" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block truncate text-sm font-medium">
+                                    {action.label}
+                                </span>
+                                <span className="block truncate text-xs text-muted-foreground">
+                                    {action.hint}
+                                </span>
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function KpiTile({ kpi, delay }: { kpi: Kpi; delay: number }) {
     return (
         <div

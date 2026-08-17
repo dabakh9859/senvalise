@@ -208,7 +208,7 @@ class SaleTest extends TestCase
         $vendeur = User::factory()->create(['role' => UserRole::Vendeur->value]);
 
         $this->actingAs($vendeur)
-            ->post('/caisse/client', [
+            ->post('/vente/client', [
                 'name' => 'Awa Sarr',
                 'phone' => '77 123 45 67',
             ])
@@ -239,7 +239,7 @@ class SaleTest extends TestCase
         ]);
 
         $this->actingAs($vendeur)
-            ->post('/caisse/client', [
+            ->post('/vente/client', [
                 'name' => 'Awa S.',
                 'phone' => '77 123 45 67',
             ])

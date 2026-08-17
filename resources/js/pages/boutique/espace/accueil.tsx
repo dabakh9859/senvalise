@@ -112,7 +112,7 @@ export default function EspaceAccueil({
                                             <p className="truncate font-medium">
                                                 {vault.label}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-xs text-[var(--vitrine-encre)]/60">
                                                 {vault.reference}
                                             </p>
                                         </div>
@@ -128,7 +128,7 @@ export default function EspaceAccueil({
                                         <span className="font-semibold">
                                             {money(vault.saved)}
                                         </span>
-                                        <span className="text-muted-foreground">
+                                        <span className="text-[var(--vitrine-encre)]/60">
                                             sur {money(vault.target)}
                                         </span>
                                     </p>
@@ -138,14 +138,14 @@ export default function EspaceAccueil({
                     </section>
                 ) : (
                     <section className="anim-entree mb-6 flex flex-col items-start gap-3 border border-dashed p-5">
-                        <span className="flex size-10 items-center justify-center bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        <span className="flex size-10 items-center justify-center bg-[var(--vitrine-terre)]/10 text-[var(--vitrine-terre)]">
                             <PiggyBank className="size-5" />
                         </span>
                         <div>
                             <p className="font-medium">
                                 Ouvrez votre premier coffre
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-[var(--vitrine-encre)]/60">
                                 Mettez de côté à votre rythme et achetez quand
                                 l’objectif est atteint.
                             </p>
@@ -172,7 +172,7 @@ export default function EspaceAccueil({
                     </div>
 
                     {orders.length === 0 ? (
-                        <p className="border border-dashed p-5 text-center text-sm text-muted-foreground">
+                        <p className="border border-dashed p-5 text-center text-sm text-[var(--vitrine-encre)]/60">
                             Vous n’avez pas encore commandé.
                         </p>
                     ) : (
@@ -181,13 +181,13 @@ export default function EspaceAccueil({
                                 <li key={order.id} className="anim-entree">
                                     <Link
                                         href={`/boutique/suivi/${order.token}`}
-                                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors active:bg-accent"
+                                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors active:bg-[var(--vitrine-sable)]"
                                     >
                                         <span className="min-w-0">
                                             <span className="block text-sm font-medium">
                                                 {order.reference}
                                             </span>
-                                            <span className="block text-xs text-muted-foreground">
+                                            <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                                 {date(order.placedAt)} ·{' '}
                                                 {count(order.itemCount)} article
                                                 {order.itemCount > 1 ? 's' : ''}
@@ -229,11 +229,15 @@ function Tuile({
     return (
         <div className={`anim-entree verre p-4 ${className ?? ''}`}>
             <div className="flex items-start justify-between gap-2">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <Icon className="size-4 text-muted-foreground" />
+                <p className="text-xs text-[var(--vitrine-encre)]/60">
+                    {label}
+                </p>
+                <Icon className="size-4 text-[var(--vitrine-encre)]/60" />
             </div>
             <p className="mt-1 truncate text-lg font-semibold">{value}</p>
-            <p className="truncate text-xs text-muted-foreground">{hint}</p>
+            <p className="truncate text-xs text-[var(--vitrine-encre)]/60">
+                {hint}
+            </p>
         </div>
     );
 }

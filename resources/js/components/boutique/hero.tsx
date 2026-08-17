@@ -65,8 +65,8 @@ export function Hero({
                 <div className="max-w-xl space-y-7">
                     <p className="anim-entree flex items-center gap-2.5 text-sm text-[var(--vitrine-encre)]/65">
                         <span className="relative flex size-2">
-                            <span className="absolute inline-flex size-full animate-ping bg-[var(--vitrine-or)] opacity-60" />
-                            <span className="relative inline-flex size-2 bg-[var(--vitrine-or)]" />
+                            <span className="absolute inline-flex size-full animate-ping bg-[var(--vitrine-terre)] opacity-60" />
+                            <span className="relative inline-flex size-2 bg-[var(--vitrine-terre)]" />
                         </span>
                         {bloc?.subtitle ??
                             'Valises et bagages — Dakar, Sénégal'}
@@ -80,7 +80,7 @@ export function Hero({
                         {apres ? (
                             <>
                                 <br />
-                                <span className="text-[var(--vitrine-bleu)]">
+                                <span className="text-[var(--vitrine-terre)]">
                                     {apres}
                                 </span>
                             </>
@@ -126,7 +126,7 @@ export function Hero({
                         />
                         <Paiement
                             nom="Espèces"
-                            couleur="var(--vitrine-bleu)"
+                            couleur="var(--vitrine-terre)"
                             initiale="F"
                         />
                     </div>
@@ -141,7 +141,7 @@ export function Hero({
                                     key={mention}
                                     className="vitrine-mono flex items-center gap-2 text-[var(--vitrine-encre)]/45"
                                 >
-                                    <span className="size-1 bg-[var(--vitrine-or)]" />
+                                    <span className="size-1 bg-[var(--vitrine-terre)]" />
                                     {mention}
                                 </li>
                             ))}
@@ -206,7 +206,7 @@ export function Hero({
                             <p className="text-sm text-[var(--vitrine-encre)]/60">
                                 {vedette.tagline}
                             </p>
-                            <p className="text-sm font-medium text-[var(--vitrine-bleu)] tabular-nums">
+                            <p className="text-sm font-medium text-[var(--vitrine-terre)] tabular-nums">
                                 À partir de {money(vedette.price)}
                             </p>
                         </div>
@@ -223,7 +223,7 @@ export function Hero({
                                         className={cn(
                                             'h-1.5 transition-[width,background-color] duration-300',
                                             position === index
-                                                ? 'w-8 bg-[var(--vitrine-bleu)]'
+                                                ? 'w-8 bg-[var(--vitrine-terre)]'
                                                 : 'w-4 bg-[var(--vitrine-encre)]/20 hover:bg-[var(--vitrine-encre)]/40',
                                         )}
                                     />

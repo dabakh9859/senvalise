@@ -20,54 +20,6 @@ class StockController extends Controller
 {
     public function __construct(private readonly StockService $stock) {}
 
-    public function index(Request $request): Response
-    {
-        $isGerant = $request->user('web')->isGerant();
-        $etat = $request->string('etat')->toString();
-
-        $variants = ProductVariant::query()
-            ->with(['product:id,name,reference,category_id', 'product.category:id,name'])
-            ->search($request->string('recherche')->toString())
-            ->when($request->filled('categorie'), fn ($q) => $q->whereHas(
-                'product',
-                fn ($p) => $p->where('category_id', $request->integer('categorie')),
-            ))
-            ->when($etat === 'bas', fn ($q) => $q->lowStock()->where('stock_quantity', '>', 0))
-            ->when($etat === 'rupture', fn ($q) => $q->where('stock_quantity', '<=', 0))
-            ->when($etat === 'disponible', fn ($q) => $q->where('stock_quantity', '>', 0))
-            ->when($etat !== 'inactif', fn ($q) => $q->active())
-            ->when($etat === 'inactif', fn ($q) => $q->where('is_active', false))
-            ->orderBy('stock_quantity')
-            ->paginate(25)
-            ->withQueryString()
-            ->through(fn (ProductVariant $variant) => array_filter([
-                'id' => $variant->id,
-                'productId' => $variant->product_id,
-                'label' => $variant->fullLabel(),
-                'sku' => $variant->sku,
-                'barcode' => $variant->barcode,
-                'category' => $variant->product?->category?->name,
-                'stock' => $variant->stock_quantity,
-                'reserved' => $variant->reserved_quantity,
-                'available' => $variant->available_quantity,
-                'threshold' => $variant->low_stock_threshold,
-                'isLow' => $variant->is_low_stock,
-                'sellingPrice' => $variant->selling_price,
-                'isActive' => $variant->is_active,
-                'costPrice' => $isGerant ? $variant->cost_price : null,
-                'stockValue' => $isGerant ? $variant->stock_value : null,
-            ], fn ($v) => $v !== null));
-
-        return Inertia::render('stock/index', [
-            'variants' => $variants,
-            'filters' => $request->only(['recherche', 'categorie', 'etat']),
-            'categories' => Category::orderBy('position')->get(['id', 'name']),
-            'summary' => $this->summary($isGerant),
-            'reasons' => MovementReason::manualOptions(),
-            'canManage' => $isGerant,
-        ]);
-    }
-
     public function movements(Request $request): Response
     {
         $isGerant = $request->user('web')->isGerant();
@@ -231,21 +183,4 @@ class StockController extends Controller
     }
 
     /** @return array<string, int> */
-    protected function summary(bool $isGerant): array
-    {
-        $summary = [
-            'references' => ProductVariant::active()->count(),
-            'articles' => (int) ProductVariant::active()->sum('stock_quantity'),
-            'lowStock' => ProductVariant::active()->lowStock()->where('stock_quantity', '>', 0)->count(),
-            'outOfStock' => ProductVariant::active()->where('stock_quantity', '<=', 0)->count(),
-        ];
-
-        if ($isGerant) {
-            $summary['stockValue'] = $this->stock->totalStockValue();
-            $summary['retailValue'] = $this->stock->totalRetailValue();
-            $summary['potentialMargin'] = $summary['retailValue'] - $summary['stockValue'];
-        }
-
-        return $summary;
-    }
 }

@@ -61,12 +61,12 @@ export function PositionLivraison({
     return (
         <div className="space-y-3 border border-dashed p-4">
             <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-blue-700 dark:text-blue-400" />
+                <MapPin className="mt-0.5 size-4 shrink-0 text-[var(--vitrine-terre)]" />
                 <div className="min-w-0 space-y-1">
                     <p className="text-sm font-medium">
                         Aider le livreur à vous trouver
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[var(--vitrine-encre)]/60">
                         Au Sénégal, une adresse écrite mène au quartier, pas à
                         la porte. En partageant votre position, le livreur
                         arrive directement chez vous.{' '}
@@ -81,7 +81,7 @@ export function PositionLivraison({
 
             {position ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 bg-emerald-500/10 px-3 py-2">
-                    <p className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
+                    <p className="flex items-center gap-2 text-xs text-emerald-700">
                         <Check className="size-3.5 shrink-0" />
                         Position enregistrée
                         {position.accuracy !== null
@@ -94,7 +94,7 @@ export function PositionLivraison({
                             onChange(null);
                             reinitialiser();
                         }}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground underline underline-offset-4 transition-opacity hover:opacity-70"
+                        className="flex items-center gap-1.5 text-xs text-[var(--vitrine-encre)]/60 underline underline-offset-4 transition-opacity hover:opacity-70"
                     >
                         <MapPinOff className="size-3" />
                         Retirer
@@ -105,7 +105,7 @@ export function PositionLivraison({
                     type="button"
                     onClick={demander}
                     disabled={etat === 'en-cours'}
-                    className="flex w-full items-center justify-center gap-2 border border-[var(--vitrine-trait)] px-5 py-2.5 text-sm font-medium transition-[border-color,transform] duration-150 hover:border-foreground active:scale-[0.98] disabled:opacity-60 sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 border border-[var(--vitrine-trait)] px-5 py-2.5 text-sm font-medium transition-[border-color,transform] duration-150 hover:border-[var(--vitrine-encre)] active:scale-[0.98] disabled:opacity-60 sm:w-auto"
                 >
                     {etat === 'en-cours' ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -123,7 +123,7 @@ export function PositionLivraison({
              * le navigateur ne redemandera plus rien de lui-même.
              */}
             {etat === 'refusee' ? (
-                <p className="flex items-start gap-2 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                <p className="flex items-start gap-2 bg-[var(--vitrine-alerte)]/10 px-3 py-2 text-xs text-[var(--vitrine-alerte)]">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                     <span>
                         Position refusée — aucun problème, votre commande passe
@@ -135,7 +135,7 @@ export function PositionLivraison({
             ) : null}
 
             {etat === 'echec' ? (
-                <p className="flex items-center justify-between gap-3 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                <p className="flex items-center justify-between gap-3 bg-[var(--vitrine-alerte)]/10 px-3 py-2 text-xs text-[var(--vitrine-alerte)]">
                     <span className="flex items-start gap-2">
                         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                         Position introuvable. Vérifiez que le GPS est activé.

@@ -135,6 +135,32 @@ class StockService
             ->sum(DB::raw('stock_quantity * cost_price'));
     }
 
+    /**
+     * Etat du stock en quatre chiffres, pour l'en-tete du catalogue.
+     *
+     * Les valeurs monetaires ne sont calculees que pour le gerant : elles se
+     * lisent sur le prix de revient, que le vendeur ne doit pas voir.
+     *
+     * @return array<string, int>
+     */
+    public function summary(bool $withValues): array
+    {
+        $summary = [
+            'references' => ProductVariant::query()->active()->count(),
+            'articles' => (int) ProductVariant::query()->active()->sum('stock_quantity'),
+            'lowStock' => ProductVariant::query()->active()->lowStock()->where('stock_quantity', '>', 0)->count(),
+            'outOfStock' => ProductVariant::query()->active()->where('stock_quantity', '<=', 0)->count(),
+        ];
+
+        if ($withValues) {
+            $summary['stockValue'] = $this->totalStockValue();
+            $summary['retailValue'] = $this->totalRetailValue();
+            $summary['potentialMargin'] = $summary['retailValue'] - $summary['stockValue'];
+        }
+
+        return $summary;
+    }
+
     /** Valeur totale du stock au prix de vente. */
     public function totalRetailValue(): int
     {

@@ -1,10 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
+    Backpack,
     BadgeCheck,
     Briefcase,
-    Backpack,
-    ImageIcon,
     Luggage,
     PiggyBank,
     Play,
@@ -16,10 +15,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Hero } from '@/components/boutique/hero';
 import type { Vedette } from '@/components/boutique/hero';
+import { Cascade, Palier } from '@/components/boutique/mouvement';
 import { ProductCard } from '@/components/boutique/product-card';
 import type { ProductCardData } from '@/components/boutique/product-card';
 import {
-    cascade,
     Rail,
     Section,
     SectionHeader,
@@ -78,6 +77,20 @@ const ARGUMENTS_PAR_DEFAUT = [
     },
 ];
 
+/**
+ * La page d'accueil de la boutique.
+ *
+ * Le fil est celui d'une visite : ce qui rassure, ce qu'on vend, ce qui est en
+ * promotion, comment on peut payer autrement, et enfin comment nous joindre.
+ *
+ * Une règle de composition tient toute la page : **deux sections voisines ne
+ * se ressemblent jamais**. Il y avait auparavant trois rails de produits
+ * identiques, séparés par des grilles régulières — chacun pris isolément était
+ * juste, mais mis bout à bout ils donnaient une page qui se répète, où l'on
+ * ne sait plus où l'on en est. Les nouveautés sont donc passées en grille
+ * décalée, les catégories en grille asymétrique, et les promotions en deux
+ * blocs de largeurs différentes.
+ */
 export default function Accueil({
     hero,
     vedettes,
@@ -105,6 +118,17 @@ export default function Accueil({
         .filter((titre): titre is string => Boolean(titre))
         .slice(0, 3);
 
+    /*
+     * Cinq catégories, pas six.
+     *
+     * La grande tuile occupe quatre cases d'une grille de quatre colonnes ; il
+     * en reste donc exactement quatre à remplir. Une sixième catégorie
+     * ouvrirait une troisième rangée pour s'y retrouver seule, avec trois
+     * cases vides à sa droite. Le lien « Tout le catalogue » est là pour
+     * celles qui ne tiennent pas.
+     */
+    const [premiere, ...autresCategories] = categories.slice(0, 5);
+
     return (
         <>
             <Head title="Valises et bagages à Dakar" />
@@ -113,96 +137,92 @@ export default function Accueil({
 
             {/* ------------------------------------------------ Atouts */}
             <div className="border-y border-[var(--vitrine-trait)] bg-[var(--vitrine-papier)]">
-                <div className="mx-auto grid max-w-[1500px] gap-px bg-[var(--vitrine-trait)] sm:grid-cols-2 lg:grid-cols-4">
+                <Cascade
+                    pas={0.05}
+                    className="mx-auto grid max-w-[1500px] gap-px bg-[var(--vitrine-trait)] sm:grid-cols-2 lg:grid-cols-4"
+                >
                     {atoutsAffiches.map((atout, index) => {
                         const Icon = ICONES_ATOUT[index % ICONES_ATOUT.length];
 
                         return (
-                            <div
+                            <Palier
                                 key={atout.title ?? index}
-                                style={cascade(index)}
-                                className="anim-revele group flex items-start gap-3.5 bg-[var(--vitrine-papier)] px-6 py-7"
+                                className="group flex items-start gap-3.5 bg-[var(--vitrine-papier)] px-6 py-7"
                             >
-                                <Icon className="mt-0.5 size-5 shrink-0 text-[var(--vitrine-bleu)] transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-110" />
-                                <div className="min-w-0">
-                                    <p className="text-sm font-semibold">
+                                <Icon className="mt-0.5 size-5 shrink-0 text-[var(--vitrine-terre)] transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-110" />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-semibold">
                                         {atout.title}
-                                    </p>
-                                    <p className="mt-1 text-xs text-[var(--vitrine-encre)]/60">
+                                    </span>
+                                    <span className="mt-1 block text-xs text-[var(--vitrine-encre)]/60">
                                         {atout.body}
-                                    </p>
-                                </div>
-                            </div>
+                                    </span>
+                                </span>
+                            </Palier>
                         );
                     })}
-                </div>
+                </Cascade>
             </div>
 
             {/* ------------------------------------------------ Catégories */}
-            {categories.length > 0 ? (
+            {premiere ? (
                 <div className="vitrine-halo">
-                    <Section wide>
+                    <Section wide className="pb-20 sm:pb-28">
                         <SectionHeader
-                            align="center"
                             kicker="Pour chaque façon de partir"
                             title="Nos catégories"
                             subtitle="Trouvez le bagage qui vous correspond."
+                            action={
+                                <ShopButton
+                                    href="/boutique/catalogue"
+                                    variant="verre"
+                                    className="hidden shrink-0 px-5 py-2.5 sm:inline-flex"
+                                >
+                                    Tout le catalogue
+                                </ShopButton>
+                            }
                         />
 
-                        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                            {categories.slice(0, 6).map((categorie, index) => {
-                                const Icon =
-                                    ICONES_CATEGORIE[
-                                        index % ICONES_CATEGORIE.length
-                                    ];
+                        {/*
+                         * Grille asymétrique : la première catégorie occupe
+                         * quatre cases, les suivantes une seule.
+                         *
+                         * Six tuiles rigoureusement égales ne hiérarchisent
+                         * rien — l'œil les balaie sans savoir par où entrer.
+                         * En donner une plus grande, avec sa photo en grand,
+                         * ouvre la lecture ; les autres deviennent une liste
+                         * qu'on parcourt ensuite. Le décalage suffit, aucune
+                         * couleur n'est nécessaire pour créer la hiérarchie.
+                         */}
+                        <Cascade
+                            pas={0.05}
+                            className="mt-10 grid grid-cols-2 gap-3 lg:grid-cols-4"
+                        >
+                            <Palier
+                                depuis="gauche"
+                                className="col-span-2 row-span-2"
+                            >
+                                <TuileCategorie
+                                    categorie={premiere}
+                                    icone={ICONES_CATEGORIE[0]}
+                                    grande
+                                />
+                            </Palier>
 
-                                return (
-                                    /*
-                                     * Deux éléments imbriqués, et il le faut :
-                                     * une animation garde la main sur
-                                     * `transform` tant qu'elle est active. Le
-                                     * survol qui soulève la tuile serait donc
-                                     * sans effet s'il partageait l'élément qui
-                                     * porte l'apparition.
-                                     */
-                                    <div
-                                        key={categorie.slug}
-                                        style={cascade(index)}
-                                        className="anim-revele"
-                                    >
-                                        <Link
-                                            href={`/boutique/catalogue?categorie=${categorie.slug}`}
-                                            className="verre group flex h-full flex-col items-center gap-3 p-5 text-center transition-transform duration-200 ease-out hover:-translate-y-1"
-                                        >
-                                            {/* La photo du premier article de la
-                                            catégorie si elle existe, l'icône
-                                            sinon — jamais un carré vide. */}
-                                            <span className="flex size-16 items-center justify-center overflow-hidden bg-[var(--vitrine-bleu)] text-white">
-                                                {categorie.image ? (
-                                                    <img
-                                                        src={categorie.image}
-                                                        alt=""
-                                                        loading="lazy"
-                                                        className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                    />
-                                                ) : (
-                                                    <Icon className="size-7" />
-                                                )}
-                                            </span>
-                                            <span className="min-w-0">
-                                                <span className="block truncate text-sm font-semibold">
-                                                    {categorie.name}
-                                                </span>
-                                                <span className="mt-0.5 block truncate text-xs text-[var(--vitrine-encre)]/55">
-                                                    {categorie.description ??
-                                                        `${count(categorie.count)} article${categorie.count > 1 ? 's' : ''}`}
-                                                </span>
-                                            </span>
-                                        </Link>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                            {autresCategories.map((categorie, index) => (
+                                <Palier key={categorie.slug}>
+                                    <TuileCategorie
+                                        categorie={categorie}
+                                        icone={
+                                            ICONES_CATEGORIE[
+                                                (index + 1) %
+                                                    ICONES_CATEGORIE.length
+                                            ]
+                                        }
+                                    />
+                                </Palier>
+                            ))}
+                        </Cascade>
                     </Section>
                 </div>
             ) : null}
@@ -218,12 +238,23 @@ export default function Accueil({
             {/* ------------------------------------------------ Promotions */}
             {promos.length > 0 ? (
                 <Section wide className="pt-0">
-                    <div className="grid gap-3 lg:grid-cols-2">
-                        {promos.map((promo, index) => (
-                            <article
+                    {/*
+                     * Sept douzièmes contre cinq : deux moitiés parfaitement
+                     * égales donnent une page qui se plie en son milieu, et
+                     * aucune des deux promotions ne prend le dessus. Le rapport
+                     * inégal désigne celle qu'on regarde en premier.
+                     */}
+                    <Cascade pas={0.09} className="grid gap-3 lg:grid-cols-12">
+                        {promos.slice(0, 2).map((promo, index) => (
+                            <Palier
                                 key={promo.id}
-                                style={cascade(index)}
-                                className="anim-revele group relative aspect-[16/9] overflow-hidden bg-[var(--vitrine-encre)]"
+                                depuis={index === 0 ? 'gauche' : 'droite'}
+                                balise="article"
+                                className={
+                                    index === 0
+                                        ? 'group relative aspect-[16/10] overflow-hidden bg-[var(--vitrine-encre)] lg:col-span-7'
+                                        : 'group relative aspect-[16/10] overflow-hidden bg-[var(--vitrine-encre)] lg:col-span-5'
+                                }
                             >
                                 {(promo.image ?? promo.product?.image) ? (
                                     <img
@@ -238,13 +269,13 @@ export default function Accueil({
                                     />
                                 ) : null}
 
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+                                <span
+                                    aria-hidden
+                                    className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"
+                                />
 
-                                <div className="absolute inset-0 flex flex-col justify-center gap-3 p-7 text-white sm:p-10">
-                                    {/* La pastille respire doucement : c'est
-                                        ce qui attire l'œil sur la promotion
-                                        sans qu'elle clignote. */}
-                                    <span className="vitrine-mono w-fit bg-[var(--vitrine-or)] px-2.5 py-1 text-[var(--vitrine-encre)] transition-transform duration-300 ease-out group-hover:scale-105">
+                                <div className="absolute inset-0 flex flex-col justify-end gap-3 p-7 text-white sm:p-10">
+                                    <span className="vitrine-mono w-fit bg-[var(--vitrine-terre)] px-2.5 py-1 text-white transition-transform duration-300 ease-out group-hover:scale-105">
                                         Promotion
                                     </span>
                                     <h3 className="vitrine-serif max-w-sm text-2xl sm:text-4xl">
@@ -271,57 +302,79 @@ export default function Accueil({
                                         <ArrowRight className="size-4" />
                                     </ShopButton>
                                 </div>
-                            </article>
+                            </Palier>
                         ))}
-                    </div>
+                    </Cascade>
                 </Section>
             ) : null}
 
             {/* ------------------------------------------------ Nouveautés */}
-            <RailProduits
-                kicker="Tout juste arrivées"
-                titre="Les nouveautés"
-                sousTitre="Les derniers modèles rentrés en boutique."
-                produits={nouveautes}
-                halo
-            />
+            {nouveautes.length > 0 ? (
+                <div className="vitrine-halo">
+                    <Section wide>
+                        <SectionHeader
+                            kicker="Tout juste arrivées"
+                            title="Les nouveautés"
+                            subtitle="Les derniers modèles rentrés en boutique."
+                        />
+
+                        {/*
+                         * Grille décalée, et non un troisième rail.
+                         *
+                         * Trois rails à la file donnent le même geste trois
+                         * fois ; en changeant de forme ici, on redonne un
+                         * repère au visiteur. Le décalage vertical d'une
+                         * colonne sur deux casse la ligne d'horizon des
+                         * photos — c'est ce qui distingue une planche de
+                         * magazine d'un tableau à double entrée.
+                         */}
+                        <Cascade
+                            pas={0.06}
+                            className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:[&>*:nth-child(even)]:mt-14"
+                        >
+                            {nouveautes.slice(0, 8).map((produit) => (
+                                <Palier key={produit.id}>
+                                    <ProductCard product={produit} />
+                                </Palier>
+                            ))}
+                        </Cascade>
+                    </Section>
+                </div>
+            ) : null}
 
             {/* ------------------------------------------------ Le coffre */}
             <section className="relative overflow-hidden bg-[var(--vitrine-encre)] text-white">
-                <div className="absolute inset-0 opacity-40">
-                    <div className="absolute -top-32 -left-24 size-[36rem] bg-[var(--vitrine-bleu)] blur-[120px]" />
-                    <div className="absolute -right-24 -bottom-32 size-[30rem] bg-[var(--vitrine-or)] blur-[140px]" />
-                </div>
+                <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 opacity-40"
+                >
+                    <span className="absolute -top-32 -left-24 size-[36rem] bg-[var(--vitrine-terre)] blur-[120px]" />
+                    <span className="absolute -right-24 -bottom-32 size-[30rem] bg-[var(--vitrine-sable)] blur-[140px]" />
+                </span>
 
-                <div className="relative mx-auto grid max-w-[1500px] gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-2 lg:items-center">
-                    <div className="space-y-5">
-                        <span
-                            style={cascade(0)}
-                            className="vitrine-mono anim-revele flex w-fit items-center gap-2 bg-white/10 px-3 py-1.5"
+                <div className="relative mx-auto grid max-w-[1500px] gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+                    <Cascade pas={0.07} className="space-y-5">
+                        <Palier
+                            balise="span"
+                            className="vitrine-mono flex w-fit items-center gap-2 bg-white/10 px-3 py-1.5"
                         >
                             <PiggyBank className="size-3.5" />
                             Sans intérêt, sans engagement
-                        </span>
-                        <h2
-                            style={cascade(1)}
-                            className="vitrine-titre anim-revele"
-                        >
+                        </Palier>
+                        <Palier balise="h2" className="vitrine-titre">
                             Une valise qui vous plaît,
                             <br />
-                            <span className="text-[var(--vitrine-or)]">
-                                mais pas tout de suite ?
+                            <span className="text-[var(--vitrine-terre-clair)]">
+                                mais pas tout de suite&nbsp;?
                             </span>
-                        </h2>
-                        <p
-                            style={cascade(2)}
-                            className="anim-revele max-w-lg text-white/70"
-                        >
+                        </Palier>
+                        <Palier balise="p" className="max-w-lg text-white/70">
                             Ouvrez un coffre et versez ce que vous pouvez, quand
                             vous le pouvez. Le jour où l’objectif est atteint,
                             vous commandez. Et si vous changez d’avis, l’argent
                             vous est rendu.
-                        </p>
-                        <div style={cascade(3)} className="anim-revele">
+                        </Palier>
+                        <Palier>
                             <ShopButton
                                 href="/boutique/coffre"
                                 variant="inverse"
@@ -329,30 +382,40 @@ export default function Accueil({
                                 Découvrir le coffre
                                 <ArrowRight className="size-4" />
                             </ShopButton>
-                        </div>
-                    </div>
+                        </Palier>
+                    </Cascade>
 
-                    <ol className="grid gap-px bg-white/10 sm:grid-cols-2">
+                    {/*
+                     * Les quatre étapes montent d'un cran par rapport à la
+                     * colonne de texte : deux blocs alignés au pixel près se
+                     * lisent comme un tableau, un léger décrochement les lit
+                     * comme deux choses distinctes posées côte à côte.
+                     */}
+                    <Cascade
+                        pas={0.06}
+                        balise="ol"
+                        className="grid gap-px bg-white/10 sm:grid-cols-2 lg:-mt-10"
+                    >
                         {[
                             'Choisissez la valise ou fixez un montant.',
                             'Passez en boutique verser ce que vous voulez.',
                             'Suivez votre progression depuis votre espace.',
                             'Objectif atteint : commandez, c’est déjà payé.',
                         ].map((etape, index) => (
-                            <li
+                            <Palier
                                 key={etape}
-                                style={cascade(index)}
-                                className="anim-revele group space-y-2 bg-[var(--vitrine-encre)] p-6"
+                                balise="li"
+                                className="group space-y-2 bg-[var(--vitrine-encre)] p-6"
                             >
-                                <span className="vitrine-serif block text-2xl text-[var(--vitrine-or)]/50 tabular-nums transition-colors duration-300 group-hover:text-[var(--vitrine-or)]">
+                                <span className="vitrine-serif block text-3xl text-[var(--vitrine-terre-clair)]/50 tabular-nums transition-colors duration-300 group-hover:text-[var(--vitrine-terre-clair)]">
                                     0{index + 1}
                                 </span>
                                 <span className="block text-sm text-white/85">
                                     {etape}
                                 </span>
-                            </li>
+                            </Palier>
                         ))}
-                    </ol>
+                    </Cascade>
                 </div>
             </section>
 
@@ -373,13 +436,12 @@ export default function Accueil({
                         title="Nos valises en situation"
                     />
 
-                    <div className="mt-8 grid gap-3 lg:grid-cols-2">
-                        {videos.map((video, index) => (
-                            <figure
-                                key={video.id}
-                                style={cascade(index)}
-                                className="anim-revele"
-                            >
+                    <Cascade
+                        pas={0.08}
+                        className="mt-8 grid gap-3 lg:grid-cols-2"
+                    >
+                        {videos.map((video) => (
+                            <Palier key={video.id} balise="figure">
                                 <div className="aspect-video bg-[var(--vitrine-encre)]">
                                     {video.video ? (
                                         <iframe
@@ -408,30 +470,30 @@ export default function Accueil({
                                         ) : null}
                                     </figcaption>
                                 ) : null}
-                            </figure>
+                            </Palier>
                         ))}
-                    </div>
+                    </Cascade>
                 </Section>
             ) : null}
 
             {/* ------------------------------------------------ Invitation */}
             <div className="vitrine-halo border-t border-[var(--vitrine-trait)]">
-                <div className="mx-auto max-w-2xl space-y-5 px-5 py-20 text-center">
-                    <h2 className="vitrine-titre anim-revele">
+                <Cascade
+                    pas={0.07}
+                    className="mx-auto max-w-2xl space-y-5 px-5 py-24 text-center sm:py-32"
+                >
+                    <Palier balise="h2" className="vitrine-titre">
                         Une question sur un modèle&nbsp;?
-                    </h2>
-                    <p
-                        style={cascade(1)}
-                        className="vitrine-texte anim-revele text-[var(--vitrine-encre)]/60"
+                    </Palier>
+                    <Palier
+                        balise="p"
+                        className="vitrine-texte text-[var(--vitrine-encre)]/60"
                     >
                         Dites-nous ce que vous cherchez : capacité, format
                         cabine, résistance. Nous répondons vite, et nous
                         connaissons chaque pièce du rayon.
-                    </p>
-                    <div
-                        style={cascade(2)}
-                        className="anim-revele flex flex-wrap justify-center gap-3 pt-1"
-                    >
+                    </Palier>
+                    <Palier className="flex flex-wrap justify-center gap-3 pt-1">
                         <ShopButton href="/boutique/contact" variant="pilule">
                             Nous écrire
                             <ArrowRight className="size-4" />
@@ -439,10 +501,100 @@ export default function Accueil({
                         <ShopButton href="/boutique/catalogue" variant="verre">
                             Parcourir le catalogue
                         </ShopButton>
-                    </div>
-                </div>
+                    </Palier>
+                </Cascade>
             </div>
         </>
+    );
+}
+
+/**
+ * Une tuile de catégorie.
+ *
+ * En grand, la photo occupe toute la tuile et le texte se pose dessus, sur un
+ * voile sombre — c'est l'entrée de la grille. En petit, la photo redevient une
+ * vignette carrée à côté du nom : à cette taille, une image de fond rendrait
+ * le libellé illisible sans apporter grand-chose.
+ */
+function TuileCategorie({
+    categorie,
+    icone: Icon,
+    grande,
+}: {
+    categorie: CategoryCard;
+    icone: LucideIcon;
+    grande?: boolean;
+}) {
+    const sousTitre =
+        categorie.description ??
+        `${count(categorie.count)} article${categorie.count > 1 ? 's' : ''}`;
+
+    if (grande) {
+        return (
+            <Link
+                href={`/boutique/catalogue?categorie=${categorie.slug}`}
+                className="group relative flex h-full min-h-64 flex-col justify-end overflow-hidden bg-[var(--vitrine-encre)] p-6 text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--vitrine-terre)] sm:p-8"
+            >
+                {categorie.image ? (
+                    <>
+                        <img
+                            src={categorie.image}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        />
+                        <span
+                            aria-hidden
+                            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+                        />
+                    </>
+                ) : (
+                    <span
+                        aria-hidden
+                        className="absolute inset-0 flex items-center justify-center text-white/15"
+                    >
+                        <Icon className="size-24" />
+                    </span>
+                )}
+
+                <span className="relative">
+                    <span className="vitrine-serif block text-2xl sm:text-3xl">
+                        {categorie.name}
+                    </span>
+                    <span className="mt-1 block text-sm text-white/75">
+                        {sousTitre}
+                    </span>
+                </span>
+            </Link>
+        );
+    }
+
+    return (
+        <Link
+            href={`/boutique/catalogue?categorie=${categorie.slug}`}
+            className="verre group flex h-full flex-col items-center gap-3 p-5 text-center transition-transform duration-200 ease-out outline-none hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--vitrine-terre)]"
+        >
+            <span className="flex size-16 items-center justify-center overflow-hidden bg-[var(--vitrine-terre)] text-white">
+                {categorie.image ? (
+                    <img
+                        src={categorie.image}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                ) : (
+                    <Icon className="size-7" />
+                )}
+            </span>
+            <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold">
+                    {categorie.name}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-[var(--vitrine-encre)]/55">
+                    {sousTitre}
+                </span>
+            </span>
+        </Link>
     );
 }
 
@@ -518,13 +670,4 @@ function toEmbed(url: string): string {
     }
 
     return url;
-}
-
-/** Espace réservé quand une image manque, pour ne jamais laisser un trou. */
-export function SansImage() {
-    return (
-        <span className="flex size-full items-center justify-center text-[var(--vitrine-encre)]/25">
-            <ImageIcon className="size-8" />
-        </span>
-    );
 }

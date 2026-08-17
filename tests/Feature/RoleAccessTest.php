@@ -30,6 +30,8 @@ class RoleAccessTest extends TestCase
         return [
             ['/arrivages'],
             ['/rapports'],
+            ['/commandes'],
+            ['/coffres'],
             ['/stock/inventaire'],
             ['/reglages/boutique'],
             ['/reglages/categories'],
@@ -57,9 +59,11 @@ class RoleAccessTest extends TestCase
         return [
             ['/dashboard'],
             ['/caisse'],
+            ['/achats'],
             ['/ventes'],
+            ['/retours'],
+            ['/retours/nouveau'],
             ['/produits'],
-            ['/stock'],
             ['/stock/mouvements'],
             ['/clients'],
             ['/documents'],
@@ -71,6 +75,67 @@ class RoleAccessTest extends TestCase
     public function test_a_seller_reaches_the_day_to_day_screens(string $url): void
     {
         $this->actingAs($this->vendeur())->get($url)->assertOk();
+    }
+
+    /** Le stock a rejoint le catalogue : son ancienne adresse y mene. */
+    public function test_the_old_stock_url_lands_on_the_catalogue(): void
+    {
+        $this->actingAs($this->vendeur())
+            ->get('/stock')
+            ->assertRedirect('/produits');
+    }
+
+    /** L'ancienne adresse de la caisse mene a la liste, comptoir deja ouvert. */
+    public function test_the_old_sale_url_lands_on_the_documents_list(): void
+    {
+        $this->actingAs($this->vendeur())
+            ->get('/vente')
+            ->assertRedirect('/documents?vente=1');
+
+        $this->actingAs($this->vendeur())
+            ->get('/documents?vente=1')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('documents/index')
+                ->where('openCounter', true));
+    }
+
+    /**
+     * Le catalogue porte les quantites : le resume, les colonnes de stock et
+     * les motifs d'ajustement voyagent avec la liste des produits.
+     */
+    public function test_the_catalogue_carries_the_stock(): void
+    {
+        $variant = ProductVariant::factory()->withStock(2)->create();
+        $variant->update(['low_stock_threshold' => 5]);
+
+        $this->actingAs($this->gerant())
+            ->get('/produits')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('produits/index')
+                ->where('summary.references', 1)
+                ->where('summary.articles', 2)
+                ->where('summary.lowStock', 1)
+                ->where('summary.outOfStock', 0)
+                ->where('products.data.0.stock', 2)
+                ->where('products.data.0.available', 2)
+                ->where('products.data.0.lowCount', 1)
+                ->has('products.data.0.variants', 1)
+                ->has('reasons'));
+    }
+
+    /** La valeur du stock se lit sur le prix de revient : pas pour le vendeur. */
+    public function test_the_seller_sees_no_stock_value_in_the_catalogue(): void
+    {
+        ProductVariant::factory()->withStock(2, 9000)->create();
+
+        $this->actingAs($this->vendeur())
+            ->get('/produits')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->missing('summary.stockValue')
+                ->missing('products.data.0.stockValue'));
     }
 
     public function test_a_seller_never_sees_purchase_prices_or_margins(): void

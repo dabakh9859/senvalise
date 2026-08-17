@@ -1,8 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
+    Banknote,
     BarChart3,
+    ClipboardList,
     CopyCheck,
-    FileText,
     Home,
     Inbox,
     MessageSquare,
@@ -11,11 +13,12 @@ import {
     PiggyBank,
     QrCode,
     Receipt,
+    RotateCcw,
     Settings2,
     ShoppingCart,
     Truck,
     Users,
-    Warehouse,
+    Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -36,56 +39,56 @@ export function AppSidebar() {
     const { auth, alerts } = usePage<SharedProps>().props;
     const isGerant = auth?.isGerant ?? false;
 
-    /* Le quotidien : vendre, facturer, parler aux clients. */
-    const quotidien: NavItem[] = [
+    /*
+     * La barre suit le déroulé d'une journée plutôt que l'organigramme :
+     * on vend, on tient la caisse, on regarde la marchandise, puis seulement
+     * on pilote. Chaque groupe porte son intitulé — sans étiquette, douze
+     * entrées d'affilée se lisent comme une liste de courses.
+     */
+    const accueil: NavItem[] = [
         { title: 'Accueil', href: '/dashboard', icon: Home },
-        { title: 'Caisse', href: '/caisse', icon: ShoppingCart },
-        { title: 'Ventes', href: '/ventes', icon: Receipt },
-        { title: 'Factures & devis', href: '/documents', icon: FileText },
-        ...(isGerant
-            ? [
-                  {
-                      title: 'Messages',
-                      href: '/messages',
-                      icon: MessageSquare,
-                  } satisfies NavItem,
-              ]
-            : []),
+    ];
+
+    /* Le comptoir : tout ce qui se passe face à un client. */
+    const comptoir: NavItem[] = [
+        { title: 'Ventes & factures', href: '/documents', icon: ShoppingCart },
+        { title: 'Historique', href: '/ventes', icon: Receipt },
+        { title: 'Retours', href: '/retours', icon: RotateCcw },
         { title: 'Clients', href: '/clients', icon: Users },
     ];
 
+    /* L'argent du jour. */
+    const argent: NavItem[] = [
+        { title: 'Caisse', href: '/caisse', icon: Wallet },
+        { title: 'Achats du jour', href: '/achats', icon: Banknote },
+    ];
+
     /*
-     * La boutique en ligne.
+     * La marchandise.
      *
-     * Commandes et coffres sont ouverts au vendeur : c'est lui qui prépare les
-     * colis et qui encaisse les versements au comptoir.
+     * « Produits & stock » est un seul écran : le catalogue porte les
+     * quantités. Les mouvements et l'inventaire restent à part, ce sont des
+     * journaux, pas des listes de produits.
      */
-    const enLigne: NavItem[] = [
-        { title: 'Commandes', href: '/commandes', icon: PackageCheck },
-        { title: 'Coffres', href: '/coffres', icon: PiggyBank },
+    const marchandise: NavItem[] = [
+        {
+            title: 'Produits & stock',
+            href: '/produits',
+            icon: Package,
+            badge: alerts?.lowStock ?? 0,
+        },
+        {
+            title: 'Mouvements',
+            href: '/stock/mouvements',
+            icon: ArrowLeftRight,
+        },
         ...(isGerant
             ? [
                   {
-                      title: 'Messages reçus',
-                      href: '/contacts',
-                      icon: Inbox,
+                      title: 'Inventaire',
+                      href: '/stock/inventaire',
+                      icon: ClipboardList,
                   } satisfies NavItem,
-              ]
-            : []),
-    ];
-
-    /* La marchandise. */
-    const catalogue: NavItem[] = [
-        { title: 'Produits', href: '/produits', icon: Package },
-        {
-            title: 'Stock',
-            href: '/stock',
-            icon: Warehouse,
-            badge: alerts?.lowStock ?? 0,
-        },
-        { title: 'Étiquettes', href: '/etiquettes', icon: QrCode },
-        ...(isGerant
-            ? [
                   {
                       title: 'Arrivages',
                       href: '/arrivages',
@@ -93,12 +96,29 @@ export function AppSidebar() {
                   } satisfies NavItem,
               ]
             : []),
+        { title: 'Étiquettes', href: '/etiquettes', icon: QrCode },
     ];
+
+    /*
+     * La boutique en ligne, réservée au gérant.
+     *
+     * Une commande avancée à tort ou un versement de coffre encaissé de
+     * travers engage l'argent du client sur des mois : cela se rattrape mal.
+     * Le vendeur tient le comptoir, le gérant tient la boutique en ligne.
+     */
+    const enLigne: NavItem[] = isGerant
+        ? [
+              { title: 'Commandes', href: '/commandes', icon: PackageCheck },
+              { title: 'Coffres', href: '/coffres', icon: PiggyBank },
+              { title: 'Messages reçus', href: '/contacts', icon: Inbox },
+          ]
+        : [];
 
     /* Le pilotage. */
     const pilotage: NavItem[] = isGerant
         ? [
               { title: 'Rapports', href: '/rapports', icon: BarChart3 },
+              { title: 'Messages', href: '/messages', icon: MessageSquare },
               { title: 'Doublons', href: '/doublons', icon: CopyCheck },
               {
                   title: 'Réglages',
@@ -123,15 +143,23 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={quotidien} />
+                <NavMain items={accueil} />
                 <SidebarSeparator className="mx-2" />
-                <NavMain items={enLigne} label="Boutique en ligne" />
+                <NavMain items={comptoir} label="Comptoir" />
                 <SidebarSeparator className="mx-2" />
-                <NavMain items={catalogue} />
+                <NavMain items={argent} label="Caisse" />
+                <SidebarSeparator className="mx-2" />
+                <NavMain items={marchandise} label="Marchandise" />
+                {enLigne.length > 0 ? (
+                    <>
+                        <SidebarSeparator className="mx-2" />
+                        <NavMain items={enLigne} label="Boutique en ligne" />
+                    </>
+                ) : null}
                 {pilotage.length > 0 ? (
                     <>
                         <SidebarSeparator className="mx-2" />
-                        <NavMain items={pilotage} />
+                        <NavMain items={pilotage} label="Pilotage" />
                     </>
                 ) : null}
             </SidebarContent>

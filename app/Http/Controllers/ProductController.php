@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MovementReason;
 use App\Models\ActivityLog;
 use App\Models\Brand;
 use App\Models\Category;
@@ -12,6 +13,7 @@ use App\Models\Setting;
 use App\Services\ImageSearchService;
 use App\Services\ProductImageService;
 use App\Services\ProductService;
+use App\Services\StockService;
 use App\Support\Barcode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +28,7 @@ class ProductController extends Controller
         private readonly ProductService $products,
         private readonly ProductImageService $images,
         private readonly ImageSearchService $imageSearch,
+        private readonly StockService $stock,
     ) {}
 
     public function index(Request $request): Response
@@ -58,6 +61,10 @@ class ProductController extends Controller
             'filters' => $request->only(['recherche', 'categorie', 'marque', 'etat', 'stock']),
             'categories' => Category::orderBy('position')->get(['id', 'name']),
             'brands' => Brand::orderBy('name')->get(['id', 'name']),
+            // Le catalogue et le stock ne font qu'un ecran : les quantites, le
+            // resume et l'ajustement vivent ici, plus sur une page a part.
+            'summary' => $this->stock->summary($isGerant),
+            'reasons' => MovementReason::manualOptions(),
             'canManage' => $isGerant,
         ]);
     }
@@ -344,6 +351,7 @@ class ProductController extends Controller
         $variants = $product->variants;
         $stock = (int) $variants->sum('stock_quantity');
         $prices = $variants->pluck('selling_price')->filter()->all();
+        $active = $variants->filter(fn (ProductVariant $v) => $v->is_active);
 
         return array_filter([
             'id' => $product->id,
@@ -354,6 +362,10 @@ class ProductController extends Controller
             'brand' => $product->brand?->name,
             'variantCount' => $variants->count(),
             'stock' => $stock,
+            'reserved' => (int) $variants->sum('reserved_quantity'),
+            'available' => (int) $variants->sum(fn (ProductVariant $v) => $v->available_quantity),
+            'lowCount' => $active->filter(fn (ProductVariant $v) => $v->is_low_stock && $v->stock_quantity > 0)->count(),
+            'outCount' => $active->filter(fn (ProductVariant $v) => $v->stock_quantity <= 0)->count(),
             'isLowStock' => $variants->contains(fn (ProductVariant $v) => $v->is_active && $v->is_low_stock),
             'priceMin' => $prices ? min($prices) : 0,
             'priceMax' => $prices ? max($prices) : 0,
@@ -362,6 +374,24 @@ class ProductController extends Controller
             'stockValue' => $isGerant
                 ? (int) $variants->sum(fn (ProductVariant $v) => $v->stock_quantity * $v->cost_price)
                 : null,
+            /*
+             * Les declinaisons voyagent avec la ligne : l'ajustement se fait
+             * article par article, et un produit en cinq tailles ne se corrige
+             * pas d'un seul chiffre. La fenetre d'ajustement les liste sans
+             * avoir a rappeler le serveur.
+             */
+            'variants' => $variants
+                ->map(fn (ProductVariant $v) => [
+                    'id' => $v->id,
+                    'label' => $v->variant_label,
+                    'sku' => $v->sku,
+                    'stock' => $v->stock_quantity,
+                    'reserved' => $v->reserved_quantity,
+                    'threshold' => $v->low_stock_threshold,
+                    'isActive' => $v->is_active,
+                ])
+                ->values()
+                ->all(),
         ], fn ($value) => $value !== null);
     }
 }

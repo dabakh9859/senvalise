@@ -81,7 +81,7 @@ export default function Panier({
                                 >
                                     <Link
                                         href={`/boutique/produit/${line.slug}`}
-                                        className="size-24 shrink-0 overflow-hidden bg-muted sm:size-28"
+                                        className="size-24 shrink-0 overflow-hidden bg-[var(--vitrine-sable)] sm:size-28"
                                     >
                                         {line.image ? (
                                             <img
@@ -91,7 +91,7 @@ export default function Panier({
                                                 className="size-full object-cover"
                                             />
                                         ) : (
-                                            <span className="flex size-full items-center justify-center text-muted-foreground">
+                                            <span className="flex size-full items-center justify-center text-[var(--vitrine-encre)]/60">
                                                 <ImageIcon className="size-5" />
                                             </span>
                                         )}
@@ -106,7 +106,7 @@ export default function Panier({
                                                 >
                                                     {line.label}
                                                 </Link>
-                                                <p className="text-xs text-muted-foreground tabular-nums">
+                                                <p className="text-xs text-[var(--vitrine-encre)]/60 tabular-nums">
                                                     {money(line.unitPrice)}{' '}
                                                     l’unité
                                                 </p>
@@ -126,7 +126,7 @@ export default function Panier({
                                                         },
                                                     )
                                                 }
-                                                className="shrink-0 p-1 text-muted-foreground transition-[color,transform] duration-150 hover:text-destructive active:scale-90"
+                                                className="shrink-0 p-1 text-[var(--vitrine-encre)]/60 transition-[color,transform] duration-150 hover:text-destructive active:scale-90"
                                                 aria-label="Retirer"
                                             >
                                                 <X className="size-4" />
@@ -134,7 +134,7 @@ export default function Panier({
                                         </div>
 
                                         {line.shortage > 0 ? (
-                                            <p className="flex items-start gap-1.5 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                                            <p className="flex items-start gap-1.5 bg-[var(--vitrine-alerte)]/10 px-2 py-1 text-xs text-[var(--vitrine-alerte)]">
                                                 <TriangleAlert className="mt-0.5 size-3 shrink-0" />
                                                 Il ne reste que {line.available}{' '}
                                                 en stock.
@@ -151,7 +151,7 @@ export default function Panier({
                                                             line.quantity - 1,
                                                         )
                                                     }
-                                                    className="flex size-10 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-accent active:scale-90"
+                                                    className="flex size-10 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-[var(--vitrine-sable)] active:scale-90"
                                                     aria-label="Retirer un"
                                                 >
                                                     <Minus className="size-3.5" />
@@ -167,7 +167,7 @@ export default function Panier({
                                                             line.quantity + 1,
                                                         )
                                                     }
-                                                    className="flex size-10 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-accent active:scale-90"
+                                                    className="flex size-10 items-center justify-center transition-[background-color,transform] duration-150 hover:bg-[var(--vitrine-sable)] active:scale-90"
                                                     aria-label="Ajouter un"
                                                 >
                                                     <Plus className="size-3.5" />
@@ -192,7 +192,7 @@ export default function Panier({
 
                             <dl className="space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                    <dt className="text-muted-foreground">
+                                    <dt className="text-[var(--vitrine-encre)]/60">
                                         Sous-total
                                     </dt>
                                     <dd className="tabular-nums">
@@ -200,10 +200,10 @@ export default function Panier({
                                     </dd>
                                 </div>
                                 <div className="flex justify-between">
-                                    <dt className="text-muted-foreground">
+                                    <dt className="text-[var(--vitrine-encre)]/60">
                                         Livraison
                                     </dt>
-                                    <dd className="text-right text-xs text-muted-foreground">
+                                    <dd className="text-right text-xs text-[var(--vitrine-encre)]/60">
                                         {zones.length > 0
                                             ? `à partir de ${money(cheapest)}`
                                             : 'calculée à l’étape suivante'}
@@ -227,7 +227,7 @@ export default function Panier({
 
                             <Link
                                 href="/boutique/catalogue"
-                                className="mt-3 block text-center text-sm text-muted-foreground underline underline-offset-4"
+                                className="mt-3 block text-center text-sm text-[var(--vitrine-encre)]/60 underline underline-offset-4"
                             >
                                 Continuer mes achats
                             </Link>

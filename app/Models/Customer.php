@@ -99,6 +99,12 @@ class Customer extends Authenticatable
         return $this->hasMany(Vault::class)->latest('id');
     }
 
+    /** @return HasMany<SaleReturn, $this> */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class)->latest('returned_at');
+    }
+
     /** Le client a-t-il une position enregistrée et consentie ? */
     public function hasLocation(): bool
     {

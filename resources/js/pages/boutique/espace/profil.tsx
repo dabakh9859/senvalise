@@ -156,7 +156,7 @@ export default function EspaceProfil({
                         />
                         <span>
                             Recevoir les nouveautés et promotions sur WhatsApp
-                            <span className="block text-xs text-muted-foreground">
+                            <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                 Décochez pour ne plus rien recevoir.
                             </span>
                         </span>
@@ -169,9 +169,9 @@ export default function EspaceProfil({
                         </p>
 
                         {customer.hasLocation ? (
-                            <div className="flex flex-wrap items-center justify-between gap-3 bg-muted px-3 py-2.5 text-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--vitrine-sable)] px-3 py-2.5 text-xs">
                                 <span className="flex items-center gap-2">
-                                    <MapPin className="size-3.5 shrink-0 text-blue-700 dark:text-blue-400" />
+                                    <MapPin className="size-3.5 shrink-0 text-[var(--vitrine-terre)]" />
                                     Position enregistrée
                                     {customer.accuracyLabel
                                         ? ` \u2014 ${customer.accuracyLabel}`
@@ -197,7 +197,7 @@ export default function EspaceProfil({
                                                 { preserveScroll: true },
                                             )
                                         }
-                                        className="flex items-center gap-1.5 text-muted-foreground underline underline-offset-4 transition-colors hover:text-destructive"
+                                        className="flex items-center gap-1.5 text-[var(--vitrine-encre)]/60 underline underline-offset-4 transition-colors hover:text-destructive"
                                     >
                                         <MapPinOff className="size-3" />
                                         Effacer
@@ -215,7 +215,7 @@ export default function EspaceProfil({
                     <div className="space-y-4 border-t pt-4">
                         <p className="text-sm font-medium">
                             Changer de mot de passe
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            <span className="ml-2 text-xs font-normal text-[var(--vitrine-encre)]/60">
                                 (laissez vide pour le conserver)
                             </span>
                         </p>

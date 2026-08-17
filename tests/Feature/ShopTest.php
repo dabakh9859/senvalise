@@ -532,11 +532,13 @@ class ShopTest extends TestCase
         $gerant = User::factory()->create(['role' => UserRole::Gerant->value]);
         $vendeur = User::factory()->create(['role' => UserRole::Vendeur->value]);
 
-        // Le vendeur prépare les colis et encaisse les versements.
-        $this->actingAs($vendeur)->get('/commandes')->assertOk();
-        $this->actingAs($vendeur)->get('/coffres')->assertOk();
+        // La boutique en ligne est entierement reservee au gerant : commandes,
+        // coffres, messages recus et reglages.
+        $this->actingAs($vendeur)->get('/commandes')->assertForbidden();
+        $this->actingAs($vendeur)->get('/coffres')->assertForbidden();
+        $this->actingAs($gerant)->get('/commandes')->assertOk();
+        $this->actingAs($gerant)->get('/coffres')->assertOk();
 
-        // Les réglages et les messages restent au gérant.
         $this->actingAs($vendeur)->get('/contacts')->assertForbidden();
         $this->actingAs($vendeur)->get('/reglages/livraison')->assertForbidden();
 

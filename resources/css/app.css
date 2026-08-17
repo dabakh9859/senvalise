@@ -13,6 +13,14 @@
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
+    /*
+     * Réservé aux titres d'affiche de la vitrine. Les substituts sont des
+     * serifs à empattements fins, de proportions voisines : le jour où la
+     * police tarde, le titre change de dessin mais pas de gabarit.
+     */
+    --font-serif:
+        'Instrument Serif', ui-serif, Georgia, 'Times New Roman', serif;
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -340,10 +348,10 @@
 
 @keyframes sv-entete {
     from {
-        box-shadow: 0 0 0 0 rgb(20 33 61 / 0);
+        box-shadow: 0 0 0 0 rgb(28 24 21 / 0);
     }
     to {
-        box-shadow: 0 14px 34px -22px rgb(20 33 61 / 0.55);
+        box-shadow: 0 14px 34px -22px rgb(28 24 21 / 0.55);
     }
 }
 
@@ -354,23 +362,47 @@
 }
 
 /*
- * Teintes de la vitrine, reprises de l'enseigne.
+ * Teintes de la vitrine.
  *
- * Le bleu roi et le jaune d'or viennent du logo ; l'encre n'est pas un noir
- * mais un bleu nuit de la même famille, pour que le texte appartienne à la
- * marque plutôt que de flotter à côté. Le fond est un blanc à peine cassé —
- * le blanc pur donne un rendu d'écran, un vrai crème jurerait avec le bleu.
+ * Registre éditorial chaud : un papier écru, une encre presque noire mais
+ * tirée vers le brun, et **une seule** couleur d'accent — la terre cuite.
+ * L'ancienne paire bleu roi + jaune d'or posait deux problèmes : deux accents
+ * qui se disputaient la hiérarchie, et un jaune à 1,9:1 de contraste qui ne
+ * pouvait jamais porter un mot.
  *
- * Une règle à ne pas franchir : **le jaune ne porte jamais de texte**. Sur
- * fond clair il tombe à 1,9:1 de contraste, illisible. Il sert aux pastilles,
- * aux filets et aux aplats, jamais aux mots.
+ * La terre cuite tient 4,9:1 sur le papier et 5,4:1 sous du blanc. Elle passe
+ * donc partout : liens, libellés, pastilles, aplats. Un accent qui sait porter
+ * du texte remplace à lui seul les deux précédents.
+ *
+ * Le sable n'est pas un accent mais une surface : c'est le second fond, celui
+ * qui détache un bloc du papier sans tracer de bordure.
  */
 :root {
-    --vitrine-papier: #f8f8f5;
-    --vitrine-encre: #14213d;
-    --vitrine-bleu: #1e3fa8;
-    --vitrine-or: #f2b01e;
-    --vitrine-trait: #dcdcd6;
+    --vitrine-papier: #f7f3ea;
+    --vitrine-encre: #1c1815;
+    --vitrine-terre: #af4e2a;
+    /* Terre cuite assombrie, pour les survols et les états pressés. */
+    --vitrine-braise: #8c3c1f;
+    /*
+     * Terre cuite éclaircie. Sur l'encre, la terre cuite pleine tombe à
+     * 3,3:1 — assez pour un grand titre, pas pour une ligne de texte. Cette
+     * variante remonte à 6,8:1 en gardant la même teinte, et sert partout où
+     * l'accent se pose sur un fond sombre.
+     */
+    --vitrine-terre-clair: #e08a5f;
+    --vitrine-sable: #ede4d4;
+    --vitrine-trait: #ddd3c2;
+
+    /*
+     * Alerte de stock.
+     *
+     * Un ocre profond, et surtout pas la terre cuite : « plus que 3 en stock »
+     * ne doit pas se confondre avec la couleur de la marque, sinon l'accent
+     * finit par vouloir dire deux choses à la fois. Il tient 5,4:1 sur le
+     * papier. La couleur ne porte de toute façon jamais l'information seule —
+     * une icône et le texte l'accompagnent toujours.
+     */
+    --vitrine-alerte: #8a5a12;
 
     /*
      * Hauteur cumulée du bandeau d'annonces et de la barre de navigation.
@@ -381,17 +413,24 @@
     --vitrine-entete: 6.5rem;
 }
 
+/*
+ * La vitrine ne suit pas le thème sombre.
+ *
+ * Le back-office garde sa bascule clair/sombre — on y passe la journée. Une
+ * vitrine, elle, se consulte au comptoir ou dans la rue, souvent en plein
+ * soleil : le papier clair y reste le plus lisible. Redéclarer les mêmes
+ * valeurs sous `.dark` est ce qui empêche la préférence système de la faire
+ * basculer, sans rien retirer au reste de l'application.
+ */
 .dark {
-    /*
-     * Sur fond sombre le bleu du logo devient illisible : on remonte sa
-     * clarté sans changer sa teinte, de sorte qu'on reconnaisse la même
-     * couleur. Le jaune, lui, tient déjà.
-     */
-    --vitrine-papier: #0e1526;
-    --vitrine-encre: #eef1f8;
-    --vitrine-bleu: #7c9cf0;
-    --vitrine-or: #f5bd42;
-    --vitrine-trait: #26314b;
+    --vitrine-papier: #f7f3ea;
+    --vitrine-encre: #1c1815;
+    --vitrine-terre: #af4e2a;
+    --vitrine-braise: #8c3c1f;
+    --vitrine-terre-clair: #e08a5f;
+    --vitrine-sable: #ede4d4;
+    --vitrine-trait: #ddd3c2;
+    --vitrine-alerte: #8a5a12;
 }
 
 @layer components {
@@ -488,7 +527,7 @@
      * c'est le genre de chose qu'on ne remarque que par son absence.
      */
     .vitrine-anguleux ::selection {
-        background: color-mix(in oklab, var(--vitrine-bleu) 22%, transparent);
+        background: color-mix(in oklab, var(--vitrine-terre) 22%, transparent);
     }
 
     /*
@@ -500,7 +539,7 @@
      * sans qu'il gêne personne.
      */
     .vitrine-anguleux a:focus-visible {
-        outline: 2px solid var(--vitrine-bleu);
+        outline: 2px solid var(--vitrine-terre);
         outline-offset: 3px;
     }
 
@@ -520,20 +559,28 @@
         background-color: var(--vitrine-papier);
         background-repeat: repeat-y;
         background-size: 100% 64rem;
+        /*
+         * Trois nappes très diluées, décalées les unes des autres : elles
+         * cassent la platitude d'un aplat sans qu'on puisse les nommer. La
+         * terre cuite reste sous les 10 % — au-delà, sur un papier écru, elle
+         * vire au rose et le fond se met à porter une couleur qu'on n'a pas
+         * demandée. Le sable, lui, peut monter : c'est la même famille que le
+         * papier, il l'épaissit plutôt qu'il ne le teinte.
+         */
         background-image:
             radial-gradient(
                 42rem 32rem at 12% 8%,
-                color-mix(in oklab, var(--vitrine-bleu) 22%, transparent),
+                color-mix(in oklab, var(--vitrine-terre) 9%, transparent),
                 transparent 70%
             ),
             radial-gradient(
                 38rem 30rem at 88% 34%,
-                color-mix(in oklab, var(--vitrine-or) 20%, transparent),
+                color-mix(in oklab, var(--vitrine-sable) 60%, transparent),
                 transparent 70%
             ),
             radial-gradient(
                 50rem 36rem at 42% 78%,
-                color-mix(in oklab, var(--vitrine-bleu) 12%, transparent),
+                color-mix(in oklab, var(--vitrine-terre) 5%, transparent),
                 transparent 72%
             );
     }
@@ -554,7 +601,7 @@
         border: 1px solid rgb(255 255 255 / 0.65);
         box-shadow:
             0 1px 0 0 rgb(255 255 255 / 0.6) inset,
-            0 8px 32px -12px rgb(20 33 61 / 0.18);
+            0 8px 32px -12px rgb(28 24 21 / 0.18);
     }
 
     .dark .verre {
@@ -569,7 +616,7 @@
     .verre-dense {
         background: rgb(255 255 255 / 0.78);
         border: 1px solid rgb(255 255 255 / 0.7);
-        box-shadow: 0 8px 32px -14px rgb(20 33 61 / 0.22);
+        box-shadow: 0 8px 32px -14px rgb(28 24 21 / 0.22);
     }
 
     .dark .verre-dense {
@@ -624,19 +671,42 @@
      * lieu d'abandonner un mot seul en dernière ligne. Là où il n'existe
      * pas, le titre revient au retour à la ligne ordinaire — rien ne casse.
      */
+    /*
+     * Le dessin d'affiche de la vitrine.
+     *
+     * Instrument Serif n'est dessinée qu'en 400. Demander un 700 ne
+     * l'épaissirait pas : le navigateur fabriquerait un gras synthétique en
+     * dilatant les traits, ce qui écrase justement le contraste plein/délié
+     * qui fait l'intérêt de cette police. `font-synthesis-weight: none`
+     * interdit ce rattrapage — mieux vaut un titre fin et juste qu'un titre
+     * gras et sale.
+     *
+     * L'interlettrage est bien moins serré que sur la linéale : les
+     * empattements occupent déjà l'espace entre les lettres, et un serif
+     * trop resserré se met à baver.
+     */
     .vitrine-serif {
-        font-weight: 700;
-        letter-spacing: -0.032em;
-        line-height: 1.03;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-synthesis-weight: none;
+        letter-spacing: -0.012em;
+        line-height: 1.05;
         text-wrap: balance;
     }
 
     /* Accroche du héros : le seul texte de cette taille sur tout le site. */
     .vitrine-affiche {
-        font-size: clamp(2.5rem, 1.4rem + 4.6vw, 4.5rem);
-        font-weight: 700;
-        letter-spacing: -0.038em;
-        line-height: 1.01;
+        font-family: var(--font-serif);
+        /*
+         * Le plafond monte de 4,5 à 5,75 rem. Un serif à 400 pèse moins
+         * qu'une linéale à 700 : à corps égal l'accroche paraîtrait avoir
+         * reculé. On lui rend sa présence par la taille, pas par la graisse.
+         */
+        font-size: clamp(2.75rem, 1.4rem + 5.4vw, 5.75rem);
+        font-weight: 400;
+        font-synthesis-weight: none;
+        letter-spacing: -0.018em;
+        line-height: 0.98;
         text-wrap: balance;
     }
 
@@ -650,10 +720,12 @@
      * Le corps et la graisse suffisent à le poser.
      */
     .vitrine-titre {
-        font-size: clamp(1.65rem, 1.15rem + 1.9vw, 2.75rem);
-        font-weight: 800;
-        letter-spacing: -0.028em;
-        line-height: 1.08;
+        font-family: var(--font-serif);
+        font-size: clamp(1.9rem, 1.2rem + 2.4vw, 3.25rem);
+        font-weight: 400;
+        font-synthesis-weight: none;
+        letter-spacing: -0.014em;
+        line-height: 1.06;
         text-wrap: balance;
     }
 

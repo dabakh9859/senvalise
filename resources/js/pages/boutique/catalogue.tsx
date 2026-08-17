@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { PackageSearch } from 'lucide-react';
 import { ProductCard } from '@/components/boutique/product-card';
 import type { ProductCardData } from '@/components/boutique/product-card';
-import { cascade, SectionHeader } from '@/components/boutique/vitrine';
+import { SectionHeader } from '@/components/boutique/vitrine';
 import { DataPagination } from '@/components/data-pagination';
 import { EmptyState } from '@/components/empty-state';
 import { cn } from '@/lib/utils';
@@ -115,7 +115,7 @@ export default function Catalogue({
                                 /* La grille est longue : les cartes du bas
                                    apparaissent quand on les atteint. */
                                 revele
-                                style={cascade(index % 4)}
+                                delay={(index % 4) * 45}
                             />
                         ))}
                     </div>
@@ -151,8 +151,8 @@ function Pastille({
             className={cn(
                 'vitrine-libelle border px-4 py-2 text-[11px] transition-[background-color,color,border-color,transform] duration-150 ease-out active:scale-[0.97]',
                 active
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground',
+                    ? 'border-[var(--vitrine-encre)] bg-[var(--vitrine-encre)] text-[var(--vitrine-papier)]'
+                    : 'border-[var(--vitrine-trait)] text-[var(--vitrine-encre)]/60 hover:border-[var(--vitrine-encre)] hover:text-[var(--vitrine-encre)]',
             )}
         >
             {children}

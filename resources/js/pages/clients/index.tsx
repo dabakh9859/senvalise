@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { DataList, TileHeader } from '@/components/data-list';
@@ -186,9 +186,12 @@ export default function ClientsIndex({
                             header: 'Client',
                             cell: (customer) => (
                                 <>
-                                    <span className="font-medium">
+                                    <Link
+                                        href={`/clients/${customer.id}`}
+                                        className="font-medium hover:underline"
+                                    >
                                         {customer.displayName}
-                                    </span>
+                                    </Link>
                                     <span className="block text-xs text-muted-foreground">
                                         {customer.type === 'entreprise'
                                             ? 'Entreprise'
@@ -244,6 +247,7 @@ export default function ClientsIndex({
                             ),
                         },
                     ]}
+                    tileHref={(customer) => `/clients/${customer.id}`}
                     tile={(customer) => (
                         <div className="space-y-2">
                             <TileHeader
@@ -273,7 +277,10 @@ export default function ClientsIndex({
                                 {customer.isActive ? (
                                     <span />
                                 ) : (
-                                    <StatusBadge label="Inactif" tone="neutral" />
+                                    <StatusBadge
+                                        label="Inactif"
+                                        tone="neutral"
+                                    />
                                 )}
                                 <div className="flex gap-1">
                                     {actions(customer)}

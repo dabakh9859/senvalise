@@ -6,10 +6,10 @@ import {
     ShieldCheck,
     Wallet,
 } from 'lucide-react';
+import { Cascade, Palier } from '@/components/boutique/mouvement';
 import { ProductCard } from '@/components/boutique/product-card';
 import type { ProductCardData } from '@/components/boutique/product-card';
 import {
-    cascade,
     Section,
     SectionHeader,
     ShopButton,
@@ -84,10 +84,10 @@ export default function Coffre({
             <Head title="Le coffre" />
 
             {/* ------------------------------------------------ Promesse */}
-            <section className="border-b bg-neutral-950 text-white">
+            <section className="border-b border-[var(--vitrine-trait)] bg-[var(--vitrine-encre)] text-white">
                 <div className="mx-auto max-w-[1600px] px-4 py-16 sm:py-24">
                     <div className="max-w-2xl space-y-6">
-                        <span className="anim-entree flex size-12 items-center justify-center bg-blue-700">
+                        <span className="anim-entree flex size-12 items-center justify-center bg-[var(--vitrine-terre)]">
                             <PiggyBank className="size-6" />
                         </span>
                         <p className="vitrine-surtitre anim-entree text-white/70">
@@ -160,41 +160,54 @@ export default function Coffre({
                         }
                     />
 
-                    <div className="mt-8 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
-                        {mesCoffres.map((coffre, index) => (
-                            <Link
+                    <Cascade
+                        pas={0.05}
+                        className="mt-8 grid gap-px bg-[var(--vitrine-trait)] sm:grid-cols-2 lg:grid-cols-3"
+                    >
+                        {mesCoffres.map((coffre) => (
+                            /*
+                             * Le `Palier` porte le fond et le survol, le lien
+                             * porte le contenu. Il faut les deux : le fond doit
+                             * appartenir à l'enfant direct de la grille, sinon
+                             * les filets d'un pixel qui séparent les cases
+                             * disparaissent.
+                             */
+                            <Palier
                                 key={coffre.id}
-                                href="/boutique/espace/coffres"
-                                style={cascade(index)}
-                                className="anim-revele space-y-3 bg-background p-5 transition-colors hover:bg-accent"
+                                className="bg-[var(--vitrine-papier)] transition-colors hover:bg-[var(--vitrine-sable)]"
                             >
-                                <p className="flex items-baseline justify-between gap-3">
-                                    <span className="vitrine-libelle text-xs">
-                                        {coffre.label}
+                                <Link
+                                    href="/boutique/espace/coffres"
+                                    className="block h-full space-y-3 p-5"
+                                >
+                                    <p className="flex items-baseline justify-between gap-3">
+                                        <span className="vitrine-libelle text-xs">
+                                            {coffre.label}
+                                        </span>
+                                        <span className="text-xs text-[var(--vitrine-encre)]/60">
+                                            {coffre.statusLabel}
+                                        </span>
+                                    </p>
+                                    <span className="block h-2 w-full overflow-hidden bg-[var(--vitrine-sable)]">
+                                        <span
+                                            className="anim-barre-h block h-full bg-[var(--vitrine-terre)]"
+                                            style={{
+                                                width: `${Math.max(coffre.progress, 2)}%`,
+                                            }}
+                                        />
                                     </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {coffre.statusLabel}
-                                    </span>
-                                </p>
-                                <span className="block h-2 w-full overflow-hidden bg-muted">
-                                    <span
-                                        className="anim-barre-h block h-full bg-blue-700"
-                                        style={{
-                                            width: `${Math.max(coffre.progress, 2)}%`,
-                                        }}
-                                    />
-                                </span>
-                                <p className="flex items-baseline justify-between gap-3 tabular-nums">
-                                    <span className="text-lg font-semibold">
-                                        {money(coffre.saved)}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                        sur {money(coffre.target)}
-                                    </span>
-                                </p>
-                            </Link>
+                                    <p className="flex items-baseline justify-between gap-3 tabular-nums">
+                                        <span className="text-lg font-semibold">
+                                            {money(coffre.saved)}
+                                        </span>
+                                        <span className="text-sm text-[var(--vitrine-encre)]/60">
+                                            sur {money(coffre.target)}
+                                        </span>
+                                    </p>
+                                </Link>
+                            </Palier>
                         ))}
-                    </div>
+                    </Cascade>
                 </Section>
             ) : null}
 
@@ -206,46 +219,52 @@ export default function Coffre({
                     title="Comment ça marche"
                 />
 
-                <ol className="mt-10 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
+                <Cascade
+                    pas={0.06}
+                    balise="ol"
+                    className="mt-10 grid gap-px bg-[var(--vitrine-trait)] sm:grid-cols-2 lg:grid-cols-4"
+                >
                     {ETAPES.map((etape, index) => (
-                        <li
+                        <Palier
                             key={etape.titre}
-                            style={cascade(index)}
-                            className="anim-revele space-y-3 bg-background p-6"
+                            balise="li"
+                            className="space-y-3 bg-[var(--vitrine-papier)] p-6"
                         >
-                            <span className="vitrine-titre block text-3xl text-muted-foreground/30 tabular-nums">
+                            <span className="vitrine-titre block text-3xl text-[var(--vitrine-encre)]/30 tabular-nums">
                                 0{index + 1}
                             </span>
                             <p className="vitrine-libelle text-xs">
                                 {etape.titre}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-[var(--vitrine-encre)]/60">
                                 {etape.texte}
                             </p>
-                        </li>
+                        </Palier>
                     ))}
-                </ol>
+                </Cascade>
             </Section>
 
             {/* ------------------------------------------------ Garanties */}
-            <section className="border-y bg-muted/30">
-                <div className="mx-auto grid max-w-[1600px] gap-px bg-border lg:grid-cols-3">
-                    {GARANTIES.map((garantie, index) => (
-                        <div
+            <section className="border-y bg-[var(--vitrine-sable)]">
+                <Cascade
+                    pas={0.07}
+                    className="mx-auto grid max-w-[1600px] gap-px bg-[var(--vitrine-trait)] lg:grid-cols-3"
+                >
+                    {GARANTIES.map((garantie) => (
+                        <Palier
                             key={garantie.titre}
-                            style={cascade(index)}
-                            className="anim-revele space-y-2 bg-background p-8"
+                            className="space-y-2 bg-[var(--vitrine-papier)] p-8"
                         >
-                            <garantie.icon className="size-5 text-blue-700 dark:text-blue-400" />
+                            <garantie.icon className="size-5 text-[var(--vitrine-terre)]" />
                             <p className="vitrine-libelle text-xs">
                                 {garantie.titre}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-[var(--vitrine-encre)]/60">
                                 {garantie.texte}
                             </p>
-                        </div>
+                        </Palier>
                     ))}
-                </div>
+                </Cascade>
             </section>
 
             {/* ------------------------------------------------ Suggestions */}
@@ -263,7 +282,7 @@ export default function Coffre({
                                 key={produit.id}
                                 product={produit}
                                 revele
-                                style={cascade(index)}
+                                delay={index * 45}
                             />
                         ))}
                     </div>
@@ -276,7 +295,7 @@ export default function Coffre({
                     <h2 className="vitrine-titre text-2xl sm:text-3xl">
                         Prêt à commencer&nbsp;?
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-[var(--vitrine-encre)]/60">
                         Ouvrez votre coffre en ligne, puis passez en boutique
                         faire votre premier versement. Il n’y a pas de montant
                         minimum.

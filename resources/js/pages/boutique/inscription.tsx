@@ -44,7 +44,7 @@ export default function Inscription() {
                         <h1 className="text-xl font-semibold tracking-tight">
                             Créer mon compte
                         </h1>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-[var(--vitrine-encre)]/60">
                             Pour suivre vos commandes et ouvrir un coffre.
                         </p>
                     </div>
@@ -151,7 +151,7 @@ export default function Inscription() {
                         <span>
                             Je souhaite recevoir les nouveautés et promotions
                             sur WhatsApp
-                            <span className="block text-xs text-muted-foreground">
+                            <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                 Vous pourrez vous désinscrire à tout moment en
                                 répondant « stop ».
                             </span>
@@ -170,11 +170,11 @@ export default function Inscription() {
                         Créer mon compte
                     </Button>
 
-                    <p className="text-center text-sm text-muted-foreground">
+                    <p className="text-center text-sm text-[var(--vitrine-encre)]/60">
                         Déjà client ?{' '}
                         <Link
                             href="/boutique/connexion"
-                            className="font-medium text-foreground underline underline-offset-4"
+                            className="font-medium text-[var(--vitrine-encre)] underline underline-offset-4"
                         >
                             Se connecter
                         </Link>

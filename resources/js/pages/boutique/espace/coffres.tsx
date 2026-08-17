@@ -129,14 +129,14 @@ export default function EspaceCoffres({
 
                 {vaults.length === 0 ? (
                     <div className="anim-entree space-y-4 border border-dashed p-6 text-center">
-                        <span className="mx-auto flex size-12 items-center justify-center bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        <span className="mx-auto flex size-12 items-center justify-center bg-[var(--vitrine-terre)]/10 text-[var(--vitrine-terre)]">
                             <PiggyBank className="size-6" />
                         </span>
                         <div className="space-y-1">
                             <p className="font-medium">
                                 Achetez à votre rythme
                             </p>
-                            <p className="mx-auto max-w-md text-sm text-muted-foreground">
+                            <p className="mx-auto max-w-md text-sm text-[var(--vitrine-encre)]/60">
                                 Ouvrez un coffre, passez en boutique verser ce
                                 que vous pouvez quand vous le pouvez, et
                                 commandez le jour où l’objectif est atteint.
@@ -163,7 +163,7 @@ export default function EspaceCoffres({
                                             <p className="font-medium">
                                                 {vault.label}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-xs text-[var(--vitrine-encre)]/60">
                                                 {vault.reference}
                                                 {vault.article
                                                     ? ` · ${vault.article}`
@@ -181,18 +181,18 @@ export default function EspaceCoffres({
                                     <div className="flex flex-wrap items-baseline justify-between gap-3">
                                         <p className="text-lg font-semibold tabular-nums">
                                             {money(vault.saved)}
-                                            <span className="ml-1 text-sm font-normal text-muted-foreground">
+                                            <span className="ml-1 text-sm font-normal text-[var(--vitrine-encre)]/60">
                                                 sur {money(vault.target)}
                                             </span>
                                         </p>
                                         {vault.remaining > 0 ? (
-                                            <p className="text-sm text-muted-foreground tabular-nums">
+                                            <p className="text-sm text-[var(--vitrine-encre)]/60 tabular-nums">
                                                 Reste {money(vault.remaining)}
                                             </p>
                                         ) : null}
                                     </div>
 
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-[var(--vitrine-encre)]/60">
                                         {vault.statusDescription}
                                     </p>
 
@@ -208,7 +208,7 @@ export default function EspaceCoffres({
 
                                 {vault.deposits.length > 0 ? (
                                     <details className="border-t">
-                                        <summary className="cursor-pointer px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                                        <summary className="cursor-pointer px-4 py-2.5 text-sm text-[var(--vitrine-encre)]/60 transition-colors hover:text-[var(--vitrine-encre)]">
                                             Voir mes versements (
                                             {vault.deposits.length})
                                         </summary>
@@ -219,14 +219,14 @@ export default function EspaceCoffres({
                                                     className="flex items-center justify-between gap-3 px-4 py-2"
                                                 >
                                                     <span className="min-w-0">
-                                                        <span className="block text-xs text-muted-foreground">
+                                                        <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                                             {dateTime(
                                                                 deposit.date,
                                                             )}{' '}
                                                             · {deposit.method}
                                                         </span>
                                                         {deposit.note ? (
-                                                            <span className="block text-xs text-muted-foreground">
+                                                            <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                                                 {deposit.note}
                                                             </span>
                                                         ) : null}
@@ -239,7 +239,7 @@ export default function EspaceCoffres({
                                         </ul>
                                     </details>
                                 ) : (
-                                    <p className="border-t px-4 py-2.5 text-xs text-muted-foreground">
+                                    <p className="border-t px-4 py-2.5 text-xs text-[var(--vitrine-encre)]/60">
                                         Aucun versement pour l’instant. Passez
                                         en boutique pour alimenter ce coffre.
                                     </p>
@@ -360,7 +360,7 @@ export default function EspaceCoffres({
                             />
                         </div>
 
-                        <p className="bg-muted px-3 py-2 text-xs text-muted-foreground">
+                        <p className="bg-[var(--vitrine-sable)] px-3 py-2 text-xs text-[var(--vitrine-encre)]/60">
                             Les versements se font en boutique, en espèces,
                             Wave, Orange Money ou Free Money. Chaque versement
                             est enregistré et visible ici.

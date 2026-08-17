@@ -82,6 +82,18 @@ export function dateTime(value: string | null | undefined): string {
     });
 }
 
+/** Heure seule : « 14:30 ». Pour tout ce qui se lit à l'intérieur d'une journée. */
+export function time(value: string | null | undefined): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 /** « aujourd'hui à 14:30 », « hier à 09:12 », sinon la date complète. */
 export function relativeDateTime(value: string | null | undefined): string {
     if (!value) {

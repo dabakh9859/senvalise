@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-import { FilePlus2, FileText, Truck } from 'lucide-react';
+import { FilePlus2, FileText, ShoppingCart, Truck } from 'lucide-react';
+import { useState } from 'react';
 import { DataList, TileHeader } from '@/components/data-list';
 import { DataPagination } from '@/components/data-pagination';
 import { EmptyState } from '@/components/empty-state';
@@ -7,11 +8,19 @@ import { FilterBar, FilterSelect } from '@/components/filter-bar';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Comptoir } from '@/components/vente/comptoir';
 import { useFilters } from '@/hooks/use-filters';
 import { date, money } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Option, Paginated, StatusTone } from '@/types';
+import type { IdOption, Option, Paginated, StatusTone } from '@/types';
 
 type DocumentRow = {
     id: number;
@@ -31,6 +40,20 @@ type DocumentRow = {
     author: string | null;
 };
 
+type CatalogueItem = {
+    id: number;
+    label: string;
+    productName: string | null;
+    variantLabel: string;
+    sku: string;
+    barcode: string | null;
+    price: number;
+    stock: number;
+    categoryId: number | null;
+};
+
+type CustomerOption = { id: number; name: string; phone: string | null };
+
 /** Onglets de type : plus lisibles qu'une liste déroulante de filtre. */
 const TABS = [
     { value: '', label: 'Tout' },
@@ -44,13 +67,28 @@ export default function DocumentsIndex({
     filters,
     statuses,
     totals,
+    catalogue,
+    categories,
+    customers,
+    paymentMethods,
+    allowNegativeStock,
+    openCounter,
 }: {
     documents: Paginated<DocumentRow>;
     filters: Record<string, string | undefined>;
     types: Option[];
     statuses: Option[];
     totals: { count: number; total: number; paid: number; due: number };
+    catalogue: CatalogueItem[];
+    categories: IdOption[];
+    customers: CustomerOption[];
+    paymentMethods: Option[];
+    allowNegativeStock: boolean;
+    openCounter: boolean;
 }) {
+    // L'ancienne adresse /vente et le bouton « Encaisser » de l'accueil
+    // arrivent ici avec ?vente=1 : le comptoir est alors déjà ouvert.
+    const [venteOuverte, setVenteOuverte] = useState(openCounter);
     const { values, set, reset, isFiltered } = useFilters('/documents', {
         recherche: filters.recherche ?? '',
         type: filters.type ?? '',
@@ -61,14 +99,52 @@ export default function DocumentsIndex({
 
     return (
         <>
-            <Head title="Factures & devis" />
+            <Head title="Ventes, factures & devis" />
+
+            <Dialog open={venteOuverte} onOpenChange={setVenteOuverte}>
+                {/*
+                 * Presque plein écran : le comptoir a besoin de la grille du
+                 * catalogue et du panier côte à côte, une fenêtre étroite
+                 * ramènerait le vendeur à faire défiler pour encaisser.
+                 */}
+                {/*
+                 * sm:max-w-[1600px] est indispensable : la classe de base du
+                 * composant pose sm:max-w-lg, et une largeur sans variante ne
+                 * l'emporterait pas au-delà de 640 px.
+                 */}
+                <DialogContent className="flex h-[92svh] w-[98vw] max-w-[98vw] flex-col gap-3 p-4 sm:max-w-[1600px] sm:p-5">
+                    <DialogHeader className="space-y-0.5 text-left">
+                        <DialogTitle className="flex items-center gap-2">
+                            <ShoppingCart className="size-5" />
+                            Nouvelle vente
+                        </DialogTitle>
+                        <DialogDescription>
+                            Scannez ou choisissez les articles. L'encaissement
+                            édite la facture dans la foulée.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <Comptoir
+                        catalogue={catalogue}
+                        categories={categories}
+                        customers={customers}
+                        paymentMethods={paymentMethods}
+                        allowNegativeStock={allowNegativeStock}
+                        onEncaisse={() => setVenteOuverte(false)}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <div className="flex flex-1 flex-col gap-5 p-4">
                 <PageHeader
-                    title="Factures & devis"
-                    description="Créez un devis, transformez-le en facture, puis éditez le bon de livraison."
+                    title="Ventes & factures"
+                    description="Encaissez au comptoir, la facture suit. Les devis et bons de livraison se créent aussi d'ici."
                     actions={
                         <>
+                            <Button onClick={() => setVenteOuverte(true)}>
+                                <ShoppingCart className="size-4" />
+                                Nouvelle vente
+                            </Button>
                             <Button asChild variant="outline">
                                 <Link href="/documents/nouveau?type=devis">
                                     <FilePlus2 className="size-4" />
@@ -81,10 +157,10 @@ export default function DocumentsIndex({
                                     Bon de livraison
                                 </Link>
                             </Button>
-                            <Button asChild>
+                            <Button asChild variant="outline">
                                 <Link href="/documents/nouveau?type=facture">
                                     <FileText className="size-4" />
-                                    Nouvelle facture
+                                    Facture manuelle
                                 </Link>
                             </Button>
                         </>
@@ -171,9 +247,12 @@ export default function DocumentsIndex({
                             header: 'Numéro',
                             cell: (document) => (
                                 <>
-                                    <span className="font-medium">
+                                    <Link
+                                        href={`/documents/${document.id}`}
+                                        className="font-medium hover:underline"
+                                    >
                                         {document.reference}
-                                    </span>
+                                    </Link>
                                     <span className="block text-xs text-muted-foreground">
                                         {document.typeLabel}
                                     </span>
@@ -313,5 +392,5 @@ function echeance(document: DocumentRow): string | null {
 }
 
 DocumentsIndex.layout = {
-    breadcrumbs: [{ title: 'Factures & devis', href: '/documents' }],
+    breadcrumbs: [{ title: 'Ventes & factures', href: '/documents' }],
 };

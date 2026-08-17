@@ -2,52 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PaymentMethod;
-use App\Models\Category;
+use App\Enums\DocumentType;
+use App\Http\Controllers\Concerns\BuildsSaleCounter;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\ProductVariant;
-use App\Models\Setting;
+use App\Services\DocumentService;
 use App\Services\SaleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 use RuntimeException;
 
 /**
- * Caisse boutique.
+ * Vente au comptoir.
  *
- * Le catalogue vendable est envoyé en entier au navigateur au chargement :
- * la recherche et le scan sont alors instantanés, sans aller-retour serveur.
- * C'est ce qui compte devant un client au comptoir.
+ * La vente n'a pas d'ecran a elle : elle s'ouvre en fenetre depuis la liste
+ * des factures et devis, et se referme sur la facture qu'elle vient de
+ * produire. Ce controleur ne rend donc aucune page, il ne fait qu'enregistrer.
  */
 class PosController extends Controller
 {
-    public function __construct(private readonly SaleService $sales) {}
+    use BuildsSaleCounter;
 
-    public function index(): Response
-    {
-        return Inertia::render('caisse/index', [
-            'catalogue' => $this->catalogue(),
-            'categories' => Category::active()->orderBy('position')->get(['id', 'name']),
-            /*
-             * Client tout juste créé depuis la caisse. Il transite par la
-             * session plutôt que par le flash Inertia : le flash arrive dans
-             * un évènement, pas dans les props, et c'est bien d'une prop dont
-             * l'écran a besoin pour se présélectionner.
-             */
-            'nouveauClientId' => session('nouveauClient'),
-            'customers' => Customer::active()->orderBy('name')->limit(500)->get(['id', 'name', 'phone'])
-                ->map(fn (Customer $c) => [
-                    'id' => $c->id,
-                    'name' => $c->name,
-                    'phone' => $c->phone,
-                ]),
-            'paymentMethods' => PaymentMethod::options(),
-            'allowNegativeStock' => (bool) Setting::get('allow_negative_stock', false),
-        ]);
-    }
+    public function __construct(
+        private readonly SaleService $sales,
+        private readonly DocumentService $documents,
+    ) {}
 
     /**
      * Recherche serveur — filet de sécurité si un article vient d'être créé
@@ -67,19 +48,19 @@ class PosController extends Controller
             ->search($term)
             ->limit(20)
             ->get()
-            ->map(fn (ProductVariant $v) => $this->toCatalogueRow($v))
+            ->map(fn (ProductVariant $v) => $this->saleCatalogueRow($v))
             ->all();
 
         return response()->json(['results' => $results]);
     }
 
     /**
-     * Crée un client sans quitter la caisse.
+     * Crée un client sans quitter la fenêtre de vente.
      *
-     * Un client arrive au comptoir et veut une facture : l'envoyer sur l'écran
-     * « Clients » ferait perdre le panier en cours et ferait attendre tout le
-     * monde. Le strict nécessaire suffit ici — nom et téléphone —, la fiche se
-     * complète plus tard.
+     * Un client arrive au comptoir et veut une facture à son nom : l'envoyer
+     * sur l'écran « Clients » ferait perdre le panier en cours et ferait
+     * attendre tout le monde. Le strict nécessaire suffit ici — nom et
+     * téléphone —, la fiche se complète plus tard.
      */
     public function storeCustomer(Request $request): RedirectResponse
     {
@@ -136,15 +117,26 @@ class PosController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'note' => $validated['note'] ?? null,
             ]);
+
+            // Une vente vaut facture. La piece est etablie dans la foulee et
+            // c'est elle qui s'affiche : au comptoir, ce que le client attend
+            // apres avoir paye, c'est un papier a emporter.
+            $document = $this->documents->fromSale($sale, DocumentType::Facture);
         } catch (RuntimeException $e) {
             $this->toast($e->getMessage(), 'error');
 
             return back();
         }
 
-        $this->toast("Vente {$sale->reference} enregistrée.");
+        ActivityLog::record(
+            'cree',
+            "Vente {$sale->reference} encaissée, facture {$document->reference} générée",
+            $document,
+        );
 
-        return to_route('sales.show', $sale);
+        $this->toast("Vente {$sale->reference} enregistrée, facture {$document->reference} générée.");
+
+        return to_route('documents.show', $document);
     }
 
     /**
@@ -168,35 +160,5 @@ class PosController extends Controller
 
                 return $stored !== '' && str_ends_with($stored, $tail);
             });
-    }
-
-    /** @return array<int, array<string, mixed>> */
-    protected function catalogue(): array
-    {
-        return ProductVariant::query()
-            ->with('product:id,name,category_id,is_active')
-            ->active()
-            ->whereHas('product', fn ($p) => $p->where('is_active', true))
-            ->orderBy('product_id')
-            ->orderBy('position')
-            ->get()
-            ->map(fn (ProductVariant $v) => $this->toCatalogueRow($v))
-            ->all();
-    }
-
-    /** @return array<string, mixed> */
-    protected function toCatalogueRow(ProductVariant $variant): array
-    {
-        return [
-            'id' => $variant->id,
-            'label' => $variant->fullLabel(),
-            'productName' => $variant->product?->name,
-            'variantLabel' => $variant->variant_label,
-            'sku' => $variant->sku,
-            'barcode' => $variant->barcode,
-            'price' => $variant->selling_price,
-            'stock' => $variant->stock_quantity,
-            'categoryId' => $variant->product?->category_id,
-        ];
     }
 }

@@ -1,0 +1,55 @@
+name: senvalise
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      UID: ${DOCKER_UID:-1000}
+      GID: ${DOCKER_GID:-1000}
+  image: senvalise-app
+  volumes:
+    - .:/var/www/html
+  init: true
+  # Docker rootless (le cas ici) : l'uid 0 du conteneur est mappé sur l'utilisateur
+  # de l'hôte, c'est donc lui qui écrit dans le volume monté avec les bons droits.
+  # Pour un Docker classique (démon root), passer DOCKER_USER=1000:1000 afin que
+  # vendor/ et node_modules/ n'appartiennent pas à root côté hôte.
+  user: ${DOCKER_USER:-0:0}
+
+services:
+  # Amorçage one-shot : .env, composer, clé, migrations, seeds, npm.
+  setup:
+    <<: *app
+    command: ['bash', 'docker/setup.sh']
+    environment:
+      # SEED_DEMO=1 pour charger le catalogue de démonstration à la 1re création.
+      SEED_DEMO: ${SEED_DEMO:-0}
+
+  app:
+    <<: *app
+    command: ['php', 'artisan', 'serve', '--host=0.0.0.0', '--port=8000']
+    ports:
+      - '8000:8000'
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  # Serveur de développement Vite (HMR). Le conteneur embarque aussi PHP :
+  # les plugins Wayfinder et Inertia appellent `php artisan` à chaud.
+  vite:
+    <<: *app
+    command: ['npm', 'run', 'dev']
+    ports:
+      - '5173:5173'
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  # QUEUE_CONNECTION=database : sans worker, les jobs (SendMessageJob) dorment.
+  queue:
+    <<: *app
+    command: ['php', 'artisan', 'queue:listen', '--tries=3', '--timeout=90']
+    depends_on:
+      setup:
+        condition: service_completed_successfully

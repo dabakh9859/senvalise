@@ -39,7 +39,7 @@ export default function Connexion() {
                         <h1 className="text-xl font-semibold tracking-tight">
                             Bon retour
                         </h1>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-[var(--vitrine-encre)]/60">
                             Retrouvez vos commandes et vos coffres.
                         </p>
                     </div>
@@ -102,17 +102,17 @@ export default function Connexion() {
                         Se connecter
                     </Button>
 
-                    <p className="text-center text-sm text-muted-foreground">
+                    <p className="text-center text-sm text-[var(--vitrine-encre)]/60">
                         Pas encore de compte ?{' '}
                         <Link
                             href="/boutique/inscription"
-                            className="font-medium text-foreground underline underline-offset-4"
+                            className="font-medium text-[var(--vitrine-encre)] underline underline-offset-4"
                         >
                             Créer un compte
                         </Link>
                     </p>
 
-                    <p className="border-t pt-4 text-center text-xs text-muted-foreground">
+                    <p className="border-t pt-4 text-center text-xs text-[var(--vitrine-encre)]/60">
                         Vous pouvez aussi{' '}
                         <Link
                             href="/boutique/catalogue"

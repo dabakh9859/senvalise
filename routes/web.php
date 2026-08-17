@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ArrivalController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\CashMovementController;
+use App\Http\Controllers\CashSessionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ShopSettingsController;
 use App\Http\Controllers\StockController;
@@ -50,32 +53,73 @@ Route::middleware(['auth:web', 'verified'])->group(function () {
     | Le quotidien — gérant et vendeur
     |--------------------------------------------------------------------------
     */
-    Route::get('caisse', [PosController::class, 'index'])->name('pos.index');
-    Route::get('caisse/recherche', [PosController::class, 'search'])->name('pos.search');
-    Route::post('caisse/vente', [PosController::class, 'store'])->name('pos.store');
-    // Créer un client sans quitter la caisse : sortir de l'écran ferait
-    // perdre le panier en cours et attendre tout le monde.
-    Route::post('caisse/client', [PosController::class, 'storeCustomer'])->name('pos.customer');
+    /*
+    | « Caisse » plus bas est le tiroir-caisse : ouverture, achats de la
+    | journee, fermeture. A ne pas confondre avec la vente elle-meme, qui vit
+    | desormais dans la fenetre ouverte depuis « Factures & devis ».
+    */
+    // La vente n'a plus d'ecran a elle : elle s'ouvre en fenetre au-dessus des
+    // factures et devis. L'ancienne adresse mene donc a cette liste, comptoir
+    // deja ouvert, pour que les liens et les habitudes continuent de marcher.
+    Route::redirect('vente', '/documents?vente=1')->name('pos.index');
+    Route::get('vente/recherche', [PosController::class, 'search'])->name('pos.search');
+    Route::post('vente/enregistrer', [PosController::class, 'store'])->name('pos.store');
+    // Créer un client sans quitter l'écran de vente : en sortir ferait perdre
+    // le panier en cours et attendre tout le monde.
+    Route::post('vente/client', [PosController::class, 'storeCustomer'])->name('pos.customer');
 
     /*
     |--------------------------------------------------------------------------
-    | Boutique en ligne
+    | Caisse : ouverture, achats du jour, fermeture
     |--------------------------------------------------------------------------
-    | Le vendeur prepare les commandes et encaisse les versements de coffre :
-    | ces ecrans ne sont pas reserves au gerant.
+    | Ouverte aux deux roles. C'est le vendeur qui tient le tiroir, donc c'est
+    | lui qui l'ouvre le matin et le compte le soir ; supprimer un mouvement
+    | reste au gerant, parce que cela deplace l'ecart d'une caisse deja fermee.
     */
-    Route::get('commandes', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::post('commandes/{order}/etape', [OrderController::class, 'advance'])->name('orders.advance');
-    Route::post('commandes/{order}/annuler', [OrderController::class, 'cancel'])
-        ->middleware('gerant')->name('orders.cancel');
+    Route::get('caisse', [CashSessionController::class, 'index'])->name('cash.index');
+    Route::post('caisse/ouvrir', [CashSessionController::class, 'open'])->name('cash.open');
+    Route::post('caisse/{session}/fermer', [CashSessionController::class, 'close'])->name('cash.close');
+    Route::get('caisse/{session}', [CashSessionController::class, 'show'])->name('cash.show');
 
-    Route::get('coffres', [VaultController::class, 'index'])->name('vaults.index');
-    Route::get('coffres/{vault}', [VaultController::class, 'show'])->name('vaults.show');
-    Route::post('coffres', [VaultController::class, 'store'])->name('vaults.store');
-    Route::post('coffres/{vault}/versement', [VaultController::class, 'deposit'])->name('vaults.deposit');
-    Route::post('coffres/{vault}/rembourser', [VaultController::class, 'refund'])
-        ->middleware('gerant')->name('vaults.refund');
+    Route::get('achats', [CashMovementController::class, 'index'])->name('cash-movements.index');
+    Route::post('achats', [CashMovementController::class, 'store'])->name('cash-movements.store');
+    Route::delete('achats/{movement}', [CashMovementController::class, 'destroy'])
+        ->middleware('gerant')->name('cash-movements.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retours client
+    |--------------------------------------------------------------------------
+    | « nouveau » et « recherche-vente » passent avant {return}, sinon le mot
+    | serait pris pour un identifiant.
+    */
+    Route::get('retours', [ReturnController::class, 'index'])->name('returns.index');
+    Route::get('retours/nouveau', [ReturnController::class, 'create'])->name('returns.create');
+    Route::get('retours/recherche-vente', [ReturnController::class, 'lookup'])->name('returns.lookup');
+    Route::post('retours', [ReturnController::class, 'store'])->name('returns.store');
+    Route::get('retours/{return}', [ReturnController::class, 'show'])->name('returns.show');
+    Route::post('retours/{return}/avoir-utilise', [ReturnController::class, 'consume'])->name('returns.consume');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Boutique en ligne — gerant uniquement
+    |--------------------------------------------------------------------------
+    | Commandes et coffres engagent l'argent du client sur la duree : un
+    | versement encaisse ou une commande avancee a tort se rattrape mal. Le
+    | vendeur tient le comptoir, le gerant tient la boutique en ligne.
+    */
+    Route::middleware('gerant')->group(function () {
+        Route::get('commandes', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('commandes/{order}/etape', [OrderController::class, 'advance'])->name('orders.advance');
+        Route::post('commandes/{order}/annuler', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+        Route::get('coffres', [VaultController::class, 'index'])->name('vaults.index');
+        Route::get('coffres/{vault}', [VaultController::class, 'show'])->name('vaults.show');
+        Route::post('coffres', [VaultController::class, 'store'])->name('vaults.store');
+        Route::post('coffres/{vault}/versement', [VaultController::class, 'deposit'])->name('vaults.deposit');
+        Route::post('coffres/{vault}/rembourser', [VaultController::class, 'refund'])->name('vaults.refund');
+    });
 
     Route::get('ventes', [SaleController::class, 'index'])->name('sales.index');
     Route::get('ventes/{sale}', [SaleController::class, 'show'])->name('sales.show');
@@ -109,7 +153,10 @@ Route::middleware(['auth:web', 'verified'])->group(function () {
     Route::post('produits/{product}/publication', [ProductController::class, 'togglePublication'])
         ->middleware('gerant')->name('products.publication');
 
-    Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+    // Le catalogue porte desormais les quantites : « Stock » et « Produits »
+    // etaient deux lectures de la meme marchandise, et corriger une quantite
+    // obligeait a changer d'ecran pour retrouver le produit.
+    Route::redirect('stock', '/produits')->name('stock.index');
     Route::get('stock/mouvements', [StockController::class, 'movements'])->name('stock.movements');
     Route::get('stock/inventaire', [StockController::class, 'inventory'])
         ->middleware('gerant')->name('stock.inventory');
@@ -129,7 +176,7 @@ Route::middleware(['auth:web', 'verified'])->group(function () {
     Route::resource('clients', CustomerController::class)
         ->parameters(['clients' => 'customer'])
         ->names('customers')
-        ->only(['index', 'store', 'update', 'destroy']);
+        ->only(['index', 'show', 'store', 'update', 'destroy']);
 
     Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('documents/nouveau', [DocumentController::class, 'create'])->name('documents.create');

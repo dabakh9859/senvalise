@@ -22,7 +22,7 @@ export function EspaceNav() {
     const { url } = usePage();
 
     return (
-        <nav className="mb-6 flex gap-1 overflow-x-auto bg-muted/60 p-1">
+        <nav className="mb-6 flex gap-1 overflow-x-auto bg-[var(--vitrine-sable)] p-1">
             {ONGLETS.map((onglet) => {
                 // « /espace » est le préfixe de tous les autres : on l'égalise
                 // strictement, sinon l'aperçu resterait toujours actif.
@@ -38,8 +38,8 @@ export function EspaceNav() {
                         className={cn(
                             'flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.97]',
                             active
-                                ? 'bg-background font-medium shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground',
+                                ? 'bg-[var(--vitrine-papier)] font-medium shadow-sm'
+                                : 'text-[var(--vitrine-encre)]/60 hover:text-[var(--vitrine-encre)]',
                         )}
                     >
                         <onglet.icon className="size-4" />
@@ -51,7 +51,7 @@ export function EspaceNav() {
             <button
                 type="button"
                 onClick={() => router.post('/boutique/deconnexion')}
-                className="ml-auto flex shrink-0 items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-destructive"
+                className="ml-auto flex shrink-0 items-center gap-2 px-3 py-2 text-sm text-[var(--vitrine-encre)]/60 transition-colors hover:text-destructive"
             >
                 <LogOut className="size-4" />
                 Se déconnecter
@@ -63,9 +63,9 @@ export function EspaceNav() {
 /** Barre d'avancement d'un coffre. */
 export function VaultProgress({ progress }: { progress: number }) {
     return (
-        <span className="block h-2 w-full overflow-hidden bg-muted">
+        <span className="block h-2 w-full overflow-hidden bg-[var(--vitrine-sable)]">
             <span
-                className="anim-barre-h block h-full bg-blue-600 transition-[width] duration-500 ease-out"
+                className="anim-barre-h block h-full bg-[var(--vitrine-terre)] transition-[width] duration-500 ease-out"
                 style={{ width: `${Math.max(progress, 2)}%` }}
             />
         </span>

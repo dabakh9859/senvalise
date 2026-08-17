@@ -66,7 +66,7 @@ export default function EspaceCommandes({
                                         <p className="font-medium">
                                             {order.reference}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-[var(--vitrine-encre)]/60">
                                             {dateTime(order.placedAt)}
                                         </p>
                                     </div>
@@ -87,7 +87,7 @@ export default function EspaceCommandes({
                                             key={item.designation}
                                             className="flex justify-between gap-3"
                                         >
-                                            <span className="min-w-0 truncate text-muted-foreground">
+                                            <span className="min-w-0 truncate text-[var(--vitrine-encre)]/60">
                                                 {item.quantity} ×{' '}
                                                 {item.designation}
                                             </span>
@@ -99,7 +99,7 @@ export default function EspaceCommandes({
                                 </ul>
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3">
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-xs text-[var(--vitrine-encre)]/60">
                                         {count(order.itemCount)} article
                                         {order.itemCount > 1 ? 's' : ''}
                                     </span>
@@ -119,7 +119,7 @@ export default function EspaceCommandes({
                                                         },
                                                     )
                                                 }
-                                                className="text-muted-foreground hover:text-destructive"
+                                                className="text-[var(--vitrine-encre)]/60 hover:text-destructive"
                                             >
                                                 Annuler
                                             </Button>

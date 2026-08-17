@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Models\CashSession;
 use App\Models\Document;
 use App\Models\ProductVariant;
 use App\Models\Sale;
@@ -45,6 +46,7 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'isGerant' => $isGerant,
+            'quickActions' => $this->quickActions($isGerant),
             'period' => [
                 'preset' => $preset,
                 'label' => $this->periodLabel($from, $to),
@@ -71,6 +73,124 @@ class DashboardController extends Controller
             'heatmap' => $this->heatmap($from, $to),
             'lowStock' => $this->lowStock(),
         ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accès rapides
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Les gestes que l'on vient faire ici sans reflechir, ranges par frequence
+     * reelle au comptoir et non par importance dans l'organigramme.
+     *
+     * Le vendeur ne voit que ce qu'il a le droit d'ouvrir : proposer un bouton
+     * qui mene a un 403 est pire que ne rien proposer.
+     *
+     * L'icone est envoyee par son nom et resolue cote React, ou vit la
+     * bibliotheque d'icones.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function quickActions(bool $isGerant): array
+    {
+        $cashOpen = CashSession::current() !== null;
+
+        $actions = [
+            [
+                'key' => 'vente',
+                'label' => 'Encaisser une vente',
+                'hint' => 'Comptoir et facture dans la foulée',
+                'href' => '/documents?vente=1',
+                'icon' => 'shopping-cart',
+                'primary' => true,
+            ],
+            [
+                'key' => 'caisse',
+                'label' => $cashOpen ? 'Voir la caisse' : 'Ouvrir la caisse',
+                'hint' => $cashOpen ? 'Caisse ouverte' : 'Aucune caisse ouverte',
+                'href' => '/caisse',
+                'icon' => 'wallet',
+                'primary' => ! $cashOpen,
+            ],
+            [
+                'key' => 'achat',
+                'label' => 'Saisir un achat',
+                'hint' => 'Dépense ou marchandise du jour',
+                'href' => '/achats',
+                'icon' => 'banknote',
+            ],
+            [
+                'key' => 'retour',
+                'label' => 'Enregistrer un retour',
+                'hint' => 'Marchandise rendue par un client',
+                'href' => '/retours/nouveau',
+                'icon' => 'rotate-ccw',
+            ],
+            [
+                'key' => 'client',
+                'label' => 'Fiches clients',
+                'hint' => 'Historique, impayés, avoirs',
+                'href' => '/clients',
+                'icon' => 'users',
+            ],
+            [
+                'key' => 'facture',
+                'label' => 'Devis et documents',
+                'hint' => 'Devis, facture ou bon de livraison',
+                'href' => '/documents/nouveau',
+                'icon' => 'file-text',
+            ],
+            [
+                'key' => 'stock',
+                'label' => 'Consulter le stock',
+                'hint' => 'Quantités et alertes',
+                'href' => '/stock',
+                'icon' => 'warehouse',
+            ],
+        ];
+
+        if ($isGerant) {
+            $actions[] = [
+                'key' => 'produit',
+                'label' => 'Ajouter un produit',
+                'hint' => 'Nouvelle référence au catalogue',
+                'href' => '/produits/nouveau',
+                'icon' => 'package-plus',
+            ];
+            $actions[] = [
+                'key' => 'arrivage',
+                'label' => 'Saisir un arrivage',
+                'hint' => 'Réception fournisseur',
+                'href' => '/arrivages/nouveau',
+                'icon' => 'truck',
+            ];
+            $actions[] = [
+                'key' => 'commandes',
+                'label' => 'Commandes en ligne',
+                'hint' => 'Préparation et suivi',
+                'href' => '/commandes',
+                'icon' => 'package-check',
+            ];
+            $actions[] = [
+                'key' => 'rapports',
+                'label' => 'Rapports',
+                'hint' => 'Marges, exports comptables',
+                'href' => '/rapports',
+                'icon' => 'bar-chart',
+            ];
+        } else {
+            $actions[] = [
+                'key' => 'etiquettes',
+                'label' => 'Imprimer des étiquettes',
+                'hint' => 'Planche de codes-barres',
+                'href' => '/etiquettes',
+                'icon' => 'qr-code',
+            ];
+        }
+
+        return $actions;
     }
 
     /*

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Http\Controllers\Concerns\BuildsSaleCounter;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Document;
@@ -18,13 +19,23 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
 
+/**
+ * Devis, factures et bons de livraison.
+ *
+ * C'est aussi l'ecran de vente : le comptoir s'ouvre en fenetre par-dessus
+ * cette liste. Vendre et facturer etant le meme geste, les separer obligeait a
+ * refaire la saisie une seconde fois pour editer la piece.
+ */
 class DocumentController extends Controller
 {
+    use BuildsSaleCounter;
+
     public function __construct(private readonly DocumentService $documents) {}
 
     public function index(Request $request): Response
@@ -71,10 +82,14 @@ class DocumentController extends Controller
             ]);
 
         return Inertia::render('documents/index', [
+            ...$this->saleCounterProps(),
             'documents' => $documents,
             'filters' => $request->only(['recherche', 'type', 'statut', 'du', 'au']),
             'types' => DocumentType::options(),
             'statuses' => DocumentStatus::options(),
+            // Ouvre le comptoir des l'arrivee : c'est ce que fait le bouton
+            // « Encaisser une vente » de l'accueil et l'ancienne adresse /vente.
+            'openCounter' => $request->boolean('vente'),
             'totals' => [
                 'count' => (int) ($totals->count ?? 0),
                 'total' => (int) ($totals->total ?? 0),
@@ -293,17 +308,52 @@ class DocumentController extends Controller
     public function pdf(Document $document): HttpResponse
     {
         $pdf = Pdf::loadView('print.document', [
-            ...$this->printData($document),
+            ...$this->printData($document, forPdf: true),
             'isPdf' => true,
         ])->setPaper('a4');
+
+        $this->stampPageNumbers($pdf);
 
         $name = str($document->reference)->slug()->upper()->value();
 
         return $pdf->download("{$name}.pdf");
     }
 
+    /**
+     * Écrit « Page X / Y » dans le pied, sur toutes les pages.
+     *
+     * Cela ne peut pas se faire dans le gabarit : dompdf ne connaît le nombre
+     * total de pages qu'une fois la mise en page terminée. On rend donc le
+     * document à la main, puis on dessine le texte sur le canevas — la
+     * position est en points depuis le coin haut gauche d'une A4 (595 x 842),
+     * calée sur la bande de pied du gabarit.
+     *
+     * Une facture d'une seule page n'est pas numérotée : « Page 1 / 1 » est du
+     * bruit.
+     */
+    protected function stampPageNumbers(mixed $pdf): void
+    {
+        $dompdf = $pdf->getDomPDF();
+        $pdf->render();
+
+        $canvas = $dompdf->getCanvas();
+
+        if ($canvas->get_page_count() < 2) {
+            return;
+        }
+
+        $canvas->page_text(
+            x: 282,
+            y: 788,
+            text: 'Page {PAGE_NUM} / {PAGE_COUNT}',
+            font: $dompdf->getFontMetrics()->getFont('DejaVu Sans', 'normal'),
+            size: 6,
+            color: [0.64, 0.67, 0.71],
+        );
+    }
+
     /** @return array<string, mixed> */
-    protected function printData(Document $document): array
+    protected function printData(Document $document, bool $forPdf = false): array
     {
         $document->load(['items.variant:id,sku', 'customer', 'user:id,name']);
 
@@ -318,9 +368,35 @@ class DocumentController extends Controller
                 'address' => Setting::get('shop_address'),
                 'ninea' => Setting::get('shop_ninea'),
                 'rc' => Setting::get('shop_rc'),
+                'logo' => $this->logoSource($forPdf),
             ],
             'taxLabel' => Setting::get('tax_label', 'TVA'),
         ];
+    }
+
+    /**
+     * Où lire le logo de l'enseigne.
+     *
+     * Le navigateur prend l'adresse publique ; dompdf prend le chemin sur le
+     * disque. Lui passer une URL l'obligerait à sortir sur le réseau, ce qui
+     * est désactivé par défaut et ferait une facture sans logo, sans erreur
+     * visible.
+     */
+    protected function logoSource(bool $forPdf): ?string
+    {
+        $path = Setting::get(ShopSettingsController::LOGO_KEY);
+
+        if (blank($path)) {
+            return null;
+        }
+
+        if (! $forPdf) {
+            return ShopSettingsController::logoUrl();
+        }
+
+        $absolute = Storage::disk('public')->path((string) $path);
+
+        return is_file($absolute) ? $absolute : null;
     }
 
     /** @return array{type: string, attributes: array<string, mixed>, lines: array<int, array<string, mixed>>} */

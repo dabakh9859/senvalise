@@ -205,12 +205,34 @@ class DocumentService
             'issue_date' => $sale->sold_at?->toDateString() ?? now()->toDateString(),
             'delivery_date' => $type === DocumentType::BonLivraison ? now()->toDateString() : null,
             'discount' => $sale->discount,
-            'amount_paid' => $sale->amount_paid,
-            'status' => $type === DocumentType::Facture
-                ? DocumentStatus::Paye->value
-                : DocumentStatus::Brouillon->value,
+            // Plafonne au total : en especes le client pose souvent plus que
+            // la somme due et repart avec la monnaie. Reporter le montant pose
+            // tel quel ferait apparaitre un trop-percu sur la facture.
+            'amount_paid' => min($sale->amount_paid, $sale->total),
+            'status' => $this->statusForSale($sale, $type)->value,
             'notes' => "Établi d'après la vente {$sale->reference}.",
         ], $lines);
+    }
+
+    /**
+     * Statut de la facture etablie d'apres une vente.
+     *
+     * Il se lit sur ce qui a ete encaisse, pas sur le type de document : une
+     * vente a credit produit une facture due, pas une facture payee. Ecrire
+     * « paye » sur toutes les factures ferait disparaitre les creances de la
+     * relance et du tableau de bord.
+     */
+    protected function statusForSale(Sale $sale, DocumentType $type): DocumentStatus
+    {
+        if ($type !== DocumentType::Facture) {
+            return DocumentStatus::Brouillon;
+        }
+
+        return match (true) {
+            $sale->total > 0 && $sale->amount_paid >= $sale->total => DocumentStatus::Paye,
+            $sale->amount_paid > 0 => DocumentStatus::PartiellementPaye,
+            default => DocumentStatus::Envoye,
+        };
     }
 
     /** @param  array<string, mixed>  $attributes */

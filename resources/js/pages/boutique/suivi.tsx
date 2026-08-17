@@ -62,20 +62,20 @@ export default function Suivi({ order }: { order: Order }) {
 
             <div className="mx-auto max-w-3xl px-4 py-8">
                 <header className="mb-6 space-y-1">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--vitrine-encre)]/60">
                         Commande {order.reference}
                     </p>
                     <h1 className="text-2xl font-semibold tracking-tight">
                         {order.statusLabel}
                     </h1>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--vitrine-encre)]/60">
                         {order.statusDescription}
                     </p>
                 </header>
 
                 {/* ------------------------------------------ Progression */}
                 {annulee ? (
-                    <div className="flex items-start gap-3 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
+                    <div className="flex items-start gap-3 bg-red-500/10 p-4 text-sm text-red-700">
                         <XCircle className="mt-0.5 size-4 shrink-0" />
                         <span>
                             Cette commande a été annulée.
@@ -104,7 +104,7 @@ export default function Suivi({ order }: { order: Order }) {
                                                 'flex size-7 shrink-0 items-center justify-center transition-colors',
                                                 done
                                                     ? 'bg-emerald-600 text-white'
-                                                    : 'bg-muted text-muted-foreground',
+                                                    : 'bg-[var(--vitrine-sable)] text-[var(--vitrine-encre)]/60',
                                             )}
                                         >
                                             {done ? (
@@ -119,7 +119,7 @@ export default function Suivi({ order }: { order: Order }) {
                                                     'w-0.5 flex-1',
                                                     order.step > etape.step
                                                         ? 'bg-emerald-600'
-                                                        : 'bg-border',
+                                                        : 'bg-[var(--vitrine-trait)]',
                                                 )}
                                             />
                                         ) : null}
@@ -137,12 +137,12 @@ export default function Suivi({ order }: { order: Order }) {
                                                 'text-sm',
                                                 current && 'font-semibold',
                                                 !done &&
-                                                    'text-muted-foreground',
+                                                    'text-[var(--vitrine-encre)]/60',
                                             )}
                                         >
                                             {etape.label}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-[var(--vitrine-encre)]/60">
                                             {horodatage(order, etape.step)}
                                         </p>
                                     </div>
@@ -165,7 +165,7 @@ export default function Suivi({ order }: { order: Order }) {
                                 key={item.designation}
                                 className="flex justify-between gap-3"
                             >
-                                <span className="min-w-0 text-muted-foreground">
+                                <span className="min-w-0 text-[var(--vitrine-encre)]/60">
                                     {item.quantity} × {item.designation}
                                 </span>
                                 <span className="shrink-0 tabular-nums">
@@ -195,12 +195,12 @@ export default function Suivi({ order }: { order: Order }) {
                             </dd>
                         </div>
                         {order.balanceDue > 0 ? (
-                            <p className="pt-1 text-xs text-muted-foreground">
+                            <p className="pt-1 text-xs text-[var(--vitrine-encre)]/60">
                                 À régler à la livraison :{' '}
                                 {money(order.balanceDue)} ({order.paymentLabel})
                             </p>
                         ) : (
-                            <p className="pt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                            <p className="pt-1 text-xs text-emerald-600">
                                 Déjà réglé.
                             </p>
                         )}
@@ -213,15 +213,15 @@ export default function Suivi({ order }: { order: Order }) {
                         Livraison
                     </h2>
                     <p>{order.customerName}</p>
-                    <p className="text-muted-foreground">
+                    <p className="text-[var(--vitrine-encre)]/60">
                         {order.customerPhone}
                     </p>
-                    <p className="text-muted-foreground">
+                    <p className="text-[var(--vitrine-encre)]/60">
                         {order.address}
                         {order.city ? `, ${order.city}` : ''}
                     </p>
                     {order.delayLabel ? (
-                        <p className="text-muted-foreground">
+                        <p className="text-[var(--vitrine-encre)]/60">
                             {order.delayLabel}
                         </p>
                     ) : null}
@@ -243,7 +243,7 @@ export default function Suivi({ order }: { order: Order }) {
 function Ligne({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex justify-between">
-            <dt className="text-muted-foreground">{label}</dt>
+            <dt className="text-[var(--vitrine-encre)]/60">{label}</dt>
             <dd className="tabular-nums">{value}</dd>
         </div>
     );

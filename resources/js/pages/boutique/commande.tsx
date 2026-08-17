@@ -132,7 +132,7 @@ export default function Commande({
                                 {!customer ? (
                                     <Link
                                         href="/boutique/connexion"
-                                        className="text-xs text-muted-foreground underline underline-offset-4"
+                                        className="text-xs text-[var(--vitrine-encre)]/60 underline underline-offset-4"
                                     >
                                         J’ai déjà un compte
                                     </Link>
@@ -143,7 +143,7 @@ export default function Commande({
                                 visiteur à s'inscrire pour acheter une valise
                                 revient à perdre la vente. */}
                             {!customer ? (
-                                <p className="bg-muted px-3 py-2 text-xs text-muted-foreground">
+                                <p className="bg-[var(--vitrine-sable)] px-3 py-2 text-xs text-[var(--vitrine-encre)]/60">
                                     Pas besoin de compte pour commander. Vous
                                     recevrez un lien de suivi.
                                 </p>
@@ -207,8 +207,8 @@ export default function Commande({
                                             'flex cursor-pointer items-center justify-between gap-3 border p-3 transition-[border-color,background-color] duration-150',
                                             candidate.id ===
                                                 form.delivery_zone_id
-                                                ? 'border-foreground bg-accent'
-                                                : 'hover:bg-accent/50',
+                                                ? 'border-[var(--vitrine-encre)] bg-[var(--vitrine-sable)]'
+                                                : 'hover:bg-[var(--vitrine-sable)]',
                                         )}
                                     >
                                         <span className="flex items-start gap-3">
@@ -232,7 +232,7 @@ export default function Commande({
                                                 <span className="block text-sm font-medium">
                                                     {candidate.name}
                                                 </span>
-                                                <span className="block text-xs text-muted-foreground">
+                                                <span className="block text-xs text-[var(--vitrine-encre)]/60">
                                                     {candidate.delayLabel}
                                                     {candidate.note
                                                         ? ` · ${candidate.note}`
@@ -268,7 +268,7 @@ export default function Commande({
                             />
 
                             {zoneSuggeree ? (
-                                <p className="bg-blue-500/10 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                                <p className="bg-[var(--vitrine-terre)]/10 px-3 py-2 text-xs text-[var(--vitrine-terre)]">
                                     Zone « {zoneSuggeree} » présélectionnée
                                     d’après votre position. Vous pouvez en
                                     changer.
@@ -336,7 +336,7 @@ export default function Commande({
                                         ))}
                                     </select>
                                     {vault && !vaultCovers ? (
-                                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                                        <p className="text-xs text-[var(--vitrine-alerte)]">
                                             Ce coffre ne couvre pas le total,
                                             frais de livraison compris.
                                         </p>
@@ -353,8 +353,8 @@ export default function Commande({
                                                 'flex cursor-pointer items-center gap-3 border p-3 text-sm transition-[border-color,background-color] duration-150',
                                                 method.value ===
                                                     form.payment_method
-                                                    ? 'border-foreground bg-accent'
-                                                    : 'hover:bg-accent/50',
+                                                    ? 'border-[var(--vitrine-encre)] bg-[var(--vitrine-sable)]'
+                                                    : 'hover:bg-[var(--vitrine-sable)]',
                                             )}
                                         >
                                             <input
@@ -378,7 +378,7 @@ export default function Commande({
                                 </div>
                             ) : null}
 
-                            <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <p className="flex items-start gap-2 text-xs text-[var(--vitrine-encre)]/60">
                                 <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
                                 Vous réglez à la livraison. Rien n’est prélevé
                                 maintenant.
@@ -413,7 +413,7 @@ export default function Commande({
                                     key={line.label}
                                     className="flex justify-between gap-3"
                                 >
-                                    <span className="min-w-0 truncate text-muted-foreground">
+                                    <span className="min-w-0 truncate text-[var(--vitrine-encre)]/60">
                                         {line.quantity} × {line.label}
                                     </span>
                                     <span className="shrink-0 tabular-nums">
@@ -425,7 +425,7 @@ export default function Commande({
 
                         <dl className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <dt className="text-muted-foreground">
+                                <dt className="text-[var(--vitrine-encre)]/60">
                                     Sous-total
                                 </dt>
                                 <dd className="tabular-nums">
@@ -433,7 +433,7 @@ export default function Commande({
                                 </dd>
                             </div>
                             <div className="flex justify-between">
-                                <dt className="text-muted-foreground">
+                                <dt className="text-[var(--vitrine-encre)]/60">
                                     Livraison {zone ? `— ${zone.name}` : ''}
                                 </dt>
                                 <dd className="tabular-nums">

@@ -97,6 +97,19 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mot de passe des comptes de démarrage
+    |--------------------------------------------------------------------------
+    |
+    | Utilisé par le seeder pour créer le gérant et le vendeur. Laissé vide, un
+    | mot de passe est tiré au hasard et affiché une seule fois. Rien n'est
+    | écrit en dur : ce dépôt est public.
+    |
+    */
+
+    'seed_password' => env('SEED_PASSWORD'),
+
     'key' => env('APP_KEY'),
 
     'previous_keys' => [

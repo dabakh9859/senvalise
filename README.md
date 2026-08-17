@@ -18,10 +18,14 @@ Vite. L'application est alors disponible sur <http://localhost:8000>.
 
 ### Comptes de démarrage
 
-| Rôle    | E-mail                  | Mot de passe    |
-| ------- | ----------------------- | --------------- |
-| Gérant  | `gerant@senvalise.sn`   | `mot-de-passe-retire` |
-| Vendeur | `vendeur@senvalise.sn`  | `mot-de-passe-retire` |
+| Rôle    | E-mail                 |
+| ------- | ---------------------- |
+| Gérant  | `gerant@senvalise.sn`  |
+| Vendeur | `vendeur@senvalise.sn` |
+
+Le mot de passe n'est pas écrit dans le dépôt. Renseignez `SEED_PASSWORD` dans
+`.env` avant de peupler la base pour le choisir, sinon le seeder en tire un au
+hasard et l'affiche une seule fois, à la création des comptes.
 
 > **À changer dès la mise en service**, depuis _Réglages → Utilisateurs_.
 
@@ -40,31 +44,28 @@ d'un arrivage réceptionné et d'une trentaine de ventes, pour voir tout de suit
 
 ## Le menu
 
-Dix entrées au maximum, dans l'ordre d'une journée de travail. Le vendeur n'en
-voit que sept.
+Rangé dans l'ordre d'une journée de travail, et non dans celui de
+l'organigramme. Le vendeur ne voit ni la boutique en ligne, ni le pilotage.
 
-Trois groupes : le quotidien, la marchandise, le pilotage.
+| Groupe | Entrée | À quoi ça sert |
+| --- | --- | --- |
+| | Accueil | Tableau de bord : chiffres, courbes, alertes, accès rapides |
+| Comptoir | Ventes & factures | Vendre — le comptoir s'ouvre en fenêtre — et retrouver les papiers clients |
+| Comptoir | Historique | Ce qui a été encaissé |
+| Comptoir | Retours | Marchandise rendue, remise en stock, remboursement ou avoir |
+| Comptoir | Clients | Le fichier client et la fiche récapitulative |
+| Caisse | Caisse | Ouverture du tiroir, comptage, écart |
+| Caisse | Achats du jour | Achats et dépenses, réglés en espèces ou non |
+| Marchandise | Produits & stock | Le catalogue et les quantités sur le même écran |
+| Marchandise | Mouvements | Le journal de toutes les variations de stock |
+| Marchandise | Inventaire | Comptage physique *(gérant)* |
+| Marchandise | Arrivages | Ce qui arrive du fournisseur *(gérant)* |
+| Marchandise | Étiquettes | Imprimer les codes-barres |
+| Boutique en ligne | Commandes, Coffres, Messages reçus | Le site de vente *(gérant)* |
+| Pilotage | Rapports, Messages, Doublons, Réglages | L'analyse et la configuration *(gérant)* |
 
-| Entrée | À quoi ça sert |
-| --- | --- |
-| Accueil | Le tableau de bord : chiffres, courbes, alertes |
-| Caisse | Vendre |
-| Ventes | Ce qui a été vendu |
-| Factures & devis | Les papiers clients |
-| Commandes | Ce qui est commandé sur le site |
-| Coffres | La mise de côté des clients |
-| Messages reçus | Le formulaire de contact du site |
-| Messages | Publicités, promotions, rappels de paiement |
-| Clients | Le fichier client |
-| Produits | Le catalogue |
-| Stock | Ce qu'il reste en rayon |
-| Étiquettes | Imprimer les codes-barres |
-| Arrivages | Ce qui arrive du fournisseur |
-| Rapports | L'analyse |
-| Doublons | Nettoyer les fiches saisies deux fois |
-| Réglages | Boutique, catégories, marques, fournisseurs, utilisateurs, intégrations |
-
-L'historique des mouvements de stock s'ouvre depuis _Stock_.
+Vendre et facturer sont le même geste : toute vente encaissée au comptoir édite
+sa facture, avec un statut déduit de ce qui a réellement été réglé.
 
 ## Ce que fait l'application
 

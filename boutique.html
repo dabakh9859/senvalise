@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boutique, tous les formats | Sen Valise</title>
+<meta name="description" content="Six formats de valises et sacs Sen Valise, du sous-le-siège au long séjour. Garantie cinq ans, livraison 48 h sur Dakar.">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!-- Applies the stored theme before first paint, so dark-mode visitors never see a flash of the light palette. -->
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=8">
+<noscript><style>.reveal{opacity:1;transform:none}.hero__copy>*,.hero__media{animation:none;opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=8" defer></script>
+<script src="assets/js/data.js?v=8" defer></script>
+<script src="assets/js/account.js?v=8" defer></script>
+<script src="assets/js/app.js?v=8" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<header class="nav is-stuck">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html" aria-current="page">Boutique</a>
+      <a href="coffre.html">Le coffre</a>
+      <a href="index.html#matiere">Matière</a>
+      <a href="index.html#finitions">Finitions</a>
+      <a href="index.html#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="index.html#matiere">Matière</a>
+  <a href="index.html#finitions">Finitions</a>
+  <a href="index.html#garantie">Garantie</a>
+  <a href="compte.html" data-account-link>Compte</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+  <div class="wrap page-head">
+    <h1 class="display">Boutique</h1>
+    <p class="lede" style="margin-top:1rem;--d:90ms">
+      Six formats, quatre finitions. Chaque modèle est réparable pièce par pièce dans notre atelier.
+    </p>
+  </div>
+
+  <div class="wrap">
+    <div class="filterbar glass" role="group" aria-label="Filtrer et trier">
+      <div class="chips" data-chips></div>
+      <div class="sort">
+        <label for="sort">Trier</label>
+        <select id="sort" data-sort>
+          <option value="pertinence">Pertinence</option>
+          <option value="prix-asc">Prix croissant</option>
+          <option value="prix-desc">Prix décroissant</option>
+          <option value="leger">Le plus léger</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="result-count" data-count aria-live="polite"></p>
+    <div class="grid-products" data-grid aria-busy="true"></div>
+
+    <div style="padding-bottom:var(--section-y)"></div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div class="footer__col">
+        <a class="brand" href="index.html">
+          <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="3" y="9" width="26" height="20" rx="6"/>
+            <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+            <path d="M9.5 14h13v1.8h-13z"/>
+          </svg>
+          Sen Valise
+        </a>
+        <p class="body-sm" style="margin-top:.9rem;max-width:34ch">
+          Atelier et boutique, 14 rue Saint-Michel, Point E, Dakar. Du lundi au samedi, 9 h à 19 h.
+        </p>
+      </div>
+      <div class="footer__col">
+        <h4>Boutique</h4>
+        <ul>
+          <li><a href="boutique.html">Tous les formats</a></li>
+          <li><a href="produit.html?ref=teranga-55">Teranga 55</a></li>
+          <li><a href="produit.html?ref=ndar-65">Ndar 65</a></li>
+          <li><a href="produit.html?ref=duo-teranga">Duo Teranga</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Aide</h4>
+        <ul>
+          <li><a href="index.html#garantie">Garantie et réparation</a></li>
+          <li><a href="index.html#garantie">Livraison</a></li>
+          <li><a href="index.html#garantie">Retours sous 30 jours</a></li>
+          <li><a href="panier.html">Suivre ma commande</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+221338247193">+221 33 824 71 93</a></li>
+          <li><a href="mailto:bonjour@senvalise.sn">bonjour@senvalise.sn</a></li>
+          <li><a href="https://wa.me/221771482036" rel="noopener">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+  var grid   = document.querySelector("[data-grid]");
+  var chips  = document.querySelector("[data-chips]");
+  var count  = document.querySelector("[data-count]");
+  var sortEl = document.querySelector("[data-sort]");
+
+  var params = new URLSearchParams(location.search);
+  var active = params.get("cat") || "tout";
+
+  chips.innerHTML = SV_CATEGORIES.map(function (c) {
+    return '<button class="chip" type="button" data-cat="' + c.id + '" aria-pressed="' +
+      (c.id === active) + '">' + c.label + '</button>';
+  }).join("");
+
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var SWAP = REDUCED ? 0 : 180;
+
+  function render() {
+    var list = SV_PRODUCTS.filter(function (p) {
+      return active === "tout" || p.category === active;
+    });
+
+    var mode = sortEl.value;
+    if (mode === "prix-asc")  list.sort(function (a, b) { return a.price - b.price; });
+    if (mode === "prix-desc") list.sort(function (a, b) { return b.price - a.price; });
+    if (mode === "leger")     list.sort(function (a, b) { return a.weight - b.weight; });
+
+    var label = list.length === 0
+      ? "Aucun article"
+      : list.length + (list.length > 1 ? " articles" : " article");
+
+    if (count.textContent !== label) {
+      count.textContent = label;
+      count.classList.remove("is-new");
+      void count.offsetWidth;
+      count.classList.add("is-new");
+    }
+
+    if (!list.length) {
+      grid.style.display = "block";
+      grid.innerHTML =
+        '<div class="empty">' +
+          '<div class="empty__icon"><svg class="ico" aria-hidden="true"><use href="#i-magnifying-glass"></use></svg></div>' +
+          '<h3>Rien dans cette catégorie</h3>' +
+          '<p>Ce filtre ne renvoie aucun format pour le moment. Revenez à la sélection complète.</p>' +
+          '<button class="btn btn--ghost btn--sm" type="button" data-reset>Tout afficher</button>' +
+        '</div>';
+    } else {
+      grid.style.display = "";
+      grid.innerHTML = list.map(function (p, i) { return SV.cardMarkup(p, i * 60); }).join("");
+
+      // Le reflow fige l'état initial des cartes (opacité 0) avant d'ajouter
+      // is-in. Sans lui, les deux états tombent dans la même frame et la
+      // transition en cascade ne joue jamais : les cartes apparaissent d'un bloc.
+      void grid.offsetHeight;
+      grid.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("is-in"); });
+    }
+    grid.setAttribute("aria-busy", "false");
+  }
+
+  /* Fond au noir la grille, remplace, puis laisse la cascade repartir. */
+  function apply() {
+    if (!SWAP) { render(); return; }
+    grid.classList.add("is-swapping");
+    setTimeout(function () {
+      render();
+      grid.classList.remove("is-swapping");
+    }, SWAP);
+  }
+
+  grid.innerHTML = SV.skeletonMarkup(6);
+  requestAnimationFrame(render);
+
+  chips.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-cat]");
+    if (!btn) return;
+    active = btn.dataset.cat;
+    chips.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(c.dataset.cat === active));
+    });
+    history.replaceState(null, "", active === "tout" ? "boutique.html" : "boutique.html?cat=" + active);
+    apply();
+  });
+
+  grid.addEventListener("click", function (e) {
+    if (!e.target.closest("[data-reset]")) return;
+    active = "tout";
+    chips.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(c.dataset.cat === "tout"));
+    });
+    apply();
+  });
+
+  sortEl.addEventListener("change", apply);
+};
+</script>
+
+</body>
+</html>

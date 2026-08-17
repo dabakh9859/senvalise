@@ -1,0 +1,11 @@
+# Rien à construire ici : le site est servi tel quel.
+# Seuls les résidus d'éditeur et de système méritent d'être écartés.
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Copies de travail créées pour les captures d'écran.
+_*.html

@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sen Valise, valises et bagages conçus pour vos allers-retours</title>
+<meta name="description" content="Valises en polycarbonate recyclé, garanties 5 ans, réparées à Dakar. Livraison offerte en 48 h sur Dakar.">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/img/hero.jpg" as="image" fetchpriority="high">
+<!-- Runs before first paint: no flash of the light palette for dark-mode visitors,
+     and no flash of the promo bar for people who already dismissed it. -->
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("sv.announce")==="off")document.documentElement.setAttribute("data-announce-off","");}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=8">
+<noscript><style>.reveal{opacity:1;transform:none}.hero__copy>*,.hero__media{animation:none;opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=8" defer></script>
+<script src="assets/js/data.js?v=8" defer></script>
+<script src="assets/js/account.js?v=8" defer></script>
+<script src="assets/js/app.js?v=8" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<div class="announce" data-announce>
+  <div class="wrap announce__inner">
+    <svg class="ico" aria-hidden="true"><use href="#i-truck"></use></svg>
+    <p>
+      Livraison offerte dès <b>100 000 F</b> sur Dakar · <b>36 000 F</b> de remise sur le Duo Teranga
+      jusqu'au <b data-promo-end>31 du mois</b>
+    </p>
+    <button class="announce__close" type="button" data-announce-close aria-label="Masquer ce bandeau">
+      <svg class="ico" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+</div>
+
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html">Boutique</a>
+      <a href="coffre.html">Le coffre</a>
+      <a href="#matiere">Matière</a>
+      <a href="#finitions">Finitions</a>
+      <a href="#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="#matiere">Matière</a>
+  <a href="#finitions">Finitions</a>
+  <a href="#garantie">Garantie</a>
+  <a href="compte.html" data-account-link>Compte</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+
+  <!-- Hero, asymmetric split -->
+  <section class="hero">
+    <span class="hero__aura" aria-hidden="true"></span>
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <p class="hero__eyebrow eyebrow" style="--d:0ms">
+          <span class="dot" aria-hidden="true"></span>Atelier de Dakar · Série 2026
+        </p>
+
+        <!-- Le mot qui tourne, la ligne de rappel et les chiffres de la phrase
+             sont réécrits par le script à partir de data.js. Les valeurs
+             présentes ici sont celles du catalogue actuel : elles servent au
+             rendu sans JavaScript, et le script reprend la main dès qu'il
+             s'exécute pour qu'elles ne puissent pas dériver du catalogue. -->
+        <h1 class="display" style="--d:60ms">
+          <span>Sen Valise,</span>
+          <span>des bagages</span>
+          <span>pour <span class="rot" data-hero-rot><span class="rot__stack" data-rot-stack aria-hidden="true"><span class="rot__w">la cabine</span></span><span class="rot__line" data-rot-line aria-hidden="true"></span><span class="sr-only">la cabine, la soute, les sacs et les sets</span></span></span>
+        </h1>
+
+        <a class="hero__pick" href="boutique.html?cat=cabine" data-hero-pick style="--d:120ms">
+          <span class="n" data-pick-count>2 modèles</span>
+          <span class="s" data-pick-price>à partir de 118 000 F</span>
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+
+        <p class="lede hero__lede" data-hero-lede style="--d:0ms">Sen Valise dessine, monte et répare ses bagages à Dakar. Six modèles au catalogue, de 26 à 106 litres, en quatre finitions, à partir de 78 000 F.</p>
+
+        <div class="hero__cta" style="--d:250ms">
+          <a class="btn btn--primary" href="boutique.html">
+            Voir la boutique
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </a>
+          <a class="btn btn--ghost" href="#comparatif">Comparer les formats</a>
+        </div>
+        <div class="hero__meta" style="--d:340ms">
+          <a class="hero__swatches" href="#finitions">
+            <span class="sw" style="--c:#1a1d24" aria-hidden="true"></span>
+            <span class="sw" style="--c:#1f3fe0" aria-hidden="true"></span>
+            <span class="sw" style="--c:#e7e3da" aria-hidden="true"></span>
+            <span class="sw" style="--c:#2f5d4f" aria-hidden="true"></span>
+            <span class="lbl" data-hero-finishes>Quatre finitions</span>
+          </a>
+          <a class="hero__from" href="produit.html?ref=teranga-55" data-hero-total>La plus vendue : Teranga 55</a>
+        </div>
+      </div>
+
+      <div class="hero__media" style="--d:200ms">
+        <div class="hero__frame" data-hero-frame>
+          <img class="is-on" src="assets/img/hero.jpg" alt="Valise Ndar 65 en finition Noir Basalte, posée dans un hall clair"
+               width="1600" height="2400" fetchpriority="high">
+        </div>
+        <a class="hero__chip glass" href="produit.html?ref=ndar-65" data-hero-chip>
+          <span class="k">Le modèle en photo</span>
+          <span class="v" data-hero-name>Ndar 65</span>
+          <span class="s"><span class="num" data-hero-price>189 000 F</span> · <span data-hero-color>Noir Basalte</span></span>
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+        <div class="hero__nav glass" data-hero-nav role="group" aria-label="Modèles mis en avant"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Service band -->
+  <section class="service-band" aria-label="Nos services">
+    <div class="wrap service-band__grid">
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-truck"></use></svg>
+        <div><b>Livrée en 48 h sur Dakar</b><span>Offerte dès 100 000 F, sous 4 jours en région.</span></div>
+      </div>
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-shield-check"></use></svg>
+        <div><b>Cinq ans sur la coque</b><span>Roues, poignée et serrure comprises.</span></div>
+      </div>
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-arrows-clockwise"></use></svg>
+        <div><b>Trente jours pour changer d'avis</b><span>Retour gratuit depuis n'importe quelle agence.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shop by format -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="rail-head reveal">
+        <div>
+          <h2 class="h2">Choisir par format</h2>
+          <p class="lede" style="margin-top:.75rem">La bonne question n'est pas la marque, c'est la durée du séjour.</p>
+        </div>
+        <a class="link-arrow" href="boutique.html">
+          Tout voir
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+      </div>
+
+      <div class="cat-grid">
+        <a class="cat-tile reveal" href="boutique.html?cat=cabine">
+          <img src="assets/img/p-teranga.jpg" alt="Valise format cabine" width="600" height="600" loading="lazy">
+          <span class="cat-tile__cap glass">
+            <span><b>Cabine</b><span>Deux formats, 28 à 38 L</span></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </span>
+        </a>
+        <a class="cat-tile reveal" href="boutique.html?cat=soute" style="--d:80ms">
+          <img src="assets/img/p-saloum.jpg" alt="Valise format soute" width="600" height="600" loading="lazy">
+          <span class="cat-tile__cap glass">
+            <span><b>Soute</b><span>Deux formats, 68 à 96 L</span></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </span>
+        </a>
+        <a class="cat-tile reveal" href="boutique.html?cat=sacs" style="--d:140ms">
+          <img src="assets/img/p-goree.jpg" alt="Sac de voyage cabine" width="600" height="600" loading="lazy">
+          <span class="cat-tile__cap glass">
+            <span><b>Sacs</b><span>Le complément cabine</span></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </span>
+        </a>
+        <a class="cat-tile reveal" href="boutique.html?cat=sets" style="--d:200ms">
+          <img src="assets/img/p-duo.jpg" alt="Set de deux valises assorties" width="600" height="600" loading="lazy">
+          <span class="cat-tile__cap glass">
+            <span><b>Sets</b><span>Deux valises, un seul prix</span></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Best sellers -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="rail-head reveal">
+        <div>
+          <h2 class="h2">Meilleures ventes</h2>
+          <p class="lede" style="margin-top:.75rem">Le classement des douze derniers mois, tous formats confondus.</p>
+        </div>
+        <div class="rail-nav">
+          <button class="btn btn--ghost btn--sm marquee-btn" type="button"
+                  data-marquee-toggle="best" aria-pressed="false">
+            <span class="btn-label">Pause</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="marquee" data-marquee="best">
+      <div class="marquee__track" data-marquee-track>
+        <div class="marquee__group" data-best-track aria-busy="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Promo banner -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="promo reveal">
+        <div class="promo__copy">
+          <p class="promo__eyebrow">Offre du mois</p>
+          <h2 class="h2">Le Duo Teranga à deux valises près</h2>
+          <p>
+            La Teranga 55 et le Ndar 65 dans la même finition, emboîtables pour le rangement.
+            Le week-end et le long séjour réglés en une commande.
+          </p>
+          <div class="promo__price">
+            <span class="now num">298 000 F</span>
+            <span class="was num">334 000 F</span>
+            <span class="save">36 000 F de remise</span>
+          </div>
+          <div class="countdown" data-countdown aria-label="Temps restant sur l'offre">
+            <div><span class="n" data-cd="d">00</span><span class="u">jours</span></div>
+            <div><span class="n" data-cd="h">00</span><span class="u">heures</span></div>
+            <div><span class="n" data-cd="m">00</span><span class="u">min</span></div>
+            <div><span class="n" data-cd="s">00</span><span class="u">sec</span></div>
+          </div>
+          <a class="btn btn--ghost" href="produit.html?ref=duo-teranga">
+            Voir le Duo Teranga
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </a>
+        </div>
+        <div class="promo__media">
+          <img src="assets/img/p-duo.jpg" alt="Duo Teranga, deux valises assorties" width="1200" height="900" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Collection -->
+  <section class="section">
+    <div class="wrap">
+      <div class="rail-head reveal">
+        <div>
+          <h2 class="h2">Toute la collection</h2>
+          <p class="lede" style="margin-top:.75rem">Six formats, du sous-le-siège au long séjour. Une seule finition par famille.</p>
+        </div>
+        <a class="link-arrow" href="boutique.html">
+          Voir la boutique
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+      </div>
+      <div class="grid-products" data-featured aria-busy="true"></div>
+    </div>
+  </section>
+
+  <!-- Bento -->
+  <section class="section" id="garantie">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Ce qui change vraiment</p>
+        <h2 class="h2" style="margin-top:.7rem">Le détail qu'on remarque au troisième voyage</h2>
+      </div>
+
+      <div class="bento">
+        <article class="tile tile--photo tile--wide tile--lead reveal">
+          <img src="assets/img/life-pack.jpg" alt="Vue de dessus d'une valise ouverte en cours de rangement" width="1200" height="800" loading="lazy">
+          <div class="tile__caption glass">
+            <h3>Rangement à plat</h3>
+            <p>Deux compartiments égaux, deux sangles croisées. Rien ne glisse quand la valise se redresse.</p>
+          </div>
+        </article>
+
+        <article class="tile tile--third tile--tall tile--accent reveal" style="--d:80ms">
+          <svg class="ico" aria-hidden="true" style="width:1.6rem;height:1.6rem;margin-bottom:auto"><use href="#i-seal-check"></use></svg>
+          <h3>Réparée, pas remplacée</h3>
+          <p>Coque, roues, poignée, serrure. Notre atelier du Point E remet en état sous huit jours.</p>
+        </article>
+
+        <article class="tile tile--third tile--stat reveal" style="--d:140ms">
+          <div class="tile__stat num">48 h</div>
+          <h3>Livraison sur Dakar</h3>
+          <p>Thiès, Mbour et Saint-Louis sous quatre jours ouvrés.</p>
+        </article>
+
+        <article class="tile tile--photo tile--third reveal" style="--d:200ms">
+          <img src="assets/img/life-open.jpg" alt="Valise ouverte à plat avec des affaires de voyage" width="1400" height="933" loading="lazy">
+          <div class="tile__caption glass">
+            <h3>Ouverture à 180°</h3>
+            <p>Elle se pose à plat sans basculer.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature split -->
+  <section class="section" id="matiere">
+    <div class="wrap feature">
+      <div class="feature__media reveal">
+        <img src="assets/img/life-stand.jpg" alt="Voyageur debout à côté d'une valise rigide noire" width="1200" height="960" loading="lazy">
+      </div>
+      <div class="feature__copy reveal" style="--d:100ms">
+        <h2 class="h2">Une coque pressée d'un seul bloc</h2>
+        <p class="lede">
+          Pas de couture, pas de rivet sur la face qui prend les chocs. Le polycarbonate recyclé encaisse
+          et reprend sa forme.
+        </p>
+        <div class="spec-tiles">
+          <div class="spec-tile"><div class="v num">2,1 kg</div><div class="k">Le format le plus léger</div></div>
+          <div class="spec-tile"><div class="v num">100 %</div><div class="k">Polycarbonate recyclé</div></div>
+          <div class="spec-tile"><div class="v">Roulements scellés</div><div class="k">Quatre roues, rotation 360°</div></div>
+          <div class="spec-tile"><div class="v">Serrure TSA</div><div class="k">Intégrée, pas rapportée</div></div>
+        </div>
+        <a class="link-arrow" href="produit.html?ref=teranga-55">
+          Découvrir la Teranga 55
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Format comparison -->
+  <section class="section section--alt" id="comparatif">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2 class="h2">Comparer les six formats</h2>
+        <p class="lede" style="margin-top:1rem">
+          Volumes, poids à vide et prix côte à côte. La colonne cabine indique ce qui passe en bagage à main
+          sur Air Sénégal, ASKY et Brussels Airlines.
+        </p>
+      </div>
+      <div class="compare-wrap reveal">
+        <table class="compare" data-compare>
+          <caption class="sr-only">Comparatif des six formats Sen Valise</caption>
+        </table>
+      </div>
+      <p class="body-sm compare-note reveal">Faites défiler le tableau horizontalement sur petit écran.</p>
+    </div>
+  </section>
+
+  <!-- Colorway rail -->
+  <section class="section" id="finitions">
+    <div class="wrap">
+      <div class="rail-head reveal">
+        <div>
+          <p class="eyebrow">Finitions</p>
+          <h2 class="h2" style="margin-top:.7rem">Quatre teintes, mates, sans logo apparent</h2>
+        </div>
+        <div class="rail-nav">
+          <button class="btn btn--ghost btn--sm marquee-btn" type="button"
+                  data-marquee-toggle="finitions" aria-pressed="false">
+            <span class="btn-label">Pause</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="marquee" data-marquee="finitions">
+      <div class="marquee__track" data-marquee-track>
+        <div class="marquee__group">
+          <article class="rail__item">
+            <div class="rail__swatch" style="background:#1f3fe0"></div>
+            <div class="rail__label"><b>Bleu Ndar</b><span>Teranga 55, Ndar 65, Duo</span></div>
+          </article>
+          <article class="rail__item">
+            <div class="rail__swatch" style="background:#1a1d24"></div>
+            <div class="rail__label"><b>Noir Basalte</b><span>Tous les formats</span></div>
+          </article>
+          <article class="rail__item">
+            <div class="rail__swatch" style="background:#e7e3da"></div>
+            <div class="rail__label"><b>Ivoire</b><span>Baobab 45, Saloum 75, Duo</span></div>
+          </article>
+          <article class="rail__item">
+            <div class="rail__swatch" style="background:#2f5d4f"></div>
+            <div class="rail__label"><b>Vert Sahel</b><span>Teranga 55, Ndar 65, Gorée</span></div>
+          </article>
+          <article class="rail__item">
+            <div class="rail__swatch" style="background:linear-gradient(135deg,#1f3fe0 0 50%,#e7e3da 50% 100%)"></div>
+            <div class="rail__label"><b>Bicolore sur commande</b><span>Quinze jours de délai</span></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lifestyle strip -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="rail-head reveal">
+        <div>
+          <h2 class="h2">En voyage</h2>
+          <p class="lede" style="margin-top:.75rem">Nos formats en situation, du hall d'embarquement au retour au pays.</p>
+        </div>
+        <a class="link-arrow" href="https://wa.me/221771482036" rel="noopener">
+          Envoyer votre photo
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+      <div class="strip">
+        <figure class="reveal"><img src="assets/img/life-airport.jpg" alt="Valise tirée dans un hall d'aéroport" width="900" height="1200" loading="lazy"></figure>
+        <figure class="reveal" style="--d:80ms"><img src="assets/img/life-walk.jpg" alt="Voyageur marchant avec sa valise" width="900" height="1200" loading="lazy"></figure>
+        <figure class="reveal" style="--d:140ms"><img src="assets/img/life-set.jpg" alt="Deux valises assorties posées côte à côte" width="900" height="1200" loading="lazy"></figure>
+        <figure class="reveal" style="--d:200ms"><img src="assets/img/detail-shell.jpg" alt="Détail de la coque et des renforts d'angle" width="900" height="1200" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <h2 class="h2 reveal" style="margin-bottom:clamp(1.75rem,4vw,2.75rem)">Ce qu'en disent nos clients</h2>
+      <div class="quotes">
+        <figure class="quote glass reveal">
+          <div class="stars" aria-label="5 sur 5">
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+          </div>
+          <blockquote>« Quatre allers-retours Dakar Paris, aucune fissure sur la coque et les roues restent silencieuses. »</blockquote>
+          <figcaption><b>Aïssatou Diagne</b><span>Teranga 55, Bleu Ndar</span></figcaption>
+        </figure>
+
+        <figure class="quote glass reveal" style="--d:90ms">
+          <div class="stars" aria-label="5 sur 5">
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+          </div>
+          <blockquote>« J'ai pris le Duo pour le mariage de ma sœur. La grande a avalé six sacs de cadeaux sans forcer. »</blockquote>
+          <figcaption><b>Ousmane Ba</b><span>Duo Teranga, Ivoire</span></figcaption>
+        </figure>
+
+        <figure class="quote glass reveal" style="--d:180ms">
+          <div class="stars" aria-label="4 sur 5">
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-star"></use></svg>
+          </div>
+          <blockquote>« La poignée descend assez bas pour ma taille. Aucune autre marque ne proposait ce réglage. »</blockquote>
+          <figcaption><b>Mariama Sow</b><span>Baobab 45, Noir Basalte</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section section--alt">
+    <div class="wrap faq">
+      <div class="faq__head reveal">
+        <h2 class="h2">Questions fréquentes</h2>
+        <p class="lede">Celles qu'on nous pose le plus en boutique, au Point E.</p>
+        <a class="link-arrow" href="https://wa.me/221771482036" rel="noopener">
+          Poser la vôtre sur WhatsApp
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+
+      <div class="accordion reveal" style="--d:100ms">
+        <details open>
+          <summary>Quel format passe vraiment en cabine ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Le Baobab 45 passe sous le siège avant sur la plupart des vols régionaux. La Teranga 55 fait
+            55 x 40 x 20 cm, la limite acceptée par Air Sénégal, ASKY et Brussels Airlines. Les compagnies
+            à bas coût appliquent parfois des gabarits plus stricts, vérifiez la fiche de votre vol.
+          </div>
+        </details>
+        <details>
+          <summary>Combien de temps pour être livré ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            48 h sur Dakar, quatre jours ouvrés vers Thiès, Mbour et Saint-Louis. La livraison est offerte
+            sur Dakar dès 100 000 F d'achat, sinon elle est facturée 4 000 F.
+          </div>
+        </details>
+        <details>
+          <summary>Que couvre exactement la garantie cinq ans ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            La coque, les quatre roues, la poignée télescopique et la serrure. Elle ne couvre pas les rayures
+            d'usage ni les dégâts causés en soute par un tiers, mais dans ce cas la réparation reste possible
+            à l'atelier, pièces facturées.
+          </div>
+        </details>
+        <details>
+          <summary>Vous réparez, ou vous remplacez ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Nous réparons. L'atelier du Point E remet en état sous huit jours et les pièces d'usure restent
+            vendues séparément après la garantie, ce qui évite de jeter une valise entière pour une roue.
+          </div>
+        </details>
+        <details>
+          <summary>Comment se passe un retour ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Trente jours pour changer d'avis, retour gratuit depuis n'importe quelle agence. La valise doit
+            être rendue non utilisée, avec sa housse de rangement. Le remboursement part sous 72 h après réception.
+          </div>
+        </details>
+        <details>
+          <summary>Quels moyens de paiement acceptez-vous ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Wave, Orange Money et carte bancaire. Le paiement à la livraison est possible sur Dakar pour
+            les commandes sous 200 000 F.
+          </div>
+        </details>
+        <details>
+          <summary>La finition bicolore, c'est quel délai ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Quinze jours, sur commande uniquement. Elle n'est pas retournable puisqu'elle est assemblée
+            pour vous, c'est la seule exception à nos trente jours.
+          </div>
+        </details>
+        <details>
+          <summary>Puis-je voir les valises avant d'acheter ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Oui, tous les formats sont exposés au 14 rue Saint-Michel, Point E, du lundi au samedi de 9 h à 19 h.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA band -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="cta-band reveal">
+        <div>
+          <h2 class="h2">Le Saloum 75 revient en stock en septembre</h2>
+          <p class="lede" style="margin-top:1rem">
+            Laissez votre adresse, nous prévenons la liste avant la mise en ligne publique.
+          </p>
+        </div>
+        <form class="form-row" data-notify novalidate>
+          <div class="field">
+            <label for="notify-email">Adresse e-mail</label>
+            <input id="notify-email" name="email" type="email" autocomplete="email"
+                   placeholder="vous@exemple.sn" required aria-describedby="notify-hint notify-err">
+            <p class="hint" id="notify-hint">Un seul message, au moment du réassort.</p>
+            <p class="err" id="notify-err" role="alert" data-err></p>
+          </div>
+          <button class="btn btn--primary" type="submit" style="margin-bottom:1.75rem">
+            <span class="btn-label">Prévenez-moi</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div class="footer__col">
+        <a class="brand" href="index.html">
+          <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="3" y="9" width="26" height="20" rx="6"/>
+            <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+            <path d="M9.5 14h13v1.8h-13z"/>
+          </svg>
+          Sen Valise
+        </a>
+        <p class="body-sm" style="margin-top:.9rem;max-width:34ch">
+          Atelier et boutique, 14 rue Saint-Michel, Point E, Dakar. Du lundi au samedi, 9 h à 19 h.
+        </p>
+      </div>
+      <div class="footer__col">
+        <h4>Boutique</h4>
+        <ul>
+          <li><a href="boutique.html">Tous les formats</a></li>
+          <li><a href="produit.html?ref=teranga-55">Teranga 55</a></li>
+          <li><a href="produit.html?ref=ndar-65">Ndar 65</a></li>
+          <li><a href="produit.html?ref=duo-teranga">Duo Teranga</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Aide</h4>
+        <ul>
+          <li><a href="#garantie">Garantie et réparation</a></li>
+          <li><a href="#garantie">Livraison</a></li>
+          <li><a href="#garantie">Retours sous 30 jours</a></li>
+          <li><a href="panier.html">Suivre ma commande</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+221338247193">+221 33 824 71 93</a></li>
+          <li><a href="mailto:bonjour@senvalise.sn">bonjour@senvalise.sn</a></li>
+          <li><a href="https://wa.me/221771482036" rel="noopener">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- hero carousel ---------- */
+
+  // Portrait sources only: the frame is 4/5 and a landscape shot would lose
+  // half the product to the crop. The colourway is named per slide rather than
+  // taken from the catalogue, so the label always matches the photo.
+  var HERO = [
+    { ref: "ndar-65",     img: "assets/img/hero.jpg",     color: "basalte",
+      alt: "Valise Ndar 65 en finition Noir Basalte, posée dans un hall clair" },
+    { ref: "duo-teranga", img: "assets/img/p-duo.jpg",    color: "basalte",
+      alt: "Duo Teranga, deux valises assorties posées côte à côte" },
+    { ref: "saloum-75",   img: "assets/img/p-saloum.jpg", color: "ivoire",
+      alt: "Saloum 75 en finition Ivoire, coque nervurée" },
+    { ref: "baobab-45",   img: "assets/img/p-baobab.jpg", color: "ivoire",
+      alt: "Baobab 45 en finition Ivoire, format sous le siège" }
+  ];
+
+  var frame = document.querySelector("[data-hero-frame]");
+  var chip  = document.querySelector("[data-hero-chip]");
+  var nav   = document.querySelector("[data-hero-nav]");
+  var slides = [frame.querySelector("img")];
+  var dots = [];
+  var current = 0;
+
+  HERO.forEach(function (s, i) {
+    var p = SV.findProduct(s.ref) || {};
+    s.name = p.name || s.ref;
+    s.price = p.price ? SV.money(p.price) : "";
+    s.colorName = (window.SV_COLORWAYS[s.color] || {}).name || "";
+
+    if (i > 0) {
+      var im = document.createElement("img");
+      // Held back until the first slide has had the network to itself.
+      im.dataset.src = s.img;
+      im.alt = s.alt;
+      im.width = 1200;
+      im.height = 1800;
+      frame.appendChild(im);
+      slides.push(im);
+    }
+
+    var dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "hero__dot" + (i === 0 ? " is-on" : "");
+    dot.setAttribute("aria-label", "Voir " + s.name);
+    dot.setAttribute("aria-current", i === 0 ? "true" : "false");
+    dot.innerHTML = '<span class="bar"></span>';
+    dot.addEventListener("click", function () { show(i); });
+    nav.appendChild(dot);
+    dots.push(dot);
+  });
+
+  function load(i) {
+    var im = slides[i];
+    if (im && im.dataset.src) {
+      im.src = im.dataset.src;
+      delete im.dataset.src;
+    }
+  }
+
+  function show(i) {
+    if (i === current) return;
+    load(i);
+    load((i + 1) % HERO.length);
+
+    slides[current].classList.remove("is-on");
+    slides[i].classList.add("is-on");
+
+    var s = HERO[i];
+    chip.href = "produit.html?ref=" + s.ref;
+    chip.querySelector("[data-hero-name]").textContent = s.name;
+    chip.querySelector("[data-hero-price]").textContent = s.price;
+    chip.querySelector("[data-hero-color]").textContent = s.colorName;
+    chip.classList.remove("is-swap");
+    void chip.offsetWidth;                 // forces the swap animation to replay
+    chip.classList.add("is-swap");
+
+    dots[current].classList.remove("is-on");
+    dots[current].setAttribute("aria-current", "false");
+    dots[i].classList.add("is-on");
+    dots[i].setAttribute("aria-current", "true");
+
+    // The progress bar is the timer, so it has to be restarted by hand.
+    var bar = dots[i].querySelector(".bar");
+    var fresh = bar.cloneNode(true);
+    dots[i].replaceChild(fresh, bar);
+    if (!REDUCED) arm(fresh, i);
+
+    current = i;
+  }
+
+  function arm(bar, i) {
+    bar.addEventListener("animationend", function () {
+      show((i + 1) % HERO.length);
+    }, { once: true });
+  }
+
+  if (!REDUCED) {
+    arm(dots[0].querySelector(".bar"), 0);
+    window.addEventListener("load", function () {
+      HERO.forEach(function (s, i) { load(i); });
+    });
+  } else {
+    HERO.forEach(function (s, i) { load(i); });
+  }
+
+  /* ---------- hero : texte de présentation ---------- */
+
+  // Tout ce que le hero avance en chiffres est relu ici dans data.js. Le HTML
+  // porte déjà les mêmes valeurs, pour le rendu sans JavaScript, mais c'est ce
+  // bloc qui fait foi : ajouter un modèle ou une finition au catalogue suffit
+  // à mettre la phrase, le mot qui tourne et le rappel de prix à jour.
+  var CATALOG = window.SV_PRODUCTS || [];
+  var FINISHES = Object.keys(window.SV_COLORWAYS || {});
+
+  var NUM_FR = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six",
+                "sept", "huit", "neuf", "dix", "onze", "douze"];
+  function spell(n, cap) {
+    var w = NUM_FR[n] || String(n);
+    return cap ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }
+
+  var lede = document.querySelector("[data-hero-lede]");
+  var finishLabel = document.querySelector("[data-hero-finishes]");
+  var totalLink = document.querySelector("[data-hero-total]");
+
+  if (finishLabel && FINISHES.length) {
+    finishLabel.textContent = spell(FINISHES.length, true) + " finitions";
+  }
+
+  // Le lien de droite met en avant le modèle qui porte un macaron dans le
+  // catalogue, plutôt qu'un nom écrit en dur qui survivrait à son retrait.
+  var flagged = CATALOG.filter(function (p) { return p.flag; })[0];
+  if (totalLink) {
+    if (flagged) {
+      totalLink.textContent = flagged.flag + " : " + flagged.name;
+      totalLink.href = "produit.html?ref=" + flagged.ref;
+    } else {
+      totalLink.textContent = spell(CATALOG.length, true) + " modèles en boutique";
+    }
+  }
+
+  if (lede && CATALOG.length) {
+    var vols = CATALOG.map(function (p) { return p.volume; });
+    var prices = CATALOG.map(function (p) { return p.price; });
+    var TEXT = "Sen Valise dessine, monte et répare ses bagages à Dakar. "
+      + spell(CATALOG.length, true) + " modèles au catalogue, de "
+      + Math.min.apply(null, vols) + " à " + Math.max.apply(null, vols) + " litres, en "
+      + spell(FINISHES.length) + " finitions, à partir de "
+      + SV.money(Math.min.apply(null, prices)) + ".";
+
+    lede.textContent = TEXT;
+
+    if (!REDUCED) {
+      // La phrase est doublée : une copie lisible d'un bloc pour les lecteurs
+      // d'écran, une copie découpée en mots pour l'animation. Sans cela, la
+      // phrase serait annoncée mot par mot.
+      var sr = document.createElement("span");
+      sr.className = "sr-only";
+      sr.textContent = TEXT;
+
+      var shown = document.createElement("span");
+      shown.setAttribute("aria-hidden", "true");
+      TEXT.split(" ").forEach(function (word, i, all) {
+        var box = document.createElement("span");
+        box.className = "w";
+        box.style.setProperty("--i", i);
+        var inner = document.createElement("i");
+        inner.textContent = word;
+        box.appendChild(inner);
+        shown.appendChild(box);
+        if (i < all.length - 1) shown.appendChild(document.createTextNode(" "));
+      });
+
+      lede.textContent = "";
+      lede.appendChild(sr);
+      lede.appendChild(shown);
+    }
+  }
+
+  /* ---------- hero : le mot qui tourne ---------- */
+
+  // Les termes sont les catégories réelles de la boutique, dans l'ordre de
+  // data.js, celles restées vides en moins.
+  var ARTICLE = { cabine: "la cabine", soute: "la soute", sacs: "les sacs", sets: "les sets" };
+  var TERMS = (window.SV_CATEGORIES || [])
+    .filter(function (c) { return c.id !== "tout"; })
+    .map(function (c) {
+      var list = CATALOG.filter(function (p) { return p.category === c.id; });
+      return {
+        id: c.id,
+        label: ARTICLE[c.id] || c.label.toLowerCase(),
+        count: list.length,
+        from: list.length ? Math.min.apply(null, list.map(function (p) { return p.price; })) : 0
+      };
+    })
+    .filter(function (t) { return t.count > 0; });
+
+  var rot = document.querySelector("[data-hero-rot]");
+  var pick = document.querySelector("[data-hero-pick]");
+
+  if (rot && pick && TERMS.length) {
+    var stack = rot.querySelector("[data-rot-stack]");
+    var line = rot.querySelector("[data-rot-line]");
+    var rotSr = rot.querySelector(".sr-only");
+    var pickN = pick.querySelector("[data-pick-count]");
+    var pickP = pick.querySelector("[data-pick-price]");
+    var term = 0;
+
+    rotSr.textContent = TERMS.map(function (t) { return t.label; }).join(", ");
+
+    // Les largeurs sont mesurées une fois, avant la première rotation. Les
+    // relever pendant l'animation forcerait une lecture du layout au pire
+    // moment, et le trait doré doit épouser chaque mot, pas le plus long.
+    var widths = TERMS.map(function (t) {
+      var probe = document.createElement("span");
+      probe.className = "rot__w";
+      probe.textContent = t.label;
+      probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;animation:none";
+      stack.appendChild(probe);
+      var w = probe.getBoundingClientRect().width;
+      stack.removeChild(probe);
+      return Math.ceil(w);
+    });
+
+    function paint(i, animate) {
+      var t = TERMS[i];
+
+      // Filet : un mot sortant part normalement à la fin de son animation, mais
+      // si celle-ci n'a jamais démarré, rien ne le retirerait.
+      Array.prototype.forEach.call(stack.querySelectorAll(".rot__w.is-out"), function (n) {
+        if (n.parentNode) n.parentNode.removeChild(n);
+      });
+
+      var next = document.createElement("span");
+      next.className = "rot__w";
+      next.textContent = t.label;
+
+      // :not(.is-out) est indispensable. Un mot sortant reste dans le DOM le
+      // temps de son animation, et sans ce filtre c'est lui qu'on retrouverait
+      // ici au tour suivant : le mot réellement affiché ne sortirait jamais et
+      // les termes s'empileraient.
+      var old = stack.querySelector(".rot__w:not(.is-out)");
+      if (animate && old) {
+        old.classList.add("is-out");
+        old.addEventListener("animationend", function () {
+          if (old.parentNode) old.parentNode.removeChild(old);
+        }, { once: true });
+        stack.appendChild(next);
+      } else {
+        stack.textContent = "";
+        stack.appendChild(next);
+      }
+
+      rot.style.width = widths[i] + "px";
+
+      pick.href = "boutique.html?cat=" + t.id;
+      pickN.textContent = t.count > 1 ? t.count + " modèles" : "1 modèle";
+      pickP.textContent = (t.count > 1 ? "à partir de " : "") + SV.money(t.from);
+
+      if (animate) {
+        pick.classList.remove("is-swap");
+        void pick.offsetWidth;
+        pick.classList.add("is-swap");
+      }
+    }
+
+    // Comme les barres du carrousel, c'est le trait doré qui sert de minuteur :
+    // sa fin d'animation appelle le mot suivant. Le survol met le trait en
+    // pause, donc il met la rotation en pause, sans second compteur à tenir.
+    function listen() {
+      line.addEventListener("animationend", function () {
+        term = (term + 1) % TERMS.length;
+        paint(term, true);
+        var fresh = line.cloneNode(true);
+        line.parentNode.replaceChild(fresh, line);
+        line = fresh;
+        listen();
+      }, { once: true });
+    }
+
+    paint(0, false);
+    if (!REDUCED && TERMS.length > 1) listen();
+  }
+
+  /* ---------- promo bar ---------- */
+
+  var bar = document.querySelector("[data-announce]");
+  var endLabel = bar.querySelector("[data-promo-end]");
+
+  // The offer always runs to the end of the current month, so the page never
+  // advertises a date that has already passed.
+  var now = new Date();
+  var promoEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  endLabel.textContent = promoEnd.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+
+  bar.querySelector("[data-announce-close]").addEventListener("click", function () {
+    document.documentElement.setAttribute("data-announce-off", "");
+    try { localStorage.setItem("sv.announce", "off"); } catch (e) {}
+  });
+
+  /* ---------- offer countdown ---------- */
+
+  var cd = document.querySelector("[data-countdown]");
+  var cells = {
+    d: cd.querySelector('[data-cd="d"]'),
+    h: cd.querySelector('[data-cd="h"]'),
+    m: cd.querySelector('[data-cd="m"]'),
+    s: cd.querySelector('[data-cd="s"]')
+  };
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+  function tick() {
+    var left = Math.max(0, promoEnd - new Date());
+    var sec = Math.floor(left / 1000);
+    cells.d.textContent = pad(Math.floor(sec / 86400));
+    cells.h.textContent = pad(Math.floor(sec / 3600) % 24);
+    cells.m.textContent = pad(Math.floor(sec / 60) % 60);
+    cells.s.textContent = pad(sec % 60);
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  /* ---------- best sellers ---------- */
+
+  var best = document.querySelector("[data-best-track]");
+  var bestRefs = ["teranga-55", "duo-teranga", "ndar-65", "baobab-45", "goree-weekend"];
+
+  best.innerHTML = bestRefs.map(function (ref, i) {
+    var p = SV.findProduct(ref);
+    return p ? SV.cardMarkup(p, i * 60, { flag: "N° " + (i + 1), flagKind: "rank" }) : "";
+  }).join("");
+  best.setAttribute("aria-busy", "false");
+  best.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("is-in"); });
+
+  /* ---------- full collection ---------- */
+
+  var grid = document.querySelector("[data-featured]");
+  grid.innerHTML = SV.skeletonMarkup(6);
+
+  // Products come from a local module here, so the skeleton is brief on purpose.
+  requestAnimationFrame(function () {
+    grid.innerHTML = SV_PRODUCTS.map(function (p, i) { return SV.cardMarkup(p, i * 70); }).join("");
+    grid.setAttribute("aria-busy", "false");
+    grid.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("is-in"); });
+  });
+
+  /* ---------- comparison table ---------- */
+
+  var table = document.querySelector("[data-compare]");
+  var caption = table.innerHTML;
+  var rows = SV_PRODUCTS.map(function (p) {
+    // p.cabin is set per product: the Gorée is a cabin bag even though it is
+    // filed under "sacs", so the category alone would answer this wrong.
+    var cabin = p.cabin
+      ? '<span class="yes">Oui</span>'
+      : '<span class="no">Non</span>';
+    return '<tr>' +
+      '<td><a class="m" href="produit.html?ref=' + p.ref + '">' +
+        '<img src="' + p.img + '" alt="" width="88" height="88" loading="lazy">' +
+        '<span><b>' + p.name + '</b><span>' + p.tag + '</span></span></a></td>' +
+      '<td class="num">' + p.volume + ' L</td>' +
+      '<td class="num">' + String(p.weight).replace(".", ",") + ' kg</td>' +
+      '<td>' + cabin + '</td>' +
+      '<td class="price num">' + SV.money(p.price) + '</td>' +
+      '<td><a class="link-arrow" href="produit.html?ref=' + p.ref + '">Voir' +
+        '<svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg></a></td>' +
+      '</tr>';
+  }).join("");
+
+  table.innerHTML = caption +
+    '<thead><tr><th scope="col">Modèle</th><th scope="col">Volume</th><th scope="col">Poids à vide</th>' +
+    '<th scope="col">Cabine</th><th scope="col">Prix</th><th scope="col"><span class="sr-only">Lien</span></th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>';
+
+  /* ---------- auto-scrolling bands ---------- */
+
+  // Clones the group until the track covers twice the viewport, then shifts the
+  // track by exactly one group so the loop closes on itself with no jump.
+  // Speed is px per second, so a wide band and a narrow one move at the same rate.
+  function startMarquee(name, speed) {
+    var box = document.querySelector('[data-marquee="' + name + '"]');
+    var track = box.querySelector("[data-marquee-track]");
+    var group = track.firstElementChild;
+    var width = group.getBoundingClientRect().width;
+    if (!width) return;
+
+    var copies = Math.max(2, Math.ceil((window.innerWidth * 2) / width));
+    for (var i = 1; i < copies; i++) {
+      var clone = group.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      // Cloned cards stay clickable but must never be reachable by keyboard,
+      // and never announced twice.
+      clone.querySelectorAll("a, button").forEach(function (el) {
+        el.setAttribute("tabindex", "-1");
+      });
+      track.appendChild(clone);
+    }
+
+    track.style.setProperty("--marquee-shift", (-100 / copies) + "%");
+    track.style.setProperty("--marquee-dur", (width / speed).toFixed(1) + "s");
+
+    var btn = document.querySelector('[data-marquee-toggle="' + name + '"]');
+    btn.addEventListener("click", function () {
+      var paused = box.classList.toggle("is-paused");
+      btn.setAttribute("aria-pressed", paused ? "true" : "false");
+      btn.querySelector(".btn-label").textContent = paused ? "Reprendre" : "Pause";
+    });
+  }
+
+  if (!REDUCED) {
+    startMarquee("best", 52);
+    startMarquee("finitions", 44);
+  }
+
+  // Notify form
+  var form = document.querySelector("[data-notify]");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = form.querySelector("input");
+    var field = input.closest(".field");
+    var err = form.querySelector("[data-err]");
+    var btn = form.querySelector("button");
+    var ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input.value.trim());
+
+    if (!ok) {
+      field.classList.add("is-invalid");
+      err.textContent = "Entrez une adresse e-mail valide.";
+      input.focus();
+      return;
+    }
+    field.classList.remove("is-invalid");
+    err.textContent = "";
+    btn.classList.add("is-busy");
+    btn.querySelector(".btn-label").textContent = "Envoi";
+
+    setTimeout(function () {
+      btn.classList.remove("is-busy");
+      btn.querySelector(".btn-label").textContent = "C'est noté";
+      input.value = "";
+      SV.toast("Vous serez prévenu au réassort du Saloum 75");
+    }, 700);
+  });
+};
+</script>
+
+</body>
+</html>

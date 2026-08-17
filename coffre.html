@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le coffre | Sen Valise</title>
+<meta name="description" content="Mettez de côté à votre rythme et commandez quand le coffre est plein. Sans crédit, sans intérêt.">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=8">
+<noscript><style>.reveal{opacity:1;transform:none}.hero__copy>*,.hero__media{animation:none;opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=8" defer></script>
+<script src="assets/js/data.js?v=8" defer></script>
+<script src="assets/js/account.js?v=8" defer></script>
+<script src="assets/js/app.js?v=8" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html">Boutique</a>
+      <a href="coffre.html" aria-current="page">Le coffre</a>
+      <a href="index.html#matiere">Matière</a>
+      <a href="index.html#finitions">Finitions</a>
+      <a href="index.html#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="index.html#matiere">Matière</a>
+  <a href="index.html#finitions">Finitions</a>
+  <a href="index.html#garantie">Garantie</a>
+  <a href="compte.html" data-account-link>Compte</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+
+  <section class="hero">
+    <span class="hero__aura" aria-hidden="true"></span>
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <p class="hero__eyebrow eyebrow" style="--d:0ms">
+          <span class="dot" aria-hidden="true"></span>Le coffre Sen Valise
+        </p>
+        <h1 class="display" style="--d:60ms"><span>Payez en</span><span>plusieurs fois.</span></h1>
+        <p class="lede" style="--d:160ms">
+          Mettez de côté quand vous voulez, du montant que vous voulez. Quand le coffre
+          couvre votre panier, vous commandez. Pas de crédit, pas d'intérêt, pas de dossier.
+        </p>
+        <div class="hero__cta" style="--d:250ms">
+          <a class="btn btn--primary" href="compte.html" data-open-vault>
+            Ouvrir mon coffre
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </a>
+          <a class="btn btn--ghost" href="#simulateur">Simuler mes versements</a>
+        </div>
+        <div class="hero__meta" style="--d:340ms">
+          <p class="hero__from">Premier versement dès <span class="num">1 000 F</span></p>
+          <p class="hero__from">Aucun frais</p>
+        </div>
+      </div>
+
+      <div class="hero__media" style="--d:200ms">
+        <div class="coffre-card glass">
+          <div>
+            <p class="vault__k">Solde du coffre</p>
+            <p class="vault__balance num" data-demo-balance>0 F</p>
+          </div>
+          <div>
+            <div class="progress"><div class="progress__fill" data-demo-fill style="width:0%"></div></div>
+            <p class="progress__legend">
+              <span>Objectif <b class="num">145 000 F</b></span>
+              <span data-demo-pct>0 %</span>
+            </p>
+          </div>
+          <div class="coffre-card__tx">
+            <div><span>Versement Wave</span><b>+ 25 000 F</b></div>
+            <div><span>Versement Orange Money</span><b>+ 40 000 F</b></div>
+            <div><span>Versement Wave</span><b>+ 25 000 F</b></div>
+          </div>
+          <p class="body-sm">Exemple pour une Teranga 55, en trois versements.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="service-band" aria-label="En bref">
+    <div class="wrap service-band__grid">
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-seal-check"></use></svg>
+        <div><b>Sans intérêt ni frais</b><span>Vous payez le prix affiché, rien de plus.</span></div>
+      </div>
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-arrows-clockwise"></use></svg>
+        <div><b>À votre rythme</b><span>Un versement par semaine, par mois, ou quand vous pouvez.</span></div>
+      </div>
+      <div class="service">
+        <svg class="ico" aria-hidden="true"><use href="#i-lock-simple"></use></svg>
+        <div><b>Wave, Orange Money, carte</b><span>Les trois moyens que vous utilisez déjà.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2 class="h2">Comment ça marche</h2>
+        <p class="lede" style="margin-top:1rem">
+          Trois étapes, et aucune n'engage à quoi que ce soit.
+        </p>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <div class="step__n num">1</div>
+          <h3>Ouvrez votre coffre</h3>
+          <p>Créez un compte en trente secondes. Le coffre démarre à zéro, sans engagement de montant ni de durée.</p>
+        </article>
+        <article class="step reveal" style="--d:90ms">
+          <div class="step__n num">2</div>
+          <h3>Versez quand vous voulez</h3>
+          <p>À partir de 1 000 F, par Wave, Orange Money ou carte. Fixez un objectif si vous visez un modèle précis, et suivez la progression.</p>
+        </article>
+        <article class="step reveal" style="--d:180ms">
+          <div class="step__n num">3</div>
+          <h3>Commandez avec le coffre</h3>
+          <p>Dès que le solde couvre votre panier, le bouton « Payer avec le coffre » apparaît. Le reste part en livraison comme une commande normale.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--alt" id="simulateur">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2 class="h2">Combien, et pendant combien de temps ?</h2>
+        <p class="lede" style="margin-top:1rem">
+          Choisissez un modèle et ce que vous pouvez mettre de côté chaque mois.
+        </p>
+      </div>
+
+      <div class="sim reveal">
+        <div class="panel">
+          <div class="field">
+            <label for="sim-ref">Modèle visé</label>
+            <select id="sim-ref" data-sim-ref></select>
+          </div>
+          <div class="field">
+            <label for="sim-amount">Versement mensuel : <b class="num" data-sim-amount>25 000 F</b></label>
+            <input id="sim-amount" type="range" min="5000" max="150000" step="5000" value="25000" data-sim-range>
+            <p class="hint">De 5 000 F à 150 000 F. Rien ne vous oblige à tenir ce rythme.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="sim__out">
+            <div>
+              <p class="vault__k">Coffre plein en</p>
+              <p class="sim__big" data-sim-months>6 versements</p>
+              <p class="body-sm" data-sim-when></p>
+            </div>
+            <div class="sim__bars" data-sim-bars aria-hidden="true"></div>
+            <p class="body-sm" data-sim-detail></p>
+            <div>
+              <a class="btn btn--primary btn--sm" href="compte.html" data-open-vault>Ouvrir mon coffre</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap faq">
+      <div class="faq__head reveal">
+        <h2 class="h2">Ce qu'on nous demande</h2>
+        <p class="lede">Le coffre soulève souvent les mêmes quatre questions.</p>
+        <a class="link-arrow" href="https://wa.me/221771482036" rel="noopener">
+          Poser la vôtre sur WhatsApp
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+
+      <div class="accordion reveal" style="--d:100ms">
+        <details open>
+          <summary>C'est un crédit ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Non, et c'est la différence principale. Vous ne recevez la valise qu'une fois le
+            montant réuni, donc vous n'empruntez rien, vous ne devez rien, et il n'y a ni
+            intérêt ni frais de dossier. C'est l'équivalent moderne de la mise de côté.
+          </div>
+        </details>
+        <details>
+          <summary>Le prix peut-il changer pendant que j'épargne ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Le coffre est un solde, pas une réservation de prix : vous payez le tarif du jour
+            où vous passez commande. Si le modèle visé change de prix, votre objectif se
+            décale d'autant. En revanche, une commande déjà passée garde son montant.
+          </div>
+        </details>
+        <details>
+          <summary>Dois-je verser tous les mois ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Non. Aucun prélèvement automatique, aucune échéance. Vous versez quand vous
+            pouvez, du montant que vous voulez à partir de 1 000 F. Le simulateur ci-dessus
+            n'est qu'une projection, pas un calendrier.
+          </div>
+        </details>
+        <details>
+          <summary>Puis-je viser un modèle puis changer d'avis ?<svg class="ico" aria-hidden="true"><use href="#i-caret-down"></use></svg></summary>
+          <div class="acc-body">
+            Oui. L'objectif ne bloque rien : c'est un repère de progression. Le solde reste
+            utilisable sur n'importe quel article de la boutique, seul ou combiné.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="notice reveal">
+        <svg class="ico" aria-hidden="true"><use href="#i-lock-simple"></use></svg>
+        <div>
+          <b>Maquette de démonstration.</b> Ce site est statique, sans serveur : les comptes et
+          les soldes vivent uniquement dans votre navigateur et aucun paiement n'est traité.
+          Le coffre montre le parcours complet, il ne gère pas d'argent réel.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="cta-band reveal">
+        <div>
+          <h2 class="h2">Commencez à 1 000 F</h2>
+          <p class="lede" style="margin-top:1rem">
+            Ouvrez votre coffre maintenant, versez la première fois quand vous voulez.
+          </p>
+        </div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+          <a class="btn btn--primary" href="compte.html" data-open-vault>
+            <span class="btn-label">Créer mon compte</span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </a>
+          <a class="btn btn--ghost" href="boutique.html">Voir la boutique</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div class="footer__col">
+        <a class="brand" href="index.html">
+          <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="3" y="9" width="26" height="20" rx="6"/>
+            <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+            <path d="M9.5 14h13v1.8h-13z"/>
+          </svg>
+          Sen Valise
+        </a>
+        <p class="body-sm" style="margin-top:.9rem;max-width:34ch">
+          Atelier et boutique, 14 rue Saint-Michel, Point E, Dakar. Du lundi au samedi, 9 h à 19 h.
+        </p>
+      </div>
+      <div class="footer__col">
+        <h4>Boutique</h4>
+        <ul>
+          <li><a href="boutique.html">Tous les formats</a></li>
+          <li><a href="coffre.html">Le coffre</a></li>
+          <li><a href="produit.html?ref=teranga-55">Teranga 55</a></li>
+          <li><a href="produit.html?ref=duo-teranga">Duo Teranga</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Aide</h4>
+        <ul>
+          <li><a href="index.html#garantie">Garantie et réparation</a></li>
+          <li><a href="index.html#garantie">Livraison</a></li>
+          <li><a href="index.html#garantie">Retours sous 30 jours</a></li>
+          <li><a href="parametres.html#commandes">Suivre ma commande</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+221338247193">+221 33 824 71 93</a></li>
+          <li><a href="mailto:bonjour@senvalise.sn">bonjour@senvalise.sn</a></li>
+          <li><a href="https://wa.me/221771482036" rel="noopener">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Un visiteur déjà connecté n'a pas à repasser par la création de compte.
+  if (SV.Auth.current()) {
+    SV.$$("[data-open-vault]").forEach(function (a) {
+      a.href = "mon-coffre.html";
+      var label = a.querySelector(".btn-label");
+      if (label) label.textContent = "Aller à mon coffre";
+    });
+  }
+
+  /* ---------- carte de démonstration du hero ---------- */
+
+  var GOAL = 145000, SHOWN = 90000;
+  var balanceEl = SV.$("[data-demo-balance]");
+  var fillEl = SV.$("[data-demo-fill]");
+  var pctEl = SV.$("[data-demo-pct]");
+
+  function paintDemo(value) {
+    balanceEl.textContent = SV.money(value);
+    var p = Math.round((value / GOAL) * 100);
+    fillEl.style.width = p + "%";
+    pctEl.textContent = p + " %";
+  }
+
+  if (REDUCED) {
+    paintDemo(SHOWN);
+  } else {
+    // Le solde monte pendant que la barre se remplit : la page dit ce qu'elle vend.
+    var start = null, DUR = 1500;
+    requestAnimationFrame(function step(now) {
+      if (start === null) start = now;
+      var t = Math.min(1, (now - start) / DUR);
+      var eased = 1 - Math.pow(1 - t, 3);
+      paintDemo(Math.round(SHOWN * eased / 500) * 500);
+      if (t < 1) requestAnimationFrame(step);
+      else paintDemo(SHOWN);
+    });
+  }
+
+  /* ---------- simulateur ---------- */
+
+  var refSel   = SV.$("[data-sim-ref]");
+  var range    = SV.$("[data-sim-range]");
+  var amountEl = SV.$("[data-sim-amount]");
+  var monthsEl = SV.$("[data-sim-months]");
+  var whenEl   = SV.$("[data-sim-when]");
+  var detailEl = SV.$("[data-sim-detail]");
+  var barsEl   = SV.$("[data-sim-bars]");
+
+  var MAX_BARS = 18;
+  var MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin",
+                "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+  refSel.innerHTML = SV_PRODUCTS.map(function (p) {
+    return '<option value="' + p.ref + '">' + p.name + ", " + SV.money(p.price) + "</option>";
+  }).join("");
+  refSel.value = "teranga-55";
+
+  function simulate() {
+    var p = SV.findProduct(refSel.value) || SV_PRODUCTS[0];
+    var monthly = parseInt(range.value, 10);
+    var n = Math.ceil(p.price / monthly);
+    var last = p.price - monthly * (n - 1);
+
+    amountEl.textContent = SV.money(monthly);
+    monthsEl.textContent = n + (n > 1 ? " versements" : " versement");
+
+    var d = new Date();
+    d.setMonth(d.getMonth() + n);
+    whenEl.textContent = "Au rythme d'un versement par mois, coffre plein en " +
+      MONTHS[d.getMonth()] + " " + d.getFullYear() + ".";
+
+    detailEl.textContent = n > 1
+      ? "Soit " + (n - 1) + " versement" + (n > 2 ? "s" : "") + " de " + SV.money(monthly) +
+        ", puis un dernier de " + SV.money(last) + ", pour " + p.name + " à " + SV.money(p.price) + "."
+      : "Un seul versement de " + SV.money(p.price) + " suffit pour " + p.name + ".";
+
+    // Les barres sont décoratives : au-delà de 18 versements le détail est illisible.
+    var shown = Math.min(n, MAX_BARS);
+    var bars = "";
+    for (var i = 0; i < shown; i++) bars += '<span style="--i:' + i + '"></span>';
+    barsEl.innerHTML = bars;
+    if (n > MAX_BARS) {
+      detailEl.textContent += " Seuls les " + MAX_BARS + " premiers versements sont dessinés.";
+    }
+  }
+
+  refSel.addEventListener("change", simulate);
+  range.addEventListener("input", simulate);
+  simulate();
+};
+</script>
+
+</body>
+</html>

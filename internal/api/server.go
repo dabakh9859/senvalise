@@ -17,6 +17,12 @@ import (
 )
 
 type Server struct{ DB *gorm.DB }
+type dashboardTrend struct {
+	Date   time.Time `json:"date"`
+	Billed int64     `json:"billed"`
+	Paid   int64     `json:"paid"`
+	Count  int64     `json:"count"`
+}
 
 func (s *Server) Register(app *fiber.App) {
 	app.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok", "service": "senvalise-api"}) })
@@ -503,17 +509,135 @@ func (s *Server) depositVault(c *fiber.Ctx) error {
 	return c.SendStatus(201)
 }
 func (s *Server) dashboard(c *fiber.Ctx) error {
-	var products, customers, sales, orders int64
-	s.DB.Model(&models.Product{}).Count(&products)
+	period := c.Query("period", "30d")
+	now := time.Now()
+	start, bucket := dashboardPeriod(period, now)
+	duration := now.Sub(start)
+	previousStart, previousEnd := start.Add(-duration), start
+
+	type totals struct {
+		Revenue     int64 `json:"revenue"`
+		Paid        int64 `json:"paid"`
+		Receivables int64 `json:"receivables"`
+		Invoices    int64 `json:"invoices"`
+	}
+	var summary totals
+	s.DB.Model(&models.Sale{}).Where("created_at >= ? AND created_at <= ?", start, now).
+		Select("coalesce(sum(total),0) revenue, coalesce(sum(least(paid,total)),0) paid, coalesce(sum(greatest(total-paid,0)),0) receivables, count(*) invoices").Scan(&summary)
+	var previousRevenue int64
+	s.DB.Model(&models.Sale{}).Where("created_at >= ? AND created_at < ?", previousStart, previousEnd).Select("coalesce(sum(total),0)").Scan(&previousRevenue)
+	growth := float64(0)
+	if previousRevenue > 0 {
+		growth = (float64(summary.Revenue-previousRevenue) / float64(previousRevenue)) * 100
+	}
+
+	var products, variants, customers, orders, lowStock, outOfStock, stockUnits, stockValue int64
+	s.DB.Model(&models.Product{}).Where("active = true").Count(&products)
+	s.DB.Model(&models.ProductVariant{}).Where("active = true").Count(&variants)
 	s.DB.Model(&models.Customer{}).Count(&customers)
-	s.DB.Model(&models.Sale{}).Count(&sales)
-	s.DB.Model(&models.Order{}).Count(&orders)
-	var revenue, paid int64
-	s.DB.Model(&models.Sale{}).Select("coalesce(sum(total),0)").Scan(&revenue)
-	s.DB.Model(&models.Sale{}).Select("coalesce(sum(paid),0)").Scan(&paid)
-	var low int64
-	s.DB.Model(&models.ProductVariant{}).Where("stock <= alert_at").Count(&low)
-	return c.JSON(fiber.Map{"products": products, "customers": customers, "sales": sales, "orders": orders, "revenue": revenue, "paid": paid, "receivables": revenue - paid, "lowStock": low})
+	s.DB.Model(&models.Order{}).Where("created_at >= ? AND created_at <= ?", start, now).Count(&orders)
+	s.DB.Model(&models.ProductVariant{}).Where("active = true AND stock > 0 AND stock <= alert_at").Count(&lowStock)
+	s.DB.Model(&models.ProductVariant{}).Where("active = true AND stock <= 0").Count(&outOfStock)
+	s.DB.Model(&models.ProductVariant{}).Select("coalesce(sum(greatest(stock,0)),0)").Scan(&stockUnits)
+	s.DB.Model(&models.ProductVariant{}).Select("coalesce(sum(greatest(stock,0)*cost),0)").Scan(&stockValue)
+
+	var rawTrend []dashboardTrend
+	s.DB.Raw("select date_trunc(?, created_at) date, coalesce(sum(total),0) billed, coalesce(sum(least(paid,total)),0) paid, count(*) count from sales where created_at >= ? and created_at <= ? group by 1 order by 1", bucket, start, now).Scan(&rawTrend)
+	trend := fillTrend(rawTrend, start, now, bucket)
+
+	type namedValue struct {
+		Name  string `json:"name"`
+		Value int64  `json:"value"`
+		Count int64  `json:"count"`
+	}
+	var topProducts, topCustomers, categories []namedValue
+	s.DB.Raw("select coalesce(p.name,pv.sku) name, coalesce(sum(si.total),0) value, coalesce(sum(si.quantity),0) count from sale_items si join sales s on s.id=si.sale_id join product_variants pv on pv.id=si.variant_id left join products p on p.id=pv.product_id where s.created_at >= ? and s.created_at <= ? group by p.name,pv.sku order by value desc limit 7", start, now).Scan(&topProducts)
+	s.DB.Raw("select coalesce(c.name,'Client comptoir') name, coalesce(sum(s.total),0) value, count(*) count from sales s left join customers c on c.id=s.customer_id where s.created_at >= ? and s.created_at <= ? group by c.name order by value desc limit 7", start, now).Scan(&topCustomers)
+	s.DB.Raw("select coalesce(cat.name,'Sans catégorie') name, coalesce(sum(si.total),0) value, coalesce(sum(si.quantity),0) count from sale_items si join sales s on s.id=si.sale_id join product_variants pv on pv.id=si.variant_id left join products p on p.id=pv.product_id left join categories cat on cat.id=p.category_id where s.created_at >= ? and s.created_at <= ? group by cat.name order by value desc limit 7", start, now).Scan(&categories)
+
+	type statusValue struct {
+		Status string `json:"status"`
+		Count  int64  `json:"count"`
+		Value  int64  `json:"value"`
+	}
+	var paymentStatus []statusValue
+	s.DB.Raw("select case when paid >= total then 'paid' when paid > 0 then 'partial' else 'pending' end status, count(*) count, coalesce(sum(total),0) value from sales where created_at >= ? and created_at <= ? group by 1 order by 1", start, now).Scan(&paymentStatus)
+
+	type ageingValue struct {
+		Label string `json:"label"`
+		Value int64  `json:"value"`
+		Count int64  `json:"count"`
+	}
+	var ageing []ageingValue
+	s.DB.Raw("select case when current_date-created_at::date <= 30 then '1–30 j' when current_date-created_at::date <= 60 then '31–60 j' when current_date-created_at::date <= 90 then '61–90 j' else '+90 j' end label, coalesce(sum(greatest(total-paid,0)),0) value, count(*) count from sales where total > paid group by 1 order by min(current_date-created_at::date)").Scan(&ageing)
+
+	type trafficPoint struct {
+		Day   int   `json:"day"`
+		Hour  int   `json:"hour"`
+		Count int64 `json:"count"`
+	}
+	var traffic []trafficPoint
+	s.DB.Raw("select extract(isodow from created_at)::int as \"day\", extract(hour from created_at)::int as \"hour\", count(*) count from sales where created_at >= ? and created_at <= ? group by 1,2 order by 1,2", start, now).Scan(&traffic)
+
+	type stockItem struct {
+		ID      uint   `json:"id"`
+		SKU     string `json:"sku"`
+		Product string `json:"product"`
+		Stock   int64  `json:"stock"`
+		AlertAt int64  `json:"alertAt"`
+	}
+	var stockAlerts []stockItem
+	s.DB.Raw("select pv.id,pv.sku,coalesce(p.name,pv.sku) product,pv.stock,pv.alert_at from product_variants pv left join products p on p.id=pv.product_id where pv.active=true and pv.stock<=pv.alert_at order by pv.stock asc,pv.id desc limit 8").Scan(&stockAlerts)
+
+	averageBasket := int64(0)
+	if summary.Invoices > 0 {
+		averageBasket = summary.Revenue / summary.Invoices
+	}
+	return c.JSON(fiber.Map{
+		"period": period, "from": start, "to": now, "growth": growth,
+		"summary":   fiber.Map{"revenue": summary.Revenue, "paid": summary.Paid, "receivables": summary.Receivables, "invoices": summary.Invoices, "averageBasket": averageBasket},
+		"stock":     fiber.Map{"products": products, "variants": variants, "units": stockUnits, "value": stockValue, "low": lowStock, "out": outOfStock, "alerts": stockAlerts},
+		"customers": fiber.Map{"total": customers}, "orders": orders, "trend": trend, "ageing": ageing, "paymentStatus": paymentStatus, "topProducts": topProducts, "topCustomers": topCustomers, "categories": categories, "traffic": traffic,
+	})
+}
+
+func dashboardPeriod(period string, now time.Time) (time.Time, string) {
+	switch period {
+	case "7d":
+		return now.AddDate(0, 0, -6).Truncate(24 * time.Hour), "day"
+	case "90d":
+		return now.AddDate(0, 0, -89).Truncate(24 * time.Hour), "day"
+	case "12m":
+		return time.Date(now.Year(), now.Month()-11, 1, 0, 0, 0, 0, now.Location()), "month"
+	default:
+		return now.AddDate(0, 0, -29).Truncate(24 * time.Hour), "day"
+	}
+}
+
+func fillTrend(raw []dashboardTrend, start, timeEnd time.Time, bucket string) []dashboardTrend {
+	byDate := map[string]dashboardTrend{}
+	format := "2006-01-02"
+	if bucket == "month" {
+		format = "2006-01"
+	}
+	for _, p := range raw {
+		byDate[p.Date.Format(format)] = p
+	}
+	result := make([]dashboardTrend, 0)
+	for cursor := start; !cursor.After(timeEnd); {
+		key := cursor.Format(format)
+		if p, ok := byDate[key]; ok {
+			result = append(result, p)
+		} else {
+			result = append(result, dashboardTrend{Date: cursor})
+		}
+		if bucket == "month" {
+			cursor = cursor.AddDate(0, 1, 0)
+		} else {
+			cursor = cursor.AddDate(0, 0, 1)
+		}
+	}
+	return result
 }
 func (s *Server) shopProducts(c *fiber.Ctx) error {
 	var p []models.Product

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\RefundMethod;
 use App\Enums\ReturnReason;
+use App\Services\ReferenceGenerator;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -96,13 +97,6 @@ class SaleReturn extends Model
         $year ??= (int) now()->format('Y');
         $prefix = "R-{$year}-";
 
-        $last = static::query()
-            ->where('reference', 'like', $prefix.'%')
-            ->orderByDesc('reference')
-            ->value('reference');
-
-        $number = is_string($last) ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix.str_pad((string) $number, 6, '0', STR_PAD_LEFT);
+        return app(ReferenceGenerator::class)->next("returns:{$year}", $prefix, 6, 'sale_returns');
     }
 }

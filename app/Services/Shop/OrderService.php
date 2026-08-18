@@ -68,19 +68,32 @@ class OrderService
             $prepared = [];
 
             foreach ($contents['lines'] as $line) {
-                // On relit le stock sous verrou : deux clients peuvent viser
-                // la dernière valise à la même seconde.
-                $variant = ProductVariant::whereKey($line['variantId'])->lockForUpdate()->first();
+                $variant = ProductVariant::query()->whereKey($line['variantId'])->first();
 
                 if (! $variant) {
                     throw new RuntimeException('Un article de votre panier n’existe plus.');
                 }
 
-                if ($variant->available_quantity < $line['quantity']) {
+                // La réservation est une écriture conditionnelle : SQLite ne
+                // possède pas de verrou de ligne SELECT FOR UPDATE, mais cette
+                // opération atomique empêche tout de même deux paniers de
+                // prendre le dernier article.
+                $reserved = ProductVariant::query()
+                    ->whereKey($variant->getKey())
+                    ->where('is_active', true)
+                    ->whereHas('product', fn ($query) => $query
+                        ->where('is_active', true)
+                        ->where('is_published', true))
+                    ->whereRaw('stock_quantity - reserved_quantity >= ?', [$line['quantity']])
+                    ->increment('reserved_quantity', $line['quantity']);
+
+                if ($reserved !== 1) {
                     throw new RuntimeException(
                         "« {$variant->fullLabel()} » n’est plus disponible en quantité suffisante.",
                     );
                 }
+
+                $variant->refresh();
 
                 $price = $this->cart->price($variant);
                 $lineTotal = $price * $line['quantity'];
@@ -98,7 +111,7 @@ class OrderService
             $total = $subtotal + $deliveryFee;
 
             if ($vault !== null) {
-                $this->assertVaultCovers($vault, $total, $customer);
+                $vault = $this->claimVault($vault, $total, $customer);
             }
 
             $order = Order::create([
@@ -146,17 +159,6 @@ class OrderService
                     'unit_price' => $line['unit_price'],
                     'line_total' => $line['line_total'],
                 ]);
-
-                // Réservation : la quantité reste en stock mais n'est plus
-                // vendable au comptoir.
-                $variant->increment('reserved_quantity', $line['quantity']);
-            }
-
-            if ($vault !== null) {
-                $vault->forceFill([
-                    'status' => VaultStatus::Utilise->value,
-                    'closed_at' => now(),
-                ])->save();
             }
 
             $this->cart->clear();
@@ -174,11 +176,25 @@ class OrderService
      */
     public function confirm(Order $order): Order
     {
-        if ($order->status !== OrderStatus::EnAttente) {
-            throw new RuntimeException('Seule une commande en attente peut être confirmée.');
-        }
-
         return DB::transaction(function () use ($order): Order {
+            $claimed = Order::query()
+                ->whereKey($order->getKey())
+                ->where('status', OrderStatus::EnAttente->value)
+                ->update([
+                    'status' => OrderStatus::Confirmee->value,
+                    'confirmed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            if ($claimed !== 1) {
+                throw new RuntimeException('Seule une commande en attente peut être confirmée.');
+            }
+
+            $order = Order::query()
+                ->with(['items.variant', 'customer'])
+                ->whereKey($order->getKey())
+                ->firstOrFail();
+
             $sale = Sale::create([
                 'reference' => Sale::nextReference(),
                 'channel' => SaleChannel::EnLigne->value,
@@ -233,45 +249,61 @@ class OrderService
             $sale->forceFill(['total_cost' => $totalCost])->save();
 
             $order->forceFill([
-                'status' => OrderStatus::Confirmee->value,
                 'sale_id' => $sale->id,
-                'confirmed_at' => now(),
             ])->save();
 
-            return $order;
+            return $order->refresh();
         });
     }
 
     /** Avance la commande d'une étape (préparée, expédiée, livrée). */
     public function advance(Order $order, OrderStatus $status): Order
     {
-        if ($order->status === OrderStatus::Annulee) {
-            throw new RuntimeException('Cette commande est annulée.');
-        }
+        return DB::transaction(function () use ($order, $status): Order {
+            $order = Order::query()->whereKey($order->getKey())->firstOrFail();
 
-        if ($status->step() <= $order->status->step()) {
-            throw new RuntimeException('Une commande ne revient pas en arrière.');
-        }
+            // Passer directement à « prête » depuis « en attente » confirme
+            // au passage : la marchandise doit être sortie avant l'emballage.
+            if ($order->status === OrderStatus::EnAttente) {
+                $order = $this->confirm($order);
+            }
 
-        // Passer directement à « prête » depuis « en attente » confirme au
-        // passage : la marchandise doit être sortie avant d'être emballée.
-        if ($order->status === OrderStatus::EnAttente) {
-            $order = $this->confirm($order);
-        }
+            if ($status === OrderStatus::Confirmee) {
+                return $order;
+            }
 
-        $order->forceFill([
-            'status' => $status->value,
-            'shipped_at' => $status === OrderStatus::Expediee ? now() : $order->shipped_at,
-            'delivered_at' => $status === OrderStatus::Livree ? now() : $order->delivered_at,
-            // Livrée et payée à la livraison : l'encaissement est acquis.
-            'amount_paid' => $status === OrderStatus::Livree ? $order->total : $order->amount_paid,
-        ])->save();
+            $allowed = collect(OrderStatus::cases())
+                ->filter(fn (OrderStatus $candidate) => $candidate->step() >= OrderStatus::Confirmee->step()
+                    && $candidate->step() < $status->step())
+                ->map(fn (OrderStatus $candidate) => $candidate->value)
+                ->all();
 
-        if ($status === OrderStatus::Livree && $order->sale) {
-            $order->sale->forceFill(['amount_paid' => $order->total])->save();
-        }
+            $advanced = $allowed === [] ? 0 : Order::query()
+                ->whereKey($order->getKey())
+                ->whereIn('status', $allowed)
+                ->update([
+                    'status' => $status->value,
+                    'shipped_at' => $status === OrderStatus::Expediee ? now() : $order->shipped_at,
+                    'delivered_at' => $status === OrderStatus::Livree ? now() : $order->delivered_at,
+                    'amount_paid' => $status === OrderStatus::Livree ? $order->total : $order->amount_paid,
+                    'updated_at' => now(),
+                ]);
 
-        return $order;
+            if ($advanced !== 1) {
+                throw new RuntimeException('Cette étape est déjà dépassée ou la commande est fermée.');
+            }
+
+            $order = Order::query()
+                ->with('sale')
+                ->whereKey($order->getKey())
+                ->firstOrFail();
+
+            if ($status === OrderStatus::Livree && $order->sale) {
+                $order->sale->forceFill(['amount_paid' => $order->total])->save();
+            }
+
+            return $order;
+        });
     }
 
     /**
@@ -279,16 +311,41 @@ class OrderService
      */
     public function cancel(Order $order, string $reason = 'Annulation'): Order
     {
-        if ($order->status === OrderStatus::Annulee) {
-            throw new RuntimeException('Cette commande est déjà annulée.');
-        }
-
-        if ($order->status === OrderStatus::Livree) {
-            throw new RuntimeException('Une commande livrée ne s’annule pas : passez par un retour.');
-        }
-
         return DB::transaction(function () use ($order, $reason): Order {
-            if ($order->status->stockIsOut() && $order->sale) {
+            $previousStatus = null;
+
+            foreach ([OrderStatus::EnAttente, OrderStatus::Confirmee, OrderStatus::Preparee, OrderStatus::Expediee] as $candidate) {
+                $claimed = Order::query()
+                    ->whereKey($order->getKey())
+                    ->where('status', $candidate->value)
+                    ->update([
+                        'status' => OrderStatus::Annulee->value,
+                        'cancel_reason' => $reason,
+                        'cancelled_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                if ($claimed === 1) {
+                    $previousStatus = $candidate;
+
+                    break;
+                }
+            }
+
+            if ($previousStatus === null) {
+                $current = Order::query()->whereKey($order->getKey())->firstOrFail();
+
+                throw new RuntimeException($current->status === OrderStatus::Livree
+                    ? 'Une commande livrée ne s’annule pas : passez par un retour.'
+                    : 'Cette commande est déjà annulée.');
+            }
+
+            $order = Order::query()
+                ->with(['items.variant', 'sale', 'vault'])
+                ->whereKey($order->getKey())
+                ->firstOrFail();
+
+            if ($previousStatus->stockIsOut() && $order->sale) {
                 // La marchandise était sortie : elle revient au rayon avec son
                 // mouvement, et la vente est annulée.
                 foreach ($order->items as $item) {
@@ -329,30 +386,38 @@ class OrderService
                 ])->save();
             }
 
-            $order->forceFill([
-                'status' => OrderStatus::Annulee->value,
-                'cancel_reason' => $reason,
-                'cancelled_at' => now(),
-            ])->save();
-
-            return $order;
+            return $order->refresh();
         });
     }
 
-    protected function assertVaultCovers(Vault $vault, int $total, ?Customer $customer): void
+    protected function claimVault(Vault $vault, int $total, ?Customer $customer): Vault
     {
-        if ($customer === null || $vault->customer_id !== $customer->id) {
-            throw new RuntimeException('Ce coffre ne vous appartient pas.');
+        if ($customer === null) {
+            throw new RuntimeException('Connectez-vous pour utiliser un coffre.');
         }
 
-        if (! $vault->isSpendable()) {
-            throw new RuntimeException('Ce coffre n’a pas encore atteint son objectif.');
+        $claimed = Vault::query()
+            ->whereKey($vault->getKey())
+            ->where('customer_id', $customer->getKey())
+            ->where('status', VaultStatus::Atteint->value)
+            ->update([
+                'status' => VaultStatus::Utilise->value,
+                'closed_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        if ($claimed !== 1) {
+            throw new RuntimeException('Ce coffre ne vous appartient pas, est fermé ou n’a pas atteint son objectif.');
         }
+
+        $vault = Vault::query()->whereKey($vault->getKey())->firstOrFail();
 
         if ($vault->saved_amount < $total) {
             throw new RuntimeException(
                 'Le montant du coffre ne couvre pas cette commande, frais de livraison compris.',
             );
         }
+
+        return $vault;
     }
 }

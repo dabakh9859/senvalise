@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ReferenceGenerator;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -134,14 +135,7 @@ class Product extends Model
     /** Génère la prochaine référence interne : SV-0001, SV-0002... */
     public static function nextReference(): string
     {
-        $last = static::withTrashed()
-            ->where('reference', 'like', 'SV-%')
-            ->orderByDesc('id')
-            ->value('reference');
-
-        $number = is_string($last) ? ((int) Str::afterLast($last, '-')) + 1 : 1;
-
-        return 'SV-'.str_pad((string) $number, 4, '0', STR_PAD_LEFT);
+        return app(ReferenceGenerator::class)->next('products', 'SV-', 4, 'products');
     }
 
     protected static function booted(): void

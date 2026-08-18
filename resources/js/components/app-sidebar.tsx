@@ -16,6 +16,7 @@ import {
     RotateCcw,
     Settings2,
     ShoppingCart,
+    Store,
     Truck,
     Users,
     Wallet,
@@ -108,6 +109,7 @@ export function AppSidebar() {
      */
     const enLigne: NavItem[] = isGerant
         ? [
+              { title: 'Voir la boutique', href: '/boutique', icon: Store },
               { title: 'Commandes', href: '/commandes', icon: PackageCheck },
               { title: 'Coffres', href: '/coffres', icon: PiggyBank },
               { title: 'Messages reçus', href: '/contacts', icon: Inbox },

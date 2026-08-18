@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CashSessionStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
+use App\Services\ReferenceGenerator;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $expected_cash
  * @property int|null $variance
  * @property string|null $closing_note
+ * @property int|null $open_guard
  * @property CashSessionStatus $status
  * @property-read User|null $opener
  * @property-read User|null $closer
@@ -34,7 +36,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'reference', 'opened_by', 'opened_at', 'opening_float', 'opening_note',
     'closed_by', 'closed_at', 'counted_cash', 'expected_cash', 'variance',
-    'closing_note', 'status',
+    'closing_note', 'status', 'open_guard',
 ])]
 class CashSession extends Model
 {
@@ -49,6 +51,7 @@ class CashSession extends Model
             'counted_cash' => 'integer',
             'expected_cash' => 'integer',
             'variance' => 'integer',
+            'open_guard' => 'integer',
         ];
     }
 
@@ -142,13 +145,6 @@ class CashSession extends Model
         $year ??= (int) now()->format('Y');
         $prefix = "C-{$year}-";
 
-        $last = static::query()
-            ->where('reference', 'like', $prefix.'%')
-            ->orderByDesc('reference')
-            ->value('reference');
-
-        $number = is_string($last) ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix.str_pad((string) $number, 6, '0', STR_PAD_LEFT);
+        return app(ReferenceGenerator::class)->next("cash-sessions:{$year}", $prefix, 6, 'cash_sessions');
     }
 }

@@ -92,6 +92,32 @@ class SaleTest extends TestCase
         ]);
     }
 
+    /** Le stock réservé sur le site ne peut plus être vendu au comptoir. */
+    public function test_a_counter_sale_respects_online_reservations(): void
+    {
+        $variant = ProductVariant::factory()->withStock(3)->create([
+            'reserved_quantity' => 2,
+        ]);
+
+        try {
+            $this->sales->create([
+                ['product_variant_id' => $variant->id, 'quantity' => 2],
+            ]);
+        } catch (RuntimeException) {
+            // attendu
+        }
+
+        $this->assertDatabaseCount('sales', 0);
+        $this->assertSame(3, $variant->fresh()?->stock_quantity);
+
+        $sale = $this->sales->create([
+            ['product_variant_id' => $variant->id, 'quantity' => 1],
+        ]);
+
+        $this->assertSame(2, $variant->fresh()?->stock_quantity);
+        $this->assertSame(1, $sale->items->sum('quantity'));
+    }
+
     /** Le refus doit être total : ni vente ni mouvement partiel enregistré. */
     public function test_a_refused_sale_leaves_no_trace(): void
     {

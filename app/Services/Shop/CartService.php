@@ -94,7 +94,7 @@ class CartService
             return ['lines' => [], 'subtotal' => 0, 'count' => 0];
         }
 
-        $variants = ProductVariant::with(['product:id,name,slug,is_published', 'product.images'])
+        $variants = ProductVariant::with(['product:id,name,slug,is_active,is_published', 'product.images'])
             ->whereIn('id', array_keys($lines))
             ->get()
             ->keyBy('id');
@@ -105,7 +105,11 @@ class CartService
         foreach ($lines as $variantId => $quantity) {
             $variant = $variants->get($variantId);
 
-            if (! $variant || ! $variant->product || ! $variant->product->is_published) {
+            if (! $variant
+                || ! $variant->is_active
+                || ! $variant->product
+                || ! $variant->product->is_active
+                || ! $variant->product->is_published) {
                 continue;
             }
 

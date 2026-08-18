@@ -514,7 +514,7 @@ class DocumentController extends Controller
                 'sku' => $v->sku,
                 'barcode' => $v->barcode,
                 'price' => $v->selling_price,
-                'stock' => $v->stock_quantity,
+                'stock' => $v->available_quantity,
             ])
             ->all();
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\VaultStatus;
+use App\Services\ReferenceGenerator;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -125,13 +126,6 @@ class Vault extends Model
         $year ??= (int) now()->format('Y');
         $prefix = "CF-{$year}-";
 
-        $last = static::query()
-            ->where('reference', 'like', $prefix.'%')
-            ->orderByDesc('reference')
-            ->value('reference');
-
-        $number = is_string($last) ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix.str_pad((string) $number, 4, '0', STR_PAD_LEFT);
+        return app(ReferenceGenerator::class)->next("vaults:{$year}", $prefix, 4, 'vaults');
     }
 }

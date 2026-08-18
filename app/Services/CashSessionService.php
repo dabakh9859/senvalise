@@ -7,6 +7,7 @@ use App\Enums\CashSessionStatus;
 use App\Enums\PaymentMethod;
 use App\Models\CashMovement;
 use App\Models\CashSession;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,20 +24,32 @@ class CashSessionService
 {
     public function open(int $openingFloat, ?string $note = null): CashSession
     {
-        return DB::transaction(function () use ($openingFloat, $note) {
+        try {
+            return DB::transaction(function () use ($openingFloat, $note) {
+                if (CashSession::current() !== null) {
+                    throw new RuntimeException('Une caisse est déjà ouverte. Fermez-la avant d’en ouvrir une autre.');
+                }
+
+                return CashSession::create([
+                    'reference' => CashSession::nextReference(),
+                    'opened_by' => Auth::id(),
+                    'opened_at' => now(),
+                    'opening_float' => max(0, $openingFloat),
+                    'opening_note' => $note,
+                    'status' => CashSessionStatus::Ouverte->value,
+                    'open_guard' => 1,
+                ]);
+            });
+        } catch (QueryException $exception) {
             if (CashSession::current() !== null) {
-                throw new RuntimeException('Une caisse est déjà ouverte. Fermez-la avant d’en ouvrir une autre.');
+                throw new RuntimeException(
+                    'Une caisse est déjà ouverte. Fermez-la avant d’en ouvrir une autre.',
+                    previous: $exception,
+                );
             }
 
-            return CashSession::create([
-                'reference' => CashSession::nextReference(),
-                'opened_by' => Auth::id(),
-                'opened_at' => now(),
-                'opening_float' => max(0, $openingFloat),
-                'opening_note' => $note,
-                'status' => CashSessionStatus::Ouverte->value,
-            ]);
-        });
+            throw $exception;
+        }
     }
 
     /**
@@ -49,23 +62,32 @@ class CashSessionService
     public function close(CashSession $session, int $countedCash, ?string $note = null): CashSession
     {
         return DB::transaction(function () use ($session, $countedCash, $note) {
-            /** @var CashSession $locked */
-            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->getKey());
+            $closedAt = now();
+            $claimed = CashSession::query()
+                ->whereKey($session->getKey())
+                ->where('status', CashSessionStatus::Ouverte->value)
+                ->where('open_guard', 1)
+                ->update([
+                    'status' => CashSessionStatus::Fermee->value,
+                    'open_guard' => null,
+                    'closed_by' => Auth::id(),
+                    'closed_at' => $closedAt,
+                    'updated_at' => $closedAt,
+                ]);
 
-            if (! $locked->isOpen()) {
+            if ($claimed !== 1) {
                 throw new RuntimeException('Cette caisse est déjà fermée.');
             }
+
+            $locked = CashSession::query()->whereKey($session->getKey())->firstOrFail();
 
             $expected = $locked->expectedCash();
 
             $locked->update([
-                'closed_by' => Auth::id(),
-                'closed_at' => now(),
                 'counted_cash' => max(0, $countedCash),
                 'expected_cash' => $expected,
                 'variance' => max(0, $countedCash) - $expected,
                 'closing_note' => $note,
-                'status' => CashSessionStatus::Fermee->value,
             ]);
 
             return $locked;

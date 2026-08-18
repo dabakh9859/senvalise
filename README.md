@@ -2,8 +2,8 @@
 
 Application de gestion pour la boutique de valises et bagages **SenValise**.
 Elle couvre le catalogue, le stock, la caisse, les arrivages fournisseur, les
-documents commerciaux et les rapports — et sert de socle au futur site de vente
-en ligne.
+documents commerciaux, les rapports et la boutique en ligne. Le site public et
+la gestion utilisent la même base : aucun catalogue ni stock n'est dupliqué.
 
 ---
 
@@ -14,7 +14,8 @@ composer dev
 ```
 
 Cette commande lance en parallèle le serveur PHP, la file d'attente, les logs et
-Vite. L'application est alors disponible sur <http://localhost:8000>.
+Vite. La boutique publique est disponible sur <http://localhost:8000> et la
+connexion du personnel sur <http://localhost:8000/login>.
 
 ### Comptes de démarrage
 

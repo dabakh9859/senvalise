@@ -65,11 +65,16 @@ class VaultService
             throw new RuntimeException('Le montant du versement ne peut pas être nul.');
         }
 
-        if (in_array($vault->status, [VaultStatus::Utilise, VaultStatus::Annule], true)) {
-            throw new RuntimeException('Ce coffre est fermé.');
-        }
-
         return DB::transaction(function () use ($vault, $amount, $method, $reference, $note): VaultDeposit {
+            $claimed = Vault::query()
+                ->whereKey($vault->getKey())
+                ->whereIn('status', [VaultStatus::Ouvert->value, VaultStatus::Atteint->value])
+                ->update(['updated_at' => now()]);
+
+            if ($claimed !== 1) {
+                throw new RuntimeException('Ce coffre est fermé.');
+            }
+
             $deposit = VaultDeposit::create([
                 'vault_id' => $vault->id,
                 'amount' => $amount,
@@ -94,25 +99,36 @@ class VaultService
      */
     public function refund(Vault $vault, ?string $note = null): Vault
     {
-        $saved = $vault->saved_amount;
+        return DB::transaction(function () use ($vault, $note): Vault {
+            $claimed = Vault::query()
+                ->whereKey($vault->getKey())
+                ->whereIn('status', [VaultStatus::Ouvert->value, VaultStatus::Atteint->value])
+                ->update([
+                    'status' => VaultStatus::Annule->value,
+                    'closed_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-        if ($saved > 0) {
-            VaultDeposit::create([
-                'vault_id' => $vault->id,
-                'amount' => -$saved,
-                'payment_method' => PaymentMethod::Especes->value,
-                'note' => $note ?? 'Remboursement au client',
-                'user_id' => Auth::id(),
-                'deposited_at' => now(),
-            ]);
-        }
+            if ($claimed !== 1) {
+                throw new RuntimeException('Ce coffre est déjà fermé.');
+            }
 
-        $vault->forceFill([
-            'status' => VaultStatus::Annule->value,
-            'closed_at' => now(),
-        ])->save();
+            $vault = Vault::query()->whereKey($vault->getKey())->firstOrFail();
+            $saved = $vault->saved_amount;
 
-        return $vault;
+            if ($saved > 0) {
+                VaultDeposit::create([
+                    'vault_id' => $vault->id,
+                    'amount' => -$saved,
+                    'payment_method' => PaymentMethod::Especes->value,
+                    'note' => $note ?? 'Remboursement au client',
+                    'user_id' => Auth::id(),
+                    'deposited_at' => now(),
+                ]);
+            }
+
+            return $vault->refresh();
+        });
     }
 
     /** Recalcule l'état d'après les versements réellement enregistrés. */

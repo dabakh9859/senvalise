@@ -94,6 +94,7 @@ class SaleService
                     reference: $sale,
                     unitCost: $line['unit_cost'],
                     note: "Vente {$sale->reference}",
+                    respectReservations: true,
                 );
             }
 
@@ -107,12 +108,23 @@ class SaleService
      */
     public function cancel(Sale $sale, string $reason = 'Annulation'): Sale
     {
-        if ($sale->status !== SaleStatus::Validee) {
-            throw new RuntimeException('Seule une vente validée peut être annulée.');
-        }
-
         return DB::transaction(function () use ($sale, $reason) {
-            $sale->loadMissing('items.variant');
+            $claimed = Sale::query()
+                ->whereKey($sale->getKey())
+                ->where('status', SaleStatus::Validee->value)
+                ->update([
+                    'status' => SaleStatus::Annulee->value,
+                    'updated_at' => now(),
+                ]);
+
+            if ($claimed !== 1) {
+                throw new RuntimeException('Seule une vente validée peut être annulée.');
+            }
+
+            $sale = Sale::query()
+                ->with('items.variant')
+                ->whereKey($sale->getKey())
+                ->firstOrFail();
 
             foreach ($sale->items as $item) {
                 if (! $item->variant || $item->quantity <= 0) {
@@ -128,8 +140,6 @@ class SaleService
                     note: "{$reason} — vente {$sale->reference}",
                 );
             }
-
-            $sale->forceFill(['status' => SaleStatus::Annulee->value])->save();
 
             return $sale->refresh();
         });

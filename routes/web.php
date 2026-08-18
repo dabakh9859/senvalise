@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => Auth::check()
     ? redirect()->route('dashboard')
-    : redirect()->route('login'))->name('home');
+    : redirect()->route('boutique.accueil'))->name('home');
 
 /*
 |--------------------------------------------------------------------------

@@ -36,12 +36,48 @@ class StockService
         ?string $note = null,
         ?MovementType $type = null,
         ?int $userId = null,
+        bool $respectReservations = false,
     ): StockMovement {
         if ($quantity === 0) {
             throw new RuntimeException('Un mouvement de stock ne peut pas avoir une quantité nulle.');
         }
 
-        return DB::transaction(function () use ($variant, $quantity, $reason, $reference, $unitCost, $note, $type, $userId) {
+        return DB::transaction(function () use ($variant, $quantity, $reason, $reference, $unitCost, $note, $type, $userId, $respectReservations) {
+            if ($respectReservations && $quantity < 0) {
+                $requested = abs($quantity);
+                $updated = ProductVariant::query()
+                    ->whereKey($variant->getKey())
+                    ->whereRaw('stock_quantity - reserved_quantity >= ?', [$requested])
+                    ->decrement('stock_quantity', $requested);
+
+                if ($updated !== 1) {
+                    throw new RuntimeException(
+                        "Stock disponible insuffisant pour « {$variant->sku} » : cet article est peut-être réservé en ligne."
+                    );
+                }
+
+                /** @var ProductVariant $locked */
+                $locked = ProductVariant::query()->findOrFail($variant->getKey());
+                $after = $locked->stock_quantity;
+                $before = $after - $quantity;
+
+                $variant->setRawAttributes($locked->getAttributes(), true);
+
+                return StockMovement::create([
+                    'product_variant_id' => $locked->id,
+                    'type' => ($type ?? $this->typeFor($quantity, $reason))->value,
+                    'reason' => $reason->value,
+                    'quantity' => $quantity,
+                    'quantity_before' => $before,
+                    'quantity_after' => $after,
+                    'unit_cost' => $unitCost ?? $locked->cost_price,
+                    'reference_type' => $reference ? $reference::class : null,
+                    'reference_id' => $reference?->getKey(),
+                    'user_id' => $userId ?? Auth::id(),
+                    'note' => $note,
+                ]);
+            }
+
             /** @var ProductVariant $locked */
             $locked = ProductVariant::query()->lockForUpdate()->findOrFail($variant->getKey());
 

@@ -70,7 +70,9 @@ trait BuildsSaleCounter
             'sku' => $variant->sku,
             'barcode' => $variant->barcode,
             'price' => $variant->selling_price,
-            'stock' => $variant->stock_quantity,
+            // Une réservation web reste physiquement au rayon, mais elle
+            // n'est plus vendable au comptoir.
+            'stock' => $variant->available_quantity,
             'categoryId' => $variant->product?->category_id,
         ];
     }

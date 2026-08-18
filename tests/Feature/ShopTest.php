@@ -20,6 +20,7 @@ use App\Services\Shop\OrderService;
 use App\Services\Shop\VaultService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -202,6 +203,29 @@ class ShopTest extends TestCase
         $this->assertSame($sale->id, $order->fresh()?->sale_id);
     }
 
+    /** Une même commande ne peut produire qu'une seule vente. */
+    public function test_confirming_an_order_twice_is_refused_without_a_second_sale(): void
+    {
+        $zone = $this->zone();
+        $variant = $this->variant(stock: 5);
+
+        $this->post('/boutique/panier', ['variant_id' => $variant->id, 'quantity' => 2]);
+        $this->post('/boutique/commande', $this->checkoutPayload($zone));
+
+        $orders = app(OrderService::class);
+        $order = $orders->confirm(Order::firstOrFail());
+
+        try {
+            $orders->confirm($order);
+        } catch (RuntimeException) {
+            // attendu
+        }
+
+        $this->assertDatabaseCount('sales', 1);
+        $this->assertSame(3, $variant->fresh()?->stock_quantity);
+        $this->assertSame(0, $variant->fresh()?->reserved_quantity);
+    }
+
     /** Annuler avant confirmation lève la réserve, sans toucher au journal. */
     public function test_cancelling_before_confirmation_only_releases_the_reservation(): void
     {
@@ -218,6 +242,28 @@ class ShopTest extends TestCase
         $this->assertSame(5, $fresh?->stock_quantity);
         $this->assertSame(0, $fresh->reserved_quantity);
         $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    /** Une annulation répétée ne libère jamais deux fois la réserve. */
+    public function test_cancelling_an_order_twice_is_refused_without_touching_stock_again(): void
+    {
+        $zone = $this->zone();
+        $variant = $this->variant(stock: 5);
+
+        $this->post('/boutique/panier', ['variant_id' => $variant->id, 'quantity' => 2]);
+        $this->post('/boutique/commande', $this->checkoutPayload($zone));
+
+        $orders = app(OrderService::class);
+        $order = $orders->cancel(Order::firstOrFail(), 'Test');
+
+        try {
+            $orders->cancel($order, 'Deuxième essai');
+        } catch (RuntimeException) {
+            // attendu
+        }
+
+        $this->assertSame(5, $variant->fresh()?->stock_quantity);
+        $this->assertSame(0, $variant->fresh()?->reserved_quantity);
     }
 
     /** Annuler après confirmation remet la marchandise et annule la vente. */
@@ -451,6 +497,23 @@ class ShopTest extends TestCase
 
         $this->assertSame(0, $fresh?->saved_amount);
         $this->assertSame(VaultStatus::Annule, $fresh->status);
+        $this->assertDatabaseCount('vault_deposits', 2);
+    }
+
+    public function test_a_vault_cannot_be_refunded_twice(): void
+    {
+        $vaults = app(VaultService::class);
+        $vault = $vaults->open($this->customer(), 'Ma valise', 100000);
+        $vaults->deposit($vault, 40000);
+        $vault = $vaults->refund($vault->fresh() ?? $vault);
+
+        try {
+            $vaults->refund($vault);
+        } catch (RuntimeException) {
+            // attendu
+        }
+
+        $this->assertSame(0, $vault->fresh()?->saved_amount);
         $this->assertDatabaseCount('vault_deposits', 2);
     }
 

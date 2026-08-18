@@ -1,13 +1,5 @@
 .git
-node_modules
-vendor
-public/build
-public/hot
-public/storage
-storage/framework/cache
-storage/framework/sessions
-storage/framework/views
-storage/logs
-bootstrap/ssr
 .env
-database/database.sqlite
+node_modules
+dist
+*.log

@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
-import {AlertTriangle,ArrowDownRight,ArrowUpRight,BarChart3,Box,ChevronDown,RefreshCw,Users} from 'lucide-react';
+import {AlertTriangle,ArrowDownRight,ArrowUpRight,BarChart3,Box,ChevronDown,RefreshCw,TriangleAlert,Users} from 'lucide-react';
 import {
   Area,AreaChart,Bar,BarChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,
   Tooltip,XAxis,YAxis,
@@ -30,12 +30,13 @@ export default function Dashboard(){
   const[period,setPeriod]=useState<Period>('30d');
   const[data,setData]=useState<DashboardData|null>(null);
   const[loading,setLoading]=useState(true);
+  const[error,setError]=useState('');
   const[updated,setUpdated]=useState<Date|null>(null);
-  const load=useCallback(async()=>{setLoading(true);try{setData(await api<DashboardData>(`/api/dashboard?period=${period}`));setUpdated(new Date())}finally{setLoading(false)}},[period]);
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const result=await api<DashboardData>(`/api/dashboard?period=${period}`);setData({...result,trend:result.trend??[],ageing:result.ageing??[],paymentStatus:result.paymentStatus??[],topProducts:result.topProducts??[],topCustomers:result.topCustomers??[],categories:result.categories??[],traffic:result.traffic??[],stock:{...result.stock,alerts:result.stock.alerts??[]}});setUpdated(new Date())}catch(reason){setError((reason as Error).message)}finally{setLoading(false)}},[period]);
   useEffect(()=>{void load()},[load]);
   const range=data?`${new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short'}).format(new Date(data.from))} – ${new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',year:'numeric'}).format(new Date(data.to))}`:'—';
   if(!data&&loading)return <DashboardSkeleton/>;
-  if(!data)return null;
+  if(!data)return <div className="dashboard-error"><TriangleAlert/><h1>Le tableau de bord n’a pas pu se charger.</h1><p>{error||'Réessaie dans un instant.'}</p><button className="primary" onClick={()=>void load()}>Réessayer</button></div>;
   const collectedRate=data.summary.revenue?Math.round(data.summary.paid/data.summary.revenue*100):0;
   return <div className={`dashboard ${loading?'is-refreshing':''}`}>
     <div className="dashboard-heading">

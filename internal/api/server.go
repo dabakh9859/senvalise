@@ -550,7 +550,9 @@ func (s *Server) dashboard(c *fiber.Ctx) error {
 		Value int64  `json:"value"`
 		Count int64  `json:"count"`
 	}
-	var topProducts, topCustomers, categories []namedValue
+	topProducts := make([]namedValue, 0)
+	topCustomers := make([]namedValue, 0)
+	categories := make([]namedValue, 0)
 	s.DB.Raw("select coalesce(p.name,pv.sku) name, coalesce(sum(si.total),0) value, coalesce(sum(si.quantity),0) count from sale_items si join sales s on s.id=si.sale_id join product_variants pv on pv.id=si.variant_id left join products p on p.id=pv.product_id where s.created_at >= ? and s.created_at <= ? group by p.name,pv.sku order by value desc limit 7", start, now).Scan(&topProducts)
 	s.DB.Raw("select coalesce(c.name,'Client comptoir') name, coalesce(sum(s.total),0) value, count(*) count from sales s left join customers c on c.id=s.customer_id where s.created_at >= ? and s.created_at <= ? group by c.name order by value desc limit 7", start, now).Scan(&topCustomers)
 	s.DB.Raw("select coalesce(cat.name,'Sans catégorie') name, coalesce(sum(si.total),0) value, coalesce(sum(si.quantity),0) count from sale_items si join sales s on s.id=si.sale_id join product_variants pv on pv.id=si.variant_id left join products p on p.id=pv.product_id left join categories cat on cat.id=p.category_id where s.created_at >= ? and s.created_at <= ? group by cat.name order by value desc limit 7", start, now).Scan(&categories)
@@ -560,7 +562,7 @@ func (s *Server) dashboard(c *fiber.Ctx) error {
 		Count  int64  `json:"count"`
 		Value  int64  `json:"value"`
 	}
-	var paymentStatus []statusValue
+	paymentStatus := make([]statusValue, 0)
 	s.DB.Raw("select case when paid >= total then 'paid' when paid > 0 then 'partial' else 'pending' end status, count(*) count, coalesce(sum(total),0) value from sales where created_at >= ? and created_at <= ? group by 1 order by 1", start, now).Scan(&paymentStatus)
 
 	type ageingValue struct {
@@ -568,7 +570,7 @@ func (s *Server) dashboard(c *fiber.Ctx) error {
 		Value int64  `json:"value"`
 		Count int64  `json:"count"`
 	}
-	var ageing []ageingValue
+	ageing := make([]ageingValue, 0)
 	s.DB.Raw("select case when current_date-created_at::date <= 30 then '1–30 j' when current_date-created_at::date <= 60 then '31–60 j' when current_date-created_at::date <= 90 then '61–90 j' else '+90 j' end label, coalesce(sum(greatest(total-paid,0)),0) value, count(*) count from sales where total > paid group by 1 order by min(current_date-created_at::date)").Scan(&ageing)
 
 	type trafficPoint struct {
@@ -576,7 +578,7 @@ func (s *Server) dashboard(c *fiber.Ctx) error {
 		Hour  int   `json:"hour"`
 		Count int64 `json:"count"`
 	}
-	var traffic []trafficPoint
+	traffic := make([]trafficPoint, 0)
 	s.DB.Raw("select extract(isodow from created_at)::int as \"day\", extract(hour from created_at)::int as \"hour\", count(*) count from sales where created_at >= ? and created_at <= ? group by 1,2 order by 1,2", start, now).Scan(&traffic)
 
 	type stockItem struct {
@@ -586,7 +588,7 @@ func (s *Server) dashboard(c *fiber.Ctx) error {
 		Stock   int64  `json:"stock"`
 		AlertAt int64  `json:"alertAt"`
 	}
-	var stockAlerts []stockItem
+	stockAlerts := make([]stockItem, 0)
 	s.DB.Raw("select pv.id,pv.sku,coalesce(p.name,pv.sku) product,pv.stock,pv.alert_at from product_variants pv left join products p on p.id=pv.product_id where pv.active=true and pv.stock<=pv.alert_at order by pv.stock asc,pv.id desc limit 8").Scan(&stockAlerts)
 
 	averageBasket := int64(0)

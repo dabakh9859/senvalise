@@ -25,7 +25,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-this}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-gerant@senvalise.sn}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
-      APP_ORIGIN: http://localhost:3000,http://127.0.0.1:3000
+      SEED_DEMO: ${SEED_DEMO:-true}
+      APP_ORIGIN: http://localhost:3000,http://127.0.0.1:3000,http://localhost:4000,http://127.0.0.1:4000
       TZ: Africa/Dakar
     depends_on:
       postgres:
@@ -39,7 +40,13 @@ services:
       context: .
       target: web
     ports:
-      - "3000:80"
+      - "3000:80"      # espace de gestion
+      - "4000:8080"    # boutique en ligne
+    volumes:
+      # La boutique est un site statique : on la monte plutot que de la cuire
+      # dans l'image, elle vit hors du contexte de build et se modifie sans
+      # reconstruire le conteneur.
+      - ../senvalise_site/site-senvalise:/usr/share/nginx/boutique:ro
     depends_on:
       - api
     restart: unless-stopped

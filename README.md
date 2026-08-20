@@ -27,7 +27,8 @@ passe dans `.env` avant le premier démarrage (`ADMIN_PASSWORD`).
 
 Authentification et rôles, tableau de bord, caisse, ventes, retours, clients,
 catalogue et déclinaisons, mouvements de stock, arrivages, documents,
-commandes web, coffres, sessions de caisse, messages, livraison et rapports.
+commandes web, coffres, sessions de caisse, dépenses quotidiennes, messages,
+livraison et rapports.
 
 Les montants sont enregistrés en francs CFA entiers. Les ventes, réceptions,
 retours et dépôts utilisent des transactions PostgreSQL avec verrouillage des

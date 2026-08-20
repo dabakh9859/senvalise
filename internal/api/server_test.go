@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -28,5 +29,39 @@ func TestDashboardPeriods(t *testing.T) {
 		if len(points) != test.points {
 			t.Fatalf("%s: %d points, attendu %d", test.period, len(points), test.points)
 		}
+	}
+}
+
+func TestReturnInputDecodesQuantityAndAmount(t *testing.T) {
+	body := []byte(`{
+		"saleId": 42,
+		"reason": "Article défectueux",
+		"refundMethod": "cash",
+		"restock": true,
+		"items": [
+			{"variantId": 7, "quantity": 2, "amount": 30000},
+			{"variantId": 9, "quantity": 1, "amount": 12500}
+		]
+	}`)
+	var in returnInput
+	if e := json.Unmarshal(body, &in); e != nil {
+		t.Fatalf("décodage impossible: %v", e)
+	}
+	if in.SaleID != 42 || !in.Restock {
+		t.Fatalf("en-tête du retour mal décodé: %+v", in)
+	}
+	if len(in.Items) != 2 {
+		t.Fatalf("%d lignes décodées, attendu 2", len(in.Items))
+	}
+	expected := []returnLineInput{{VariantID: 7, Quantity: 2, Amount: 30000}, {VariantID: 9, Quantity: 1, Amount: 12500}}
+	var total int64
+	for i, line := range in.Items {
+		if line != expected[i] {
+			t.Fatalf("ligne %d décodée %+v, attendu %+v", i, line, expected[i])
+		}
+		total += line.Amount
+	}
+	if total != 42500 {
+		t.Fatalf("montant remboursé %d, attendu 42500", total)
 	}
 }

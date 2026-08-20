@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,18 +28,43 @@ type dashboardTrend struct {
 
 func (s *Server) Register(app *fiber.App) {
 	app.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok", "service": "senvalise-api"}) })
+	app.Static("/uploads", "/uploads")
 	app.Post("/api/auth/login", s.login)
 	app.Get("/api/shop/products", s.shopProducts)
-	app.Post("/api/shop/orders", s.createOrder)
 	app.Post("/api/shop/contact", s.createContact)
+	s.RegisterShop(app)
 	a := app.Group("/api", auth.Required)
 	a.Get("/me", s.me)
-	a.Get("/dashboard", s.dashboard)
+	// Le tableau de bord agrège chiffre d'affaires, créances et valeur du stock :
+	// c'est du pilotage, pas du comptoir.
+	a.Get("/dashboard", auth.Manager, s.dashboard)
+	a.Get("/checkout-settings", s.checkoutSettings)
+	a.Put("/checkout-settings", auth.Manager, s.updateCheckoutSettings)
+	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
+	// Les dépenses portent les salaires et le solde de la journée. Le module
+	// entier relève du gérant.
+	a.Get("/expenses", auth.Manager, s.listExpenses)
+	a.Get("/expenses/summary", auth.Manager, s.expenseSummary)
+	a.Get("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.show(c, "expenses") })
+	a.Post("/expenses", auth.Manager, s.createExpense)
+	a.Put("/expenses/:id", auth.Manager, s.updateExpense)
+	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
 	managerOnly := map[string]bool{"categories": true, "brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "messages": true, "message-templates": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
-	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "documents", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
+	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
-		a.Get("/"+r, func(c *fiber.Ctx) error { return s.list(c, r) })
-		a.Get("/"+r+"/:id", func(c *fiber.Ctx) error { return s.show(c, r) })
+		if managerRead[r] {
+			a.Get("/"+r, auth.Manager, func(c *fiber.Ctx) error { return s.list(c, r) })
+			a.Get("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.show(c, r) })
+		} else {
+			a.Get("/"+r, func(c *fiber.Ctx) error { return s.list(c, r) })
+			a.Get("/"+r+"/:id", func(c *fiber.Ctx) error { return s.show(c, r) })
+		}
+		if r == "activity-logs" {
+			// Le journal est écrit par le serveur. Laisser un client y créer des
+			// lignes reviendrait à autoriser la fabrication de traces d'audit.
+			a.Delete("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, r) })
+			continue
+		}
 		if managerOnly[r] {
 			a.Post("/"+r, auth.Manager, func(c *fiber.Ctx) error { return s.create(c, r) })
 			a.Put("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.update(c, r) })
@@ -48,9 +75,26 @@ func (s *Server) Register(app *fiber.App) {
 		a.Delete("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, r) })
 	}
 	a.Get("/stock/movements", func(c *fiber.Ctx) error { return s.list(c, "stock-movements") })
+	a.Get("/stock/movements/:id", func(c *fiber.Ctx) error { return s.show(c, "stock-movements") })
+	a.Put("/stock/movements/:id", auth.Manager, func(c *fiber.Ctx) error { return s.update(c, "stock-movements") })
+	a.Delete("/stock/movements/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "stock-movements") })
 	a.Post("/stock/adjust", s.adjustStock)
 	a.Post("/stock/inventory", s.inventory)
 	a.Post("/sales/checkout", s.checkout)
+	a.Post("/sales/:id/payments", s.addSalePayment)
+	a.Post("/sales/:id/payments/cancel-all", auth.Manager, s.cancelAllSalePayments)
+	a.Post("/sales/:id/payments/:paymentId/cancel", auth.Manager, s.cancelSalePayment)
+	a.Put("/sales/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "sales") })
+	a.Post("/sales/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "sales") })
+	a.Put("/quotes/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "quotes") })
+	a.Post("/quotes/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "quotes") })
+	a.Put("/delivery-notes/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "delivery-notes") })
+	a.Post("/delivery-notes/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "delivery-notes") })
+	for _, signable := range []string{"sales", "quotes", "delivery-notes"} {
+		r := signable
+		a.Post("/"+r+"/:id/signatures/:kind", auth.Manager, func(c *fiber.Ctx) error { return s.uploadDocumentSignature(c, r) })
+		a.Delete("/"+r+"/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.removeBusinessLine(c, r) })
+	}
 	a.Post("/arrivals/:id/receive", auth.Manager, s.receiveArrival)
 	a.Post("/returns/process", s.processReturn)
 	a.Post("/cash/open", s.openCash)
@@ -59,8 +103,13 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/products/:id/images", auth.Manager, s.uploadProductImage)
 	a.Get("/duplicates/customers", auth.Manager, s.duplicates)
 	a.Get("/labels/:variantId", s.label)
-	a.Post("/documents/:id/convert", s.convertDocument)
-	a.Get("/reports/summary", auth.Manager, s.dashboard)
+	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)
+	a.Post("/sales/:id/delivery-note", auth.Manager, s.createDeliveryNote)
+	a.Get("/reports", auth.Manager, s.reports)
+	// Préfixe volontairement distinct de /api/shop : le groupe de la vitrine y
+	// pose auth.Customer sans préfixe, et Fiber applique ce middleware à tout
+	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.
+	s.registerShopAdmin(a.Group("/boutique", auth.Manager))
 }
 
 func (s *Server) login(c *fiber.Ctx) error {
@@ -107,8 +156,10 @@ func modelFor(name string) any {
 		return &models.Sale{}
 	case "returns":
 		return &models.SaleReturn{}
-	case "documents":
-		return &models.Document{}
+	case "quotes":
+		return &models.Quote{}
+	case "delivery-notes":
+		return &models.DeliveryNote{}
 	case "orders":
 		return &models.Order{}
 	case "vaults":
@@ -131,6 +182,8 @@ func modelFor(name string) any {
 		return &models.DeliveryZone{}
 	case "contact-messages":
 		return &models.ContactMessage{}
+	case "expenses":
+		return &models.Expense{}
 	case "users":
 		return &models.User{}
 	}
@@ -160,8 +213,10 @@ func sliceFor(name string) any {
 		return &[]models.Sale{}
 	case "returns":
 		return &[]models.SaleReturn{}
-	case "documents":
-		return &[]models.Document{}
+	case "quotes":
+		return &[]models.Quote{}
+	case "delivery-notes":
+		return &[]models.DeliveryNote{}
 	case "orders":
 		return &[]models.Order{}
 	case "vaults":
@@ -184,6 +239,8 @@ func sliceFor(name string) any {
 		return &[]models.DeliveryZone{}
 	case "contact-messages":
 		return &[]models.ContactMessage{}
+	case "expenses":
+		return &[]models.Expense{}
 	case "users":
 		return &[]models.User{}
 	}
@@ -193,7 +250,17 @@ func preload(db *gorm.DB, name string) *gorm.DB {
 	switch name {
 	case "products":
 		return db.Preload("Variants").Preload("Images")
-	case "arrivals", "sales", "returns", "documents", "orders", "vaults", "cash-sessions":
+	case "variants":
+		return db.Preload("Product.Images")
+	case "sales":
+		return db.Preload("Customer").Preload("User").Preload("Quote").Preload("DeliveryNote").Preload("Payments", func(db *gorm.DB) *gorm.DB { return db.Order("id desc") }).Preload("Items.Variant.Product.Images")
+	case "quotes":
+		return db.Preload("Customer").Preload("User").Preload("ConvertedSale").Preload("Items.Variant.Product.Images")
+	case "delivery-notes":
+		return db.Preload("Customer").Preload("User").Preload("Sale.Quote").Preload("Items.Variant.Product.Images")
+	case "expenses":
+		return db.Preload("Supplier").Preload("User")
+	case "arrivals", "returns", "orders", "vaults", "cash-sessions":
 		return db.Preload(clause.Associations)
 	}
 	return db
@@ -230,7 +297,7 @@ func (s *Server) list(c *fiber.Ctx, name string) error {
 	if e := db.Limit(limit).Find(out).Error; e != nil {
 		return e
 	}
-	return c.JSON(out)
+	return s.respond(c, out)
 }
 func (s *Server) show(c *fiber.Ctx, name string) error {
 	if name == "settings" {
@@ -243,7 +310,7 @@ func (s *Server) show(c *fiber.Ctx, name string) error {
 	if e := preload(s.DB, name).First(out, c.Params("id")).Error; e != nil {
 		return fiber.ErrNotFound
 	}
-	return c.JSON(out)
+	return s.respond(c, out)
 }
 func (s *Server) create(c *fiber.Ctx, name string) error {
 	out := modelFor(name)
@@ -277,8 +344,29 @@ func (s *Server) update(c *fiber.Ctx, name string) error {
 	if s.DB.First(out, c.Params("id")).Error != nil {
 		return fiber.ErrNotFound
 	}
+	previousPaid := int64(0)
+	if sale, ok := out.(*models.Sale); ok {
+		previousPaid = sale.Paid
+	}
 	if e := c.BodyParser(out); e != nil {
 		return fiber.ErrBadRequest
+	}
+	if sale, ok := out.(*models.Sale); ok {
+		sale.Paid = previousPaid
+		sale.Status = paymentStatus(sale.Paid, sale.Total, sale.Status)
+	}
+	if u, ok := out.(*models.User); ok {
+		var credentials struct {
+			Password string `json:"password"`
+		}
+		_ = c.BodyParser(&credentials)
+		if credentials.Password != "" {
+			if len(credentials.Password) < 8 {
+				return fiber.NewError(422, "Le mot de passe doit contenir au moins 8 caractères")
+			}
+			hash, _ := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
+			u.PasswordHash = string(hash)
+		}
 	}
 	if e := s.DB.Save(out).Error; e != nil {
 		return fiber.NewError(422, e.Error())
@@ -340,24 +428,130 @@ type lineInput struct {
 	Discount  int64 `json:"discount"`
 }
 
+type paymentMethodSetting struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	Active bool   `json:"active"`
+}
+type checkoutSettingsPayload struct {
+	TaxRate             float64                `json:"taxRate"`
+	TaxEnabledByDefault bool                   `json:"taxEnabledByDefault"`
+	PaymentMethods      []paymentMethodSetting `json:"paymentMethods"`
+	InvoiceDefaults     invoiceDefaults        `json:"invoiceDefaults"`
+}
+
+type invoiceDefaults struct {
+	CompanyName      string `json:"companyName"`
+	Tagline          string `json:"tagline"`
+	Phone            string `json:"phone"`
+	Address          string `json:"address"`
+	ThankYouTitle    string `json:"thankYouTitle"`
+	FooterNote       string `json:"footerNote"`
+	CompanySignature string `json:"companySignatureUrl"`
+}
+
+func defaultCheckoutSettings() checkoutSettingsPayload {
+	return checkoutSettingsPayload{TaxRate: 18, TaxEnabledByDefault: false, PaymentMethods: []paymentMethodSetting{{"cash", "Espèces", true}, {"wave", "Wave", true}, {"orange_money", "Orange Money", true}, {"card", "Carte bancaire", true}, {"credit", "Crédit", true}, {"bank_transfer", "Virement", false}}, InvoiceDefaults: invoiceDefaults{CompanyName: "SenValise", Tagline: "Solutions de voyage", Phone: "+221 77 888 53 74", Address: "Dakar, Sénégal", ThankYouTitle: "Merci pour votre confiance", FooterNote: "Conservez ce document pour vos besoins de garantie ou de comptabilité."}}
+}
+func (s *Server) readCheckoutSettings() checkoutSettingsPayload {
+	settings := defaultCheckoutSettings()
+	var row models.Setting
+	if s.DB.Where("key = ?", "checkout_config").First(&row).Error == nil {
+		_ = json.Unmarshal([]byte(row.Value), &settings)
+	}
+	return settings
+}
+func (s *Server) checkoutSettings(c *fiber.Ctx) error { return c.JSON(s.readCheckoutSettings()) }
+func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
+	var in checkoutSettingsPayload
+	if c.BodyParser(&in) != nil || in.TaxRate < 0 || in.TaxRate > 100 {
+		return fiber.NewError(422, "Configuration de caisse invalide")
+	}
+	active := 0
+	seen := map[string]bool{}
+	for i := range in.PaymentMethods {
+		in.PaymentMethods[i].ID = strings.TrimSpace(in.PaymentMethods[i].ID)
+		in.PaymentMethods[i].Label = strings.TrimSpace(in.PaymentMethods[i].Label)
+		if in.PaymentMethods[i].ID == "" || in.PaymentMethods[i].Label == "" || seen[in.PaymentMethods[i].ID] {
+			return fiber.NewError(422, "Chaque moyen de paiement doit avoir un identifiant et un nom uniques")
+		}
+		seen[in.PaymentMethods[i].ID] = true
+		if in.PaymentMethods[i].Active {
+			active++
+		}
+	}
+	if active == 0 {
+		return fiber.NewError(422, "Activez au moins un moyen de paiement")
+	}
+	in.InvoiceDefaults.CompanyName = strings.TrimSpace(in.InvoiceDefaults.CompanyName)
+	in.InvoiceDefaults.Tagline = strings.TrimSpace(in.InvoiceDefaults.Tagline)
+	in.InvoiceDefaults.Phone = strings.TrimSpace(in.InvoiceDefaults.Phone)
+	in.InvoiceDefaults.Address = strings.TrimSpace(in.InvoiceDefaults.Address)
+	in.InvoiceDefaults.ThankYouTitle = strings.TrimSpace(in.InvoiceDefaults.ThankYouTitle)
+	in.InvoiceDefaults.FooterNote = strings.TrimSpace(in.InvoiceDefaults.FooterNote)
+	if in.InvoiceDefaults.CompanyName == "" || in.InvoiceDefaults.FooterNote == "" {
+		return fiber.NewError(422, "Le nom de l’entreprise et le texte de pied de facture sont requis")
+	}
+	value, _ := json.Marshal(in)
+	var row models.Setting
+	if s.DB.Where("key = ?", "checkout_config").First(&row).Error == gorm.ErrRecordNotFound {
+		row = models.Setting{Key: "checkout_config", Value: string(value)}
+		if e := s.DB.Create(&row).Error; e != nil {
+			return fiber.NewError(422, e.Error())
+		}
+	} else {
+		if e := s.DB.Model(&row).Update("value", string(value)).Error; e != nil {
+			return fiber.NewError(422, e.Error())
+		}
+	}
+	return c.JSON(in)
+}
+
 func (s *Server) checkout(c *fiber.Ctx) error {
 	var in struct {
 		CustomerID    *uint       `json:"customerId"`
 		PaymentMethod string      `json:"paymentMethod"`
 		Paid          int64       `json:"paid"`
 		Discount      int64       `json:"discount"`
+		ApplyTax      bool        `json:"applyTax"`
+		TaxRate       float64     `json:"taxRate"`
 		Items         []lineInput `json:"items"`
 	}
 	if c.BodyParser(&in) != nil || len(in.Items) == 0 {
 		return fiber.ErrBadRequest
 	}
-	sale := models.Sale{Reference: ref("VTE"), CustomerID: in.CustomerID, UserID: c.Locals("userID").(uint), Channel: "pos", PaymentMethod: in.PaymentMethod, Discount: in.Discount}
+	config := s.readCheckoutSettings()
+	allowed := false
+	for _, method := range config.PaymentMethods {
+		if method.Active && method.ID == in.PaymentMethod {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return fiber.NewError(422, "Moyen de paiement non autorisé")
+	}
+	if in.Discount < 0 {
+		return fiber.NewError(422, "La remise globale ne peut pas être négative")
+	}
+	taxRate := in.TaxRate
+	if taxRate == 0 {
+		taxRate = config.TaxRate
+	}
+	if taxRate < 0 || taxRate > 100 {
+		return fiber.NewError(422, "Taux de TVA invalide")
+	}
+	defaults := config.InvoiceDefaults
+	sale := models.Sale{Reference: ref("VTE"), CustomerID: in.CustomerID, UserID: c.Locals("userID").(uint), Channel: "pos", PaymentMethod: in.PaymentMethod, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
 		if e := tx.Create(&sale).Error; e != nil {
 			return e
 		}
-		var total int64
+		var subtotal, lineDiscounts int64
 		for _, l := range in.Items {
+			if l.Quantity <= 0 || l.Discount < 0 {
+				return fmt.Errorf("quantité ou remise invalide")
+			}
 			var v models.ProductVariant
 			if e := tx.First(&v, l.VariantID).Error; e != nil {
 				return e
@@ -366,8 +560,16 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 			if price == 0 {
 				price = v.Price
 			}
-			line := price*l.Quantity - l.Discount
-			total += line
+			if price < 0 {
+				return fmt.Errorf("prix invalide pour %s", v.SKU)
+			}
+			gross := price * l.Quantity
+			if l.Discount > gross {
+				return fmt.Errorf("la remise dépasse le montant de %s", v.SKU)
+			}
+			line := gross - l.Discount
+			subtotal += gross
+			lineDiscounts += l.Discount
 			if e := tx.Create(&models.SaleItem{SaleID: sale.ID, VariantID: v.ID, Quantity: l.Quantity, UnitPrice: price, UnitCost: v.Cost, Discount: l.Discount, Total: line}).Error; e != nil {
 				return e
 			}
@@ -375,23 +577,550 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 				return e
 			}
 		}
-		sale.Subtotal = total + in.Discount
-		sale.Total = total
-		sale.Paid = in.Paid
-		if in.Paid >= total {
-			sale.Status = "paid"
-		} else if in.Paid > 0 {
-			sale.Status = "partial"
-		} else {
-			sale.Status = "pending"
+		net := subtotal - lineDiscounts
+		if in.Discount > net {
+			return fmt.Errorf("la remise globale dépasse le sous-total")
 		}
-		return tx.Save(&sale).Error
+		net -= in.Discount
+		tax := int64(0)
+		if in.ApplyTax {
+			tax = int64(math.Round(float64(net) * taxRate / 100))
+			sale.TaxRate = taxRate
+		}
+		total := net + tax
+		sale.Subtotal = subtotal
+		sale.Discount = lineDiscounts + in.Discount
+		sale.Tax = tax
+		sale.Total = total
+		applied := in.Paid
+		if applied > total {
+			applied = total
+		}
+		if applied < 0 {
+			return fmt.Errorf("le montant payé ne peut pas être négatif")
+		}
+		sale.Paid = applied
+		sale.Status = paymentStatus(applied, total, sale.Status)
+		if e := tx.Save(&sale).Error; e != nil {
+			return e
+		}
+		if applied > 0 {
+			return tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: sale.UserID, Method: in.PaymentMethod, Amount: applied, Status: "active", Reference: ref("REG")}).Error
+		}
+		return nil
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
-	s.DB.Preload("Items").First(&sale, sale.ID)
+	preload(s.DB, "sales").First(&sale, sale.ID)
 	return c.Status(201).JSON(sale)
+}
+
+func lockForUpdate() clause.Locking { return clause.Locking{Strength: "UPDATE"} }
+
+func paymentStatus(paid, total int64, current string) string {
+	if current == "cancelled" {
+		return current
+	}
+	if total > 0 && paid >= total {
+		return "paid"
+	}
+	if paid > 0 {
+		return "partial"
+	}
+	return "pending"
+}
+
+func syncSalePayments(tx *gorm.DB, sale *models.Sale) error {
+	var paid int64
+	if e := tx.Model(&models.SalePayment{}).Where("sale_id = ? AND status = ?", sale.ID, "active").Select("COALESCE(SUM(amount),0)").Scan(&paid).Error; e != nil {
+		return e
+	}
+	sale.Paid = paid
+	sale.Status = paymentStatus(paid, sale.Total, sale.Status)
+	return tx.Model(sale).Updates(map[string]any{"paid": sale.Paid, "status": sale.Status}).Error
+}
+
+func (s *Server) addSalePayment(c *fiber.Ctx) error {
+	var in struct {
+		Method string `json:"method"`
+		Amount int64  `json:"amount"`
+	}
+	if c.BodyParser(&in) != nil || in.Amount <= 0 || in.Method == "" {
+		return fiber.NewError(422, "Règlement invalide")
+	}
+	var sale models.Sale
+	if s.DB.First(&sale, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	if sale.Status == "cancelled" {
+		return fiber.NewError(409, "Une facture annulée ne peut pas être réglée")
+	}
+	remaining := sale.Total - sale.Paid
+	if in.Amount > remaining {
+		return fiber.NewError(422, fmt.Sprintf("Le règlement dépasse le reste à payer de %d F", remaining))
+	}
+	payment := models.SalePayment{SaleID: sale.ID, UserID: c.Locals("userID").(uint), Method: in.Method, Amount: in.Amount, Status: "active", Reference: ref("REG")}
+	if e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if e := tx.Create(&payment).Error; e != nil {
+			return e
+		}
+		return syncSalePayments(tx, &sale)
+	}); e != nil {
+		return fiber.NewError(422, e.Error())
+	}
+	return c.Status(201).JSON(payment)
+}
+
+func (s *Server) cancelSalePayment(c *fiber.Ctx) error {
+	var in struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.BodyParser(&in)
+	var sale models.Sale
+	if s.DB.First(&sale, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	var payment models.SalePayment
+	if s.DB.Where("id = ? AND sale_id = ?", c.Params("paymentId"), sale.ID).First(&payment).Error != nil {
+		return fiber.ErrNotFound
+	}
+	if payment.Status == "cancelled" {
+		return fiber.NewError(409, "Ce règlement est déjà annulé")
+	}
+	now := time.Now()
+	if e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if e := tx.Model(&payment).Updates(map[string]any{"status": "cancelled", "cancel_reason": in.Reason, "cancelled_at": &now}).Error; e != nil {
+			return e
+		}
+		return syncSalePayments(tx, &sale)
+	}); e != nil {
+		return fiber.NewError(422, e.Error())
+	}
+	return c.JSON(payment)
+}
+
+func (s *Server) cancelAllSalePayments(c *fiber.Ctx) error {
+	var in struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.BodyParser(&in)
+	var sale models.Sale
+	if s.DB.First(&sale, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	now := time.Now()
+	if e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if e := tx.Model(&models.SalePayment{}).Where("sale_id = ? AND status = ?", sale.ID, "active").Updates(map[string]any{"status": "cancelled", "cancel_reason": in.Reason, "cancelled_at": &now}).Error; e != nil {
+			return e
+		}
+		return syncSalePayments(tx, &sale)
+	}); e != nil {
+		return fiber.NewError(422, e.Error())
+	}
+	return c.SendStatus(204)
+}
+
+func (s *Server) updateBusinessLine(c *fiber.Ctx, kind string) error {
+	var in struct {
+		Quantity  int64 `json:"quantity"`
+		UnitPrice int64 `json:"unitPrice"`
+		Discount  int64 `json:"discount"`
+	}
+	if c.BodyParser(&in) != nil || in.Quantity <= 0 {
+		return fiber.NewError(422, "Ligne invalide")
+	}
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		switch kind {
+		case "sales":
+			var sale models.Sale
+			if e := tx.First(&sale, c.Params("id")).Error; e != nil {
+				return e
+			}
+			var item models.SaleItem
+			if e := tx.Where("id = ? AND sale_id = ?", c.Params("itemId"), sale.ID).First(&item).Error; e != nil {
+				return e
+			}
+			if in.UnitPrice < 0 || in.Discount < 0 || in.Discount > in.UnitPrice*in.Quantity {
+				return fmt.Errorf("prix ou remise invalide")
+			}
+			oldQty, oldDiscount := item.Quantity, item.Discount
+			item.Quantity = in.Quantity
+			item.UnitPrice = in.UnitPrice
+			item.Discount = in.Discount
+			item.Total = in.UnitPrice*in.Quantity - in.Discount
+			if e := tx.Save(&item).Error; e != nil {
+				return e
+			}
+			if delta := in.Quantity - oldQty; delta != 0 {
+				if e := s.adjust(tx, item.VariantID, -delta, c.Locals("userID").(uint), "sale_edit", sale.Reference); e != nil {
+					return e
+				}
+			}
+			var rows []models.SaleItem
+			if e := tx.Where("sale_id = ?", sale.ID).Find(&rows).Error; e != nil {
+				return e
+			}
+			var subtotal, lineDiscount int64
+			for _, row := range rows {
+				subtotal += row.UnitPrice * row.Quantity
+				lineDiscount += row.Discount
+			}
+			oldLineDiscount := lineDiscount - in.Discount + oldDiscount
+			globalDiscount := sale.Discount - oldLineDiscount
+			if globalDiscount < 0 {
+				globalDiscount = 0
+			}
+			sale.Subtotal = subtotal
+			sale.Discount = lineDiscount + globalDiscount
+			net := subtotal - sale.Discount
+			sale.Tax = int64(math.Round(float64(net) * sale.TaxRate / 100))
+			sale.Total = net + sale.Tax
+			sale.Status = paymentStatus(sale.Paid, sale.Total, sale.Status)
+			return tx.Save(&sale).Error
+		case "quotes":
+			var quote models.Quote
+			if e := tx.First(&quote, c.Params("id")).Error; e != nil {
+				return e
+			}
+			var item models.QuoteItem
+			if e := tx.Where("id = ? AND quote_id = ?", c.Params("itemId"), quote.ID).First(&item).Error; e != nil {
+				return e
+			}
+			if in.UnitPrice < 0 || in.Discount < 0 || in.Discount > in.UnitPrice*in.Quantity {
+				return fmt.Errorf("prix ou remise invalide")
+			}
+			item.Quantity = in.Quantity
+			item.UnitPrice = in.UnitPrice
+			item.Discount = in.Discount
+			item.Total = in.UnitPrice*in.Quantity - in.Discount
+			if e := tx.Save(&item).Error; e != nil {
+				return e
+			}
+			var rows []models.QuoteItem
+			tx.Where("quote_id = ?", quote.ID).Find(&rows)
+			var subtotal, discount int64
+			for _, row := range rows {
+				subtotal += row.UnitPrice * row.Quantity
+				discount += row.Discount
+			}
+			quote.Subtotal = subtotal
+			quote.Discount = discount
+			net := subtotal - discount
+			quote.Tax = int64(math.Round(float64(net) * quote.TaxRate / 100))
+			quote.Total = net + quote.Tax
+			return tx.Save(&quote).Error
+		default:
+			var note models.DeliveryNote
+			if e := tx.First(&note, c.Params("id")).Error; e != nil {
+				return e
+			}
+			var item models.DeliveryNoteItem
+			if e := tx.Where("id = ? AND delivery_note_id = ?", c.Params("itemId"), note.ID).First(&item).Error; e != nil {
+				return e
+			}
+			item.Quantity = in.Quantity
+			return tx.Save(&item).Error
+		}
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.SendStatus(204)
+}
+
+// Supprimer une ligne. La facture rend le stock que la vente avait retiré ;
+// le devis et le bon de livraison n'en ayant jamais pris, ils n'en rendent pas.
+func (s *Server) removeBusinessLine(c *fiber.Ctx, kind string) error {
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		switch kind {
+		case "sales":
+			var sale models.Sale
+			if e := tx.First(&sale, c.Params("id")).Error; e != nil {
+				return e
+			}
+			if sale.Status == "cancelled" {
+				return fmt.Errorf("une facture annulée ne peut pas être modifiée")
+			}
+			var item models.SaleItem
+			if e := tx.Where("id = ? AND sale_id = ?", c.Params("itemId"), sale.ID).First(&item).Error; e != nil {
+				return e
+			}
+			var count int64
+			tx.Model(&models.SaleItem{}).Where("sale_id = ?", sale.ID).Count(&count)
+			if count <= 1 {
+				return fmt.Errorf("une facture doit garder au moins une ligne : supprimez la facture entière")
+			}
+			// La remise globale est ce qui dépasse la somme des remises de ligne.
+			var lineDiscountBefore int64
+			tx.Model(&models.SaleItem{}).Where("sale_id = ?", sale.ID).Select("COALESCE(SUM(discount),0)").Scan(&lineDiscountBefore)
+			globalDiscount := sale.Discount - lineDiscountBefore
+			if globalDiscount < 0 {
+				globalDiscount = 0
+			}
+			if e := tx.Delete(&item).Error; e != nil {
+				return e
+			}
+			if e := s.adjust(tx, item.VariantID, item.Quantity, c.Locals("userID").(uint), "sale_edit", sale.Reference); e != nil {
+				return e
+			}
+			var rows []models.SaleItem
+			if e := tx.Where("sale_id = ?", sale.ID).Find(&rows).Error; e != nil {
+				return e
+			}
+			var subtotal, lineDiscount int64
+			for _, row := range rows {
+				subtotal += row.UnitPrice * row.Quantity
+				lineDiscount += row.Discount
+			}
+			sale.Subtotal = subtotal
+			sale.Discount = lineDiscount + globalDiscount
+			net := subtotal - sale.Discount
+			if net < 0 {
+				return fmt.Errorf("la remise globale dépasse le nouveau sous-total")
+			}
+			sale.Tax = int64(math.Round(float64(net) * sale.TaxRate / 100))
+			sale.Total = net + sale.Tax
+			if sale.Total < sale.Paid {
+				return fmt.Errorf("le total passerait sous les %d F déjà réglés : annulez d'abord les règlements", sale.Paid)
+			}
+			sale.Status = paymentStatus(sale.Paid, sale.Total, sale.Status)
+			return tx.Save(&sale).Error
+		case "quotes":
+			var quote models.Quote
+			if e := tx.First(&quote, c.Params("id")).Error; e != nil {
+				return e
+			}
+			if quote.Status == "cancelled" {
+				return fmt.Errorf("un devis annulé ne peut pas être modifié")
+			}
+			if quote.ConvertedSaleID != nil {
+				return fmt.Errorf("ce devis est déjà converti en facture : modifiez la facture")
+			}
+			var item models.QuoteItem
+			if e := tx.Where("id = ? AND quote_id = ?", c.Params("itemId"), quote.ID).First(&item).Error; e != nil {
+				return e
+			}
+			var count int64
+			tx.Model(&models.QuoteItem{}).Where("quote_id = ?", quote.ID).Count(&count)
+			if count <= 1 {
+				return fmt.Errorf("un devis doit garder au moins une ligne : supprimez le devis entier")
+			}
+			if e := tx.Delete(&item).Error; e != nil {
+				return e
+			}
+			var rows []models.QuoteItem
+			if e := tx.Where("quote_id = ?", quote.ID).Find(&rows).Error; e != nil {
+				return e
+			}
+			var subtotal, discount int64
+			for _, row := range rows {
+				subtotal += row.UnitPrice * row.Quantity
+				discount += row.Discount
+			}
+			quote.Subtotal = subtotal
+			quote.Discount = discount
+			net := subtotal - discount
+			quote.Tax = int64(math.Round(float64(net) * quote.TaxRate / 100))
+			quote.Total = net + quote.Tax
+			return tx.Save(&quote).Error
+		case "delivery-notes":
+			var note models.DeliveryNote
+			if e := tx.First(&note, c.Params("id")).Error; e != nil {
+				return e
+			}
+			if note.Status == "cancelled" {
+				return fmt.Errorf("un bon de livraison annulé ne peut pas être modifié")
+			}
+			if note.Status == "delivered" {
+				return fmt.Errorf("un bon déjà livré ne peut plus être modifié")
+			}
+			var item models.DeliveryNoteItem
+			if e := tx.Where("id = ? AND delivery_note_id = ?", c.Params("itemId"), note.ID).First(&item).Error; e != nil {
+				return e
+			}
+			var count int64
+			tx.Model(&models.DeliveryNoteItem{}).Where("delivery_note_id = ?", note.ID).Count(&count)
+			if count <= 1 {
+				return fmt.Errorf("un bon de livraison doit garder au moins une ligne : supprimez le bon entier")
+			}
+			return tx.Delete(&item).Error
+		default:
+			return fmt.Errorf("pièce inconnue")
+		}
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.SendStatus(204)
+}
+
+// Un devis n'engage rien et un bon de livraison solde une vente qui a déjà
+// décrémenté le stock : seule la facture déclenche un mouvement de stock.
+func (s *Server) addQuoteLine(c *fiber.Ctx, in lineInput) error {
+	var created models.QuoteItem
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var quote models.Quote
+		if e := tx.First(&quote, c.Params("id")).Error; e != nil {
+			return e
+		}
+		if quote.Status == "cancelled" {
+			return fmt.Errorf("un devis annulé ne peut pas être modifié")
+		}
+		if quote.ConvertedSaleID != nil {
+			return fmt.Errorf("ce devis est déjà converti en facture : modifiez la facture")
+		}
+		var duplicate int64
+		tx.Model(&models.QuoteItem{}).Where("quote_id = ? AND variant_id = ?", quote.ID, in.VariantID).Count(&duplicate)
+		if duplicate > 0 {
+			return fmt.Errorf("ce produit est déjà présent : modifiez sa ligne existante")
+		}
+		var variant models.ProductVariant
+		if e := tx.Preload("Product").First(&variant, in.VariantID).Error; e != nil {
+			return fmt.Errorf("produit introuvable")
+		}
+		price := in.UnitPrice
+		if price == 0 {
+			price = variant.Price
+		}
+		gross := price * in.Quantity
+		if price < 0 || in.Discount > gross {
+			return fmt.Errorf("prix ou remise invalide")
+		}
+		created = models.QuoteItem{QuoteID: quote.ID, VariantID: variant.ID, Description: variant.Product.Name, Quantity: in.Quantity, UnitPrice: price, Discount: in.Discount, Total: gross - in.Discount}
+		if e := tx.Create(&created).Error; e != nil {
+			return e
+		}
+		var rows []models.QuoteItem
+		if e := tx.Where("quote_id = ?", quote.ID).Find(&rows).Error; e != nil {
+			return e
+		}
+		var subtotal, discount int64
+		for _, row := range rows {
+			subtotal += row.UnitPrice * row.Quantity
+			discount += row.Discount
+		}
+		quote.Subtotal = subtotal
+		quote.Discount = discount
+		net := subtotal - discount
+		quote.Tax = int64(math.Round(float64(net) * quote.TaxRate / 100))
+		quote.Total = net + quote.Tax
+		return tx.Save(&quote).Error
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.Status(201).JSON(created)
+}
+
+func (s *Server) addDeliveryNoteLine(c *fiber.Ctx, in lineInput) error {
+	var created models.DeliveryNoteItem
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var note models.DeliveryNote
+		if e := tx.First(&note, c.Params("id")).Error; e != nil {
+			return e
+		}
+		if note.Status == "cancelled" {
+			return fmt.Errorf("un bon de livraison annulé ne peut pas être modifié")
+		}
+		if note.Status == "delivered" {
+			return fmt.Errorf("un bon déjà livré ne peut plus être modifié")
+		}
+		var duplicate int64
+		tx.Model(&models.DeliveryNoteItem{}).Where("delivery_note_id = ? AND variant_id = ?", note.ID, in.VariantID).Count(&duplicate)
+		if duplicate > 0 {
+			return fmt.Errorf("ce produit est déjà présent : modifiez sa ligne existante")
+		}
+		var variant models.ProductVariant
+		if e := tx.Preload("Product").First(&variant, in.VariantID).Error; e != nil {
+			return fmt.Errorf("produit introuvable")
+		}
+		created = models.DeliveryNoteItem{DeliveryNoteID: note.ID, VariantID: variant.ID, Description: variant.Product.Name, Quantity: in.Quantity}
+		return tx.Create(&created).Error
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.Status(201).JSON(created)
+}
+
+func (s *Server) addBusinessLine(c *fiber.Ctx, kind string) error {
+	var in lineInput
+	if c.BodyParser(&in) != nil || in.VariantID == 0 || in.Quantity <= 0 || in.Discount < 0 {
+		return fiber.NewError(422, "Produit, quantité ou remise invalide")
+	}
+	switch kind {
+	case "quotes":
+		return s.addQuoteLine(c, in)
+	case "delivery-notes":
+		return s.addDeliveryNoteLine(c, in)
+	case "sales":
+	default:
+		return fiber.ErrNotFound
+	}
+	var created models.SaleItem
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var sale models.Sale
+		if e := tx.First(&sale, c.Params("id")).Error; e != nil {
+			return e
+		}
+		if sale.Status == "cancelled" {
+			return fmt.Errorf("une facture annulée ne peut pas être modifiée")
+		}
+		var duplicate int64
+		tx.Model(&models.SaleItem{}).Where("sale_id = ? AND variant_id = ?", sale.ID, in.VariantID).Count(&duplicate)
+		if duplicate > 0 {
+			return fmt.Errorf("ce produit est déjà présent : modifiez sa ligne existante")
+		}
+		var variant models.ProductVariant
+		if e := tx.Preload("Product").First(&variant, in.VariantID).Error; e != nil {
+			return fmt.Errorf("produit introuvable")
+		}
+		price := in.UnitPrice
+		if price == 0 {
+			price = variant.Price
+		}
+		gross := price * in.Quantity
+		if price < 0 || in.Discount > gross {
+			return fmt.Errorf("prix ou remise invalide")
+		}
+		var existingLineDiscount int64
+		tx.Model(&models.SaleItem{}).Where("sale_id = ?", sale.ID).Select("COALESCE(SUM(discount),0)").Scan(&existingLineDiscount)
+		globalDiscount := sale.Discount - existingLineDiscount
+		if globalDiscount < 0 {
+			globalDiscount = 0
+		}
+		created = models.SaleItem{SaleID: sale.ID, VariantID: variant.ID, Quantity: in.Quantity, UnitPrice: price, UnitCost: variant.Cost, Discount: in.Discount, Total: gross - in.Discount}
+		if e := tx.Create(&created).Error; e != nil {
+			return e
+		}
+		if e := s.adjust(tx, variant.ID, -in.Quantity, c.Locals("userID").(uint), "sale_edit", sale.Reference); e != nil {
+			return e
+		}
+		var rows []models.SaleItem
+		if e := tx.Where("sale_id = ?", sale.ID).Find(&rows).Error; e != nil {
+			return e
+		}
+		var subtotal, lineDiscount int64
+		for _, row := range rows {
+			subtotal += row.UnitPrice * row.Quantity
+			lineDiscount += row.Discount
+		}
+		sale.Subtotal = subtotal
+		sale.Discount = lineDiscount + globalDiscount
+		net := subtotal - sale.Discount
+		if net < 0 {
+			return fmt.Errorf("la remise globale dépasse le nouveau sous-total")
+		}
+		sale.Tax = int64(math.Round(float64(net) * sale.TaxRate / 100))
+		sale.Total = net + sale.Tax
+		sale.Status = paymentStatus(sale.Paid, sale.Total, sale.Status)
+		return tx.Save(&sale).Error
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.Status(201).JSON(created)
 }
 func (s *Server) receiveArrival(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -423,16 +1152,22 @@ func (s *Server) receiveArrival(c *fiber.Ctx) error {
 	}
 	return c.JSON(a)
 }
+
+type returnLineInput struct {
+	VariantID uint  `json:"variantId"`
+	Quantity  int64 `json:"quantity"`
+	Amount    int64 `json:"amount"`
+}
+
+type returnInput struct {
+	SaleID               uint `json:"saleId"`
+	Reason, RefundMethod string
+	Restock              bool              `json:"restock"`
+	Items                []returnLineInput `json:"items"`
+}
+
 func (s *Server) processReturn(c *fiber.Ctx) error {
-	var in struct {
-		SaleID               uint `json:"saleId"`
-		Reason, RefundMethod string
-		Restock              bool `json:"restock"`
-		Items                []struct {
-			VariantID        uint  `json:"variantId"`
-			Quantity, Amount int64 `json:"quantity"`
-		} `json:"items"`
-	}
+	var in returnInput
 	if c.BodyParser(&in) != nil || len(in.Items) == 0 {
 		return fiber.ErrBadRequest
 	}
@@ -508,6 +1243,200 @@ func (s *Server) depositVault(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(201)
 }
+
+// Expenses are the day-to-day running costs of the shop. Amounts stay whole
+// CFA francs, like every other amount in SenValise.
+type expenseInput struct {
+	SpentOn       string `json:"spentOn"`
+	Category      string `json:"category"`
+	Label         string `json:"label"`
+	Amount        int64  `json:"amount"`
+	PaymentMethod string `json:"paymentMethod"`
+	SupplierID    *uint  `json:"supplierId"`
+	Note          string `json:"note"`
+}
+type expensePoint struct {
+	Date   time.Time `json:"date"`
+	Amount int64     `json:"amount"`
+	Count  int64     `json:"count"`
+}
+type expenseTotal struct {
+	Amount int64 `json:"amount"`
+	Count  int64 `json:"count"`
+}
+type expenseGroup struct {
+	Name   string `json:"name"`
+	Amount int64  `json:"amount"`
+	Count  int64  `json:"count"`
+}
+
+// expenseDay reads a business day. It accepts the YYYY-MM-DD sent by the date
+// input as well as a full timestamp, and falls back to today so the page always
+// has a day to show.
+func expenseDay(value string) time.Time {
+	now := time.Now()
+	day := func(t time.Time) time.Time {
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, now.Location())
+	}
+	if value == "" {
+		return day(now)
+	}
+	for _, layout := range []string{"2006-01-02", "2006-01-02T15:04", time.RFC3339} {
+		if parsed, e := time.ParseInLocation(layout, value, now.Location()); e == nil {
+			return day(parsed)
+		}
+	}
+	return day(now)
+}
+func expenseCategory(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "divers"
+	}
+	return strings.TrimSpace(value)
+}
+func (in expenseInput) validate() error {
+	if in.Amount <= 0 {
+		return fiber.NewError(422, "Le montant de la dépense doit être supérieur à zéro")
+	}
+	if strings.TrimSpace(in.Label) == "" {
+		return fiber.NewError(422, "Indiquez à quoi correspond la dépense")
+	}
+	return nil
+}
+func (s *Server) listExpenses(c *fiber.Ctx) error {
+	rows := []models.Expense{}
+	db := preload(s.DB, "expenses").Order("spent_on desc, id desc")
+	if date := c.Query("date"); date != "" {
+		start := expenseDay(date)
+		db = db.Where("spent_on >= ? AND spent_on < ?", start, start.AddDate(0, 0, 1))
+	} else {
+		if from := c.Query("from"); from != "" {
+			db = db.Where("spent_on >= ?", expenseDay(from))
+		}
+		if to := c.Query("to"); to != "" {
+			db = db.Where("spent_on < ?", expenseDay(to).AddDate(0, 0, 1))
+		}
+	}
+	if category := c.Query("category"); category != "" {
+		db = db.Where("category = ?", category)
+	}
+	limit, _ := strconv.Atoi(c.Query("limit", "200"))
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	if e := db.Limit(limit).Find(&rows).Error; e != nil {
+		return e
+	}
+	return c.JSON(rows)
+}
+func (s *Server) createExpense(c *fiber.Ctx) error {
+	var in expenseInput
+	if c.BodyParser(&in) != nil {
+		return fiber.ErrBadRequest
+	}
+	if e := in.validate(); e != nil {
+		return e
+	}
+	expense := models.Expense{
+		Reference: ref("DPS"), SpentOn: expenseDay(in.SpentOn), Category: expenseCategory(in.Category),
+		Label: strings.TrimSpace(in.Label), Amount: in.Amount, PaymentMethod: in.PaymentMethod,
+		SupplierID: in.SupplierID, UserID: c.Locals("userID").(uint), Note: strings.TrimSpace(in.Note),
+	}
+	if e := s.DB.Create(&expense).Error; e != nil {
+		return fiber.NewError(422, e.Error())
+	}
+	_ = preload(s.DB, "expenses").First(&expense, expense.ID).Error
+	return c.Status(201).JSON(expense)
+}
+func (s *Server) updateExpense(c *fiber.Ctx) error {
+	var expense models.Expense
+	if s.DB.First(&expense, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	var in expenseInput
+	if c.BodyParser(&in) != nil {
+		return fiber.ErrBadRequest
+	}
+	if e := in.validate(); e != nil {
+		return e
+	}
+	if in.SpentOn != "" {
+		expense.SpentOn = expenseDay(in.SpentOn)
+	}
+	expense.Category = expenseCategory(in.Category)
+	expense.Label = strings.TrimSpace(in.Label)
+	expense.Amount = in.Amount
+	expense.PaymentMethod = in.PaymentMethod
+	expense.SupplierID = in.SupplierID
+	expense.Note = strings.TrimSpace(in.Note)
+	if e := s.DB.Save(&expense).Error; e != nil {
+		return fiber.NewError(422, e.Error())
+	}
+	_ = preload(s.DB, "expenses").First(&expense, expense.ID).Error
+	return c.JSON(expense)
+}
+
+// expenseSummary reads one business day: what was spent, how it splits, how the
+// month is going, and what the shop billed the same day.
+func (s *Server) expenseSummary(c *fiber.Ctx) error {
+	day := expenseDay(c.Query("date"))
+	next := day.AddDate(0, 0, 1)
+	monthStart := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, day.Location())
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	trendStart := day.AddDate(0, 0, -29)
+
+	var today, month expenseTotal
+	s.DB.Model(&models.Expense{}).Where("spent_on >= ? AND spent_on < ?", day, next).
+		Select("coalesce(sum(amount),0) amount, count(*) count").Scan(&today)
+	s.DB.Model(&models.Expense{}).Where("spent_on >= ? AND spent_on < ?", monthStart, monthEnd).
+		Select("coalesce(sum(amount),0) amount, count(*) count").Scan(&month)
+
+	categories := make([]expenseGroup, 0)
+	methods := make([]expenseGroup, 0)
+	monthCategories := make([]expenseGroup, 0)
+	group := "select coalesce(nullif(%s,''),'%s') name, coalesce(sum(amount),0) amount, count(*) count from expenses where spent_on >= ? and spent_on < ? group by 1 order by amount desc"
+	s.DB.Raw(fmt.Sprintf(group, "category", "divers"), day, next).Scan(&categories)
+	s.DB.Raw(fmt.Sprintf(group, "payment_method", "cash"), day, next).Scan(&methods)
+	s.DB.Raw(fmt.Sprintf(group, "category", "divers"), monthStart, monthEnd).Scan(&monthCategories)
+
+	raw := make([]expensePoint, 0)
+	s.DB.Raw("select date_trunc('day', spent_on) date, coalesce(sum(amount),0) amount, count(*) count from expenses where spent_on >= ? and spent_on < ? group by 1 order by 1", trendStart, next).Scan(&raw)
+
+	var billed, collected int64
+	s.DB.Model(&models.Sale{}).Where("created_at >= ? AND created_at < ? AND status <> 'cancelled'", day, next).
+		Select("coalesce(sum(total),0)").Scan(&billed)
+	s.DB.Model(&models.Sale{}).Where("created_at >= ? AND created_at < ? AND status <> 'cancelled'", day, next).
+		Select("coalesce(sum(least(paid,total)),0)").Scan(&collected)
+
+	return c.JSON(fiber.Map{
+		"date":       day,
+		"day":        fiber.Map{"amount": today.Amount, "count": today.Count},
+		"month":      fiber.Map{"amount": month.Amount, "count": month.Count, "from": monthStart, "categories": monthCategories},
+		"categories": categories,
+		"methods":    methods,
+		"trend":      fillExpenseTrend(raw, trendStart, day),
+		"sales":      fiber.Map{"billed": billed, "collected": collected, "net": collected - today.Amount},
+	})
+}
+
+// fillExpenseTrend keeps one point per day so the chart never skips a quiet day.
+func fillExpenseTrend(raw []expensePoint, start, end time.Time) []expensePoint {
+	byDay := map[string]expensePoint{}
+	for _, point := range raw {
+		byDay[point.Date.Format("2006-01-02")] = point
+	}
+	points := make([]expensePoint, 0)
+	for cursor := start; !cursor.After(end); cursor = cursor.AddDate(0, 0, 1) {
+		if point, ok := byDay[cursor.Format("2006-01-02")]; ok {
+			point.Date = cursor
+			points = append(points, point)
+			continue
+		}
+		points = append(points, expensePoint{Date: cursor})
+	}
+	return points
+}
+
 func (s *Server) dashboard(c *fiber.Ctx) error {
 	period := c.Query("period", "30d")
 	now := time.Now()
@@ -711,6 +1640,73 @@ func (s *Server) inventory(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"reference": reference})
 }
 
+func saveInvoiceImage(c *fiber.Ctx, prefix string) (string, error) {
+	f, err := c.FormFile("image")
+	if err != nil {
+		return "", fiber.NewError(400, "Image requise")
+	}
+	if f.Size > 5<<20 {
+		return "", fiber.NewError(413, "Image limitée à 5 Mo")
+	}
+	ext := strings.ToLower(filepath.Ext(f.Filename))
+	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true}
+	if !allowed[ext] {
+		return "", fiber.NewError(415, "Seules les images PNG et JPG sont acceptées")
+	}
+	if err = os.MkdirAll("uploads", 0755); err != nil {
+		return "", err
+	}
+	name := fmt.Sprintf("%s-%s%s", prefix, time.Now().Format("20060102150405000000"), ext)
+	if err = c.SaveFile(f, filepath.Join("uploads", name)); err != nil {
+		return "", err
+	}
+	return "/uploads/" + name, nil
+}
+
+func (s *Server) uploadInvoiceAsset(c *fiber.Ctx) error {
+	url, err := saveInvoiceImage(c, "invoice-default")
+	if err != nil {
+		return err
+	}
+	return c.Status(201).JSON(fiber.Map{"url": url})
+}
+
+// Facture, devis et bon de livraison portent tous les deux signatures.
+// Le document cible vient de la route, jamais d'une hypothèse : signer un
+// devis ne doit pas écrire sur la vente qui porte le même identifiant.
+func (s *Server) uploadDocumentSignature(c *fiber.Ctx, resource string) error {
+	kind := c.Params("kind")
+	if kind != "client" && kind != "company" {
+		return fiber.NewError(422, "Type de signature invalide")
+	}
+	var target any
+	switch resource {
+	case "sales":
+		target = &models.Sale{}
+	case "quotes":
+		target = &models.Quote{}
+	case "delivery-notes":
+		target = &models.DeliveryNote{}
+	default:
+		return fiber.ErrNotFound
+	}
+	if s.DB.First(target, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	url, err := saveInvoiceImage(c, "signature-"+kind)
+	if err != nil {
+		return err
+	}
+	field := "client_signature_url"
+	if kind == "company" {
+		field = "company_signature_url"
+	}
+	if err = s.DB.Model(target).Update(field, url).Error; err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.Status(201).JSON(fiber.Map{"url": url})
+}
+
 func (s *Server) uploadProductImage(c *fiber.Ctx) error {
 	f, err := c.FormFile("image")
 	if err != nil {
@@ -776,23 +1772,50 @@ func (s *Server) label(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"barcode": code, "sku": v.SKU, "price": v.Price, "color": v.Color, "size": v.Size})
 }
 
-func (s *Server) convertDocument(c *fiber.Ctx) error {
-	var in struct {
-		Type string `json:"type"`
-	}
-	if c.BodyParser(&in) != nil || in.Type == "" {
-		return fiber.ErrBadRequest
-	}
-	var source models.Document
-	if s.DB.Preload("Items").First(&source, c.Params("id")).Error != nil {
+func (s *Server) convertQuote(c *fiber.Ctx) error {
+	var quote models.Quote
+	if e := s.DB.Preload("Items").First(&quote, c.Params("id")).Error; e != nil {
 		return fiber.ErrNotFound
 	}
-	target := models.Document{Reference: ref(strings.ToUpper(in.Type[:min(3, len(in.Type))])), Type: in.Type, Status: "draft", CustomerID: source.CustomerID, ParentID: &source.ID, Total: source.Total, Notes: source.Notes}
-	for _, x := range source.Items {
-		target.Items = append(target.Items, models.DocumentItem{Description: x.Description, Quantity: x.Quantity, UnitPrice: x.UnitPrice, Total: x.Total})
+	if quote.ConvertedSaleID != nil {
+		return fiber.NewError(409, "Ce devis a déjà été converti en facture")
 	}
-	if e := s.DB.Create(&target).Error; e != nil {
+	if len(quote.Items) == 0 {
+		return fiber.NewError(422, "Le devis ne contient aucune ligne")
+	}
+	var sale models.Sale
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		defaults := s.readCheckoutSettings().InvoiceDefaults
+		sale = models.Sale{Reference: ref("VTE"), QuoteID: &quote.ID, CustomerID: quote.CustomerID, UserID: c.Locals("userID").(uint), Channel: "quote", Status: "pending", PaymentMethod: "credit", Subtotal: quote.Subtotal, Discount: quote.Discount, TaxRate: quote.TaxRate, Tax: quote.Tax, Total: quote.Total, Paid: 0, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
+		for _, item := range quote.Items {
+			sale.Items = append(sale.Items, models.SaleItem{VariantID: item.VariantID, Quantity: item.Quantity, UnitPrice: item.UnitPrice, Discount: item.Discount, Total: item.Total})
+		}
+		if e := tx.Create(&sale).Error; e != nil {
+			return e
+		}
+		return tx.Model(&quote).Updates(map[string]any{"status": "accepted", "converted_sale_id": sale.ID}).Error
+	})
+	if err != nil {
+		return fiber.NewError(422, err.Error())
+	}
+	return c.Status(201).JSON(sale)
+}
+
+func (s *Server) createDeliveryNote(c *fiber.Ctx) error {
+	var sale models.Sale
+	if e := s.DB.Preload("Items.Variant.Product").First(&sale, c.Params("id")).Error; e != nil {
+		return fiber.ErrNotFound
+	}
+	var existing models.DeliveryNote
+	if s.DB.Where("sale_id = ?", sale.ID).First(&existing).Error == nil {
+		return fiber.NewError(409, "Un bon de livraison existe déjà pour cette facture")
+	}
+	note := models.DeliveryNote{Reference: ref("BL"), Status: "ready", SaleID: sale.ID, CustomerID: sale.CustomerID, UserID: c.Locals("userID").(uint), Notes: "Bon de livraison généré depuis la facture " + sale.Reference}
+	for _, item := range sale.Items {
+		note.Items = append(note.Items, models.DeliveryNoteItem{VariantID: item.VariantID, Description: item.Variant.Product.Name, Quantity: item.Quantity})
+	}
+	if e := s.DB.Create(&note).Error; e != nil {
 		return fiber.NewError(422, e.Error())
 	}
-	return c.Status(201).JSON(target)
+	return c.Status(201).JSON(note)
 }

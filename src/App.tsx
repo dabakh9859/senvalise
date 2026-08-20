@@ -1,28 +1,44 @@
 import {FormEvent,lazy,Suspense,useEffect,useMemo,useState} from 'react';
-import {ArrowDownToLine,Menu,Package,Plus,Search,ShoppingCart,Tags,Trash2,X} from 'lucide-react';
+import {ArrowDownToLine,Package,Plus,Search,ShoppingCart,Tags,Trash2,X} from 'lucide-react';
 import {api,Entity,money} from './api';
 import Sidebar,{allNav,User} from './Sidebar';
+import ResourcePage from './ResourcePage';
+import TopNavigation from './TopNavigation';
+import EnhancedPOS from './POS';
+import CheckoutSettings from './CheckoutSettings';
 
 const Dashboard=lazy(()=>import('./Dashboard'));
+const Expenses=lazy(()=>import('./Expenses'));
+const Reports=lazy(()=>import('./Reports'));
+const ShopOverview=lazy(()=>import('./ShopOverview'));
+const ShopOrders=lazy(()=>import('./ShopOrders'));
+const ShopCatalog=lazy(()=>import('./ShopCatalog'));
+const ShopCustomers=lazy(()=>import('./ShopCustomers'));
+const ShopDelivery=lazy(()=>import('./ShopDelivery'));
 
 const labels:Record<string,string>={name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',status:'Statut',reference:'Référence',total:'Total',paid:'Payé',stock:'Stock',price:'Prix',cost:'Coût',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai'};
 
 export default function App(){
   const[user,setUser]=useState<User|null>(null);
+  // Le tableau de bord est réservé au gérant : un vendeur ouvre l'application
+  // sur la caisse, qui est son poste de travail.
   const[page,setPage]=useState('dashboard');
-  const[mobile,setMobile]=useState(false);
-  const[collapsed,setCollapsed]=useState(()=>localStorage.getItem('sv_sidebar_collapsed')==='true');
   useEffect(()=>{if(localStorage.getItem('sv_token'))api<User>('/api/me').then(setUser).catch(()=>localStorage.removeItem('sv_token'))},[]);
-  const toggleCollapsed=()=>setCollapsed(value=>{localStorage.setItem('sv_sidebar_collapsed',String(!value));return !value});
   if(!user)return <Login onLogin={setUser}/>;
-  const current=allNav.find(item=>item.id===page)??allNav[0];
+  const manager=user.role==='manager';
+  const home=manager?'dashboard':'pos';
+  const requested=allNav.find(item=>item.id===page)??allNav[0];
+  // Filet côté écran : une page réservée ne s'ouvre pas, même si son
+  // identifiant est forcé. L'API refuse déjà les données correspondantes.
+  const current=requested.manager&&!manager?allNav.find(item=>item.id===home)??allNav[0]:requested;
+  const view=current.id;
   const logout=()=>{localStorage.removeItem('sv_token');setUser(null)};
-  return <div className={`app-shell ${collapsed?'nav-collapsed':''}`}>
-    <Sidebar user={user} page={page} collapsed={collapsed} mobile={mobile} onCollapse={toggleCollapsed} onCloseMobile={()=>setMobile(false)} onPage={setPage} onLogout={logout}/>
+  return <div className="app-shell rail-layout">
+    <Sidebar user={user} onPage={setPage} onLogout={logout}/>
     <main className="main-area">
-      {page!=='dashboard'&&<header className="page-header"><button className="mobile-menu" onClick={()=>setMobile(true)}><Menu/></button><div><small>ESPACE DE TRAVAIL</small><h1>{current.label}</h1></div><time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date())}</time></header>}
-      {page==='dashboard'&&<button className="dashboard-mobile-menu" onClick={()=>setMobile(true)}><Menu/></button>}
-      <section className={page==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{page==='dashboard'?<Dashboard/>:page==='pos'?<POS/>:page==='reports'?<Dashboard/>:current.resource?<Resource title={current.label} resource={current.resource}/>:null}</Suspense></section>
+      <TopNavigation user={user} page={page} onPage={setPage}/>
+      {view!=='dashboard'&&<header className="page-header"><div><small>ESPACE DE TRAVAIL</small><h1>{current.label}</h1></div><time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date())}</time></header>}
+      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user}/>:null}</Suspense></section>
     </main>
   </div>;
 }
@@ -49,13 +65,13 @@ function QuickCreate({resource,onClose,onDone}:{resource:string;onClose:()=>void
   return <div className="overlay" onMouseDown={onClose}><form className="modal" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>NOUVEL ENREGISTREMENT</small><h2>Ajouter</h2></div><button type="button" className="icon" onClick={onClose}><X/></button></div><div className="form-grid">{formFields.map(field=><label key={field}>{labels[field]??field}<input required={['name','reference','sku','password'].includes(field)} type={field==='password'?'password':/Id$|cost|price|stock|total|fee|balance|goal/.test(field)?'number':'text'} value={form[field]??''} onChange={e=>setForm({...form,[field]:e.target.value})}/></label>)}</div>{error&&<div className="error">{error}</div>}<div className="modal-actions"><button type="button" onClick={onClose}>Annuler</button><button className="primary" type="submit">Enregistrer</button></div></form></div>;
 }
 
-type Variant=Entity&{sku:string;color:string;size:string;stock:number;price:number;productId:number;active?:boolean};type CartLine={variant:Variant;quantity:number};
+type Variant=Entity&{sku:string;color:string;size:string;stock:number;alertAt?:number;price:number;productId:number;active?:boolean};type CartLine={variant:Variant;quantity:number};
 function POS(){
   const[items,setItems]=useState<Variant[]>([]);const[cart,setCart]=useState<CartLine[]>([]);const[query,setQuery]=useState('');const[paid,setPaid]=useState('');const[method,setMethod]=useState('cash');const[message,setMessage]=useState('');
   useEffect(()=>{api<Variant[]>('/api/variants').then(rows=>setItems(rows.filter(row=>row.active!==false&&row.stock>0)))},[]);const total=cart.reduce((sum,line)=>sum+line.variant.price*line.quantity,0);
   const add=(variant:Variant)=>setCart(current=>{const found=current.find(line=>line.variant.id===variant.id);return found?current.map(line=>line.variant.id===variant.id?{...line,quantity:Math.min(variant.stock,line.quantity+1)}:line):[...current,{variant,quantity:1}]});
   const checkout=async()=>{try{const sale=await api<{reference:string}>('/api/sales/checkout',{method:'POST',body:JSON.stringify({paymentMethod:method,paid:Number(paid||total),items:cart.map(line=>({variantId:line.variant.id,quantity:line.quantity}))})});setMessage(`Vente ${sale.reference} enregistrée`);setCart([]);setPaid('')}catch(reason){setMessage((reason as Error).message)}};
-  return <div className="pos"><div><div className="search"><Search/><input autoFocus placeholder="Nom, SKU ou code-barres…" value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="product-grid">{items.filter(item=>JSON.stringify(item).toLowerCase().includes(query.toLowerCase())).slice(0,30).map(variant=><button key={variant.id} onClick={()=>add(variant)}><span className="product-icon"><Tags/></span><strong>{variant.sku}</strong><small>{variant.color} · {variant.size}</small><div><b>{money(variant.price)}</b><em>{variant.stock} disponible(s)</em></div></button>)}</div></div><aside className="cart"><div><small>VENTE EN COURS</small><h2>Panier <span>{cart.reduce((sum,line)=>sum+line.quantity,0)}</span></h2></div><div className="cart-lines">{cart.length===0?<div className="empty-mini"><ShoppingCart/><p>Ajoutez un article</p></div>:cart.map(line=><div className="cart-line" key={line.variant.id}><div><strong>{line.variant.sku}</strong><small>{money(line.variant.price)} × {line.quantity}</small></div><div className="qty"><button onClick={()=>setCart(current=>current.map(item=>item.variant.id===line.variant.id?{...item,quantity:Math.max(1,item.quantity-1)}:item))}>−</button><span>{line.quantity}</span><button onClick={()=>add(line.variant)}>+</button></div><b>{money(line.variant.price*line.quantity)}</b></div>)}</div><div className="cart-bottom"><div className="total"><span>Total</span><strong>{money(total)}</strong></div><label>Mode de paiement<select value={method} onChange={e=>setMethod(e.target.value)}><option value="cash">Espèces</option><option value="wave">Wave</option><option value="orange_money">Orange Money</option><option value="card">Carte</option><option value="credit">Crédit</option></select></label><label>Montant reçu<input type="number" value={paid} placeholder={String(total)} onChange={e=>setPaid(e.target.value)}/></label>{message&&<div className={message.includes('enregistrée')?'success':'error'}>{message}</div>}<button className="primary checkout" disabled={!cart.length} onClick={()=>void checkout()}><ArrowDownToLine/>Encaisser {money(total)}</button></div></aside></div>;
+  return <div className="pos"><div><div className="search"><Search/><input autoFocus placeholder="Nom, SKU ou code-barres…" value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="product-grid">{items.filter(item=>JSON.stringify(item).toLowerCase().includes(query.toLowerCase())).slice(0,30).map(variant=>{const low=Boolean(variant.alertAt&&variant.stock<=variant.alertAt);return <button key={variant.id} onClick={()=>add(variant)}><span className="product-icon"><Tags/></span><strong>{variant.sku}</strong><small>{variant.color} · {variant.size}</small><div><b>{money(variant.price)}</b><em className={low?'stock-low':'stock-ok'}>{low?'Stock faible':'En stock'} · {variant.stock}</em></div></button>})}</div></div><aside className="cart"><div><small>VENTE EN COURS</small><h2>Panier <span>{cart.reduce((sum,line)=>sum+line.quantity,0)}</span></h2></div><div className="cart-lines">{cart.length===0?<div className="empty-mini"><ShoppingCart/><p>Ajoutez un article</p></div>:cart.map(line=><div className="cart-line" key={line.variant.id}><div><strong>{line.variant.sku}</strong><small>{money(line.variant.price)} × {line.quantity}</small></div><div className="qty"><button onClick={()=>setCart(current=>current.map(item=>item.variant.id===line.variant.id?{...item,quantity:Math.max(1,item.quantity-1)}:item))}>−</button><span>{line.quantity}</span><button onClick={()=>add(line.variant)}>+</button></div><b>{money(line.variant.price*line.quantity)}</b></div>)}</div><div className="cart-bottom"><div className="total"><span>Total</span><strong>{money(total)}</strong></div><label>Mode de paiement<select value={method} onChange={e=>setMethod(e.target.value)}><option value="cash">Espèces</option><option value="wave">Wave</option><option value="orange_money">Orange Money</option><option value="card">Carte</option><option value="credit">Crédit</option></select></label><label>Montant reçu<input type="number" value={paid} placeholder={String(total)} onChange={e=>setPaid(e.target.value)}/></label>{message&&<div className={message.includes('enregistrée')?'success':'error'}>{message}</div>}<button className="primary checkout" disabled={!cart.length} onClick={()=>void checkout()}><ArrowDownToLine/>Encaisser {money(total)}</button></div></aside></div>;
 }
 function Loading(){return <div className="loading"><i/><span>Chargement…</span></div>}
 function Empty({title}:{title:string}){return <div className="empty"><Package/><h3>Aucun élément</h3><p>Les premiers éléments de « {title} » apparaîtront ici.</p></div>}

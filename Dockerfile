@@ -18,6 +18,7 @@ RUN npm run build
 
 FROM alpine:3.22 AS api
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H -u 10001 app
+RUN mkdir -p /uploads && chown -R app:app /uploads
 COPY --from=api-build /out/senvalise /usr/local/bin/senvalise
 USER app
 EXPOSE 8080

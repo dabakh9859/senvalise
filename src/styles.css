@@ -580,3 +580,21 @@
   .shop-ranking li i{flex:1 1 40px;max-width:none}
   .shop-ranking li small,.shop-ranking li b{flex:0 0 auto}
 }
+
+/* Photos jointes au formulaire produit. Les fichiers attendent l'enregistrement
+   de la fiche : le téléversement a besoin d'un identifiant de produit. */
+.photo-picker{display:flex;flex-direction:column;gap:9px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.photo-picker-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.photo-picker-head>span{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.photo-add{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);font-size:13px;cursor:pointer}
+.photo-add:hover{background:var(--active)}
+.photo-add svg{width:15px;height:15px}
+.photo-add input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.photo-empty{margin:0;padding:14px;text-align:center;font-size:12px;color:var(--muted);background:var(--sunken);border:1px dashed var(--line);border-radius:10px}
+.photo-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:9px}
+.photo-list li{position:relative;width:88px}
+.photo-list img{width:88px;height:88px;object-fit:cover;display:block;border-radius:9px;border:1px solid var(--line)}
+.photo-list em{position:absolute;left:4px;bottom:4px;padding:2px 6px;border-radius:6px;background:var(--ok-surface);color:var(--ok);border:1px solid var(--ok-line);font-style:normal;font-size:10px;font-weight:700}
+.photo-list button{position:absolute;top:-6px;right:-6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--bad)}
+.photo-list button svg{width:12px;height:12px}
+.photo-note{font-size:11px;color:var(--muted)}

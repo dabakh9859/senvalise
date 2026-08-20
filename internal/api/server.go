@@ -1656,7 +1656,10 @@ func saveInvoiceImage(c *fiber.Ctx, prefix string) (string, error) {
 	if err = os.MkdirAll("uploads", 0755); err != nil {
 		return "", err
 	}
-	name := fmt.Sprintf("%s-%s%s", prefix, time.Now().Format("20060102150405000000"), ext)
+	// Même correction qu'au téléversement des photos : sans fraction de seconde
+	// réelle, deux envois rapprochés portaient le même nom.
+	stamp := time.Now()
+	name := fmt.Sprintf("%s-%s-%09d%s", prefix, stamp.Format("20060102-150405"), stamp.Nanosecond(), ext)
 	if err = c.SaveFile(f, filepath.Join("uploads", name)); err != nil {
 		return "", err
 	}
@@ -1723,12 +1726,22 @@ func (s *Server) uploadProductImage(c *fiber.Ctx) error {
 	if err = os.MkdirAll("uploads", 0755); err != nil {
 		return err
 	}
-	name := fmt.Sprintf("product-%s%s", time.Now().Format("20060102150405000000"), ext)
+	// « 000000 » n'est pas un motif de fraction de seconde en Go (il faudrait
+	// « .000000 ») : le nom ne variait donc pas dans la même seconde, et deux
+	// photos envoyées à la suite écrasaient le même fichier.
+	now := time.Now()
+	name := fmt.Sprintf("product-%s-%09d%s", now.Format("20060102-150405"), now.Nanosecond(), ext)
 	if err = c.SaveFile(f, filepath.Join("uploads", name)); err != nil {
 		return err
 	}
 	id64, _ := strconv.ParseUint(c.Params("id"), 10, 64)
-	img := models.ProductImage{ProductID: uint(id64), URL: "/uploads/" + name, Alt: c.FormValue("alt")}
+	var existing int64
+	s.DB.Model(&models.ProductImage{}).Where("product_id = ?", id64).Count(&existing)
+	// La première photo d'un produit devient sa photo principale, et chaque
+	// suivante se range à la fin. Sans cela aucune image n'était jamais marquée
+	// et la vitrine retombait sur l'ordre d'insertion.
+	img := models.ProductImage{ProductID: uint(id64), URL: "/uploads/" + name, Alt: c.FormValue("alt"),
+		Position: int(existing), Primary: existing == 0}
 	if err = s.DB.Create(&img).Error; err != nil {
 		return fiber.NewError(422, err.Error())
 	}

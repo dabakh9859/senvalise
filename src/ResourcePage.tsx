@@ -8,15 +8,15 @@ type Props={title:string;resource:string;user:User};
 type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string}|null;
 
 const labels:Record<string,string>={
-  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
+  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
 };
 
 const configuredFields:Record<string,string[]>={
-  customers:['name','phone','email','address','zone','whatsAppConsent'],
+  customers:['name','phone','email','address','zone','whatsAppConsent','active'],
   suppliers:['name','phone','email','address'],
   categories:['name','slug','description'],
   brands:['name','slug'],
-  products:['name','slug','description','categoryId','brandId','active','online','featured'],
+  products:['name','slug','description','blurb','tag','flag','categoryId','brandId','cabin','volume','weight','position','active','online','featured'],
   variants:['productId','sku','barcode','color','size','cost','price','stock','alertAt','active'],
   'stock/movements':['variantId','userId','type','reason','quantity','stockBefore','stockAfter','reference','note'],
   arrivals:['reference','supplierId','status','currency','exchangeRate','shipping','customs','otherFees','receivedAt'],
@@ -25,24 +25,24 @@ const configuredFields:Record<string,string[]>={
   quotes:['reference','customerId','userId','status','subtotal','discount','taxRate','tax','total','validUntil','notes'],
   'delivery-notes':['reference','saleId','customerId','userId','status','notes'],
   orders:['reference','customerId','status','paymentMethod','total','deliveryFee','deliveryZone','address'],
-  vaults:['customerId','balance','goal','status'],
+  vaults:['customerId','balance','goal','goalRef','status'],
   'cash-sessions':['userId','status','openingAmount','expectedAmount','closingAmount','openedAt','closedAt'],
   'cash-movements':['cashSessionId','userId','direction','category','amount','note'],
   messages:['customerId','recipient','channel','type','subject','body','status','sentAt','error'],
   'message-templates':['name','channel','type','subject','body'],
   'contact-messages':['name','email','phone','subject','body','status'],
   'home-blocks':['kind','title','body','imageUrl','link','position','active'],
-  'delivery-zones':['name','fee','delay','active'],
+  'delivery-zones':['name','slug','area','fee','delay','lat','lon','active'],
   users:['name','email','password','role','active'],
   settings:['key','value','secret']
 };
 
 const readonly=new Set(['id','createdAt','updatedAt','items','variants','images','deposits','movements']);
 const moneyFields=new Set(['total','subtotal','discount','tax','paid','price','cost','unitPrice','unitCost','landedCost','balance','goal','fee','amount','shipping','customs','otherFees','deliveryFee','openingAmount','expectedAmount','closingAmount']);
-const numericFields=new Set([...moneyFields,'productId','variantId','categoryId','brandId','customerId','supplierId','userId','saleId','parentId','cashSessionId','arrivalId','orderId','documentId','vaultId','saleReturnId','stock','stockBefore','stockAfter','quantity','alertAt','position','exchangeRate']);
-const booleanFields=new Set(['active','online','featured','primary','restock','whatsAppConsent','secret']);
+const numericFields=new Set([...moneyFields,'productId','variantId','categoryId','brandId','customerId','supplierId','userId','saleId','parentId','cashSessionId','arrivalId','orderId','documentId','vaultId','saleReturnId','stock','stockBefore','stockAfter','quantity','alertAt','position','exchangeRate','volume','weight','lat','lon']);
+const booleanFields=new Set(['active','online','featured','primary','restock','whatsAppConsent','whatsappConsent','secret','cabin']);
 const dateFields=new Set(['openedAt','closedAt','receivedAt','dueAt','sentAt','validUntil']);
-const longFields=new Set(['description','body','notes','note','address','error']);
+const longFields=new Set(['description','body','notes','note','address','error','blurb','story']);
 
 type Tone='success'|'warning'|'danger'|'info'|'neutral';
 type Choice={value:string;label:string};
@@ -440,9 +440,45 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
   const[form,setForm]=useState<Record<string,string|boolean>>(initial);
   const[relationOptions,setRelationOptions]=useState<Record<string,Choice[]>>({});
   const[error,setError]=useState('');const[saving,setSaving]=useState(false);
+  // Photos choisies avant l'enregistrement. Le téléversement s'accroche à un
+  // identifiant de produit : elles attendent donc que la fiche existe.
+  const acceptsPhotos=resource==='products';
+  const[photos,setPhotos]=useState<File[]>([]);
+  const previews=useMemo(()=>photos.map(file=>({name:file.name,url:URL.createObjectURL(file)})),[photos]);
+  useEffect(()=>()=>{previews.forEach(item=>URL.revokeObjectURL(item.url))},[previews]);
+  // La FileList est un objet vivant : on la copie avant de rendre la main,
+  // car le champ est réinitialisé aussitôt (pour pouvoir reprendre le même
+  // fichier) et la mise à jour d'état, elle, s'exécute après.
+  const addPhotos=(files:FileList|null)=>{if(!files||!files.length)return;const picked=Array.from(files);setPhotos(current=>[...current,...picked])};
+  const dropPhoto=(index:number)=>setPhotos(current=>current.filter((_,position)=>position!==index));
   useEffect(()=>{let active=true;const relations=[...new Set(formFields.filter(field=>relationResources[field]))];if(!relations.length)return;Promise.all(relations.map(async field=>{const rows=await api<Entity[]>(endpoint(relationResources[field]));return[field,rows.map(item=>({value:String(item.id),label:recordTitle(item)}))] as const})).then(entries=>{if(active)setRelationOptions(Object.fromEntries(entries))}).catch(()=>{});return()=>{active=false}},[formFields]);
-  const submit=async(event:FormEvent)=>{event.preventDefault();setSaving(true);setError('');try{const body=Object.fromEntries(formFields.filter(field=>!(field==='password'&&!form[field])).map(field=>[field,toPayloadValue(field,form[field])]));await api(endpoint(resource,row?.id),{method:mode==='edit'?'PUT':'POST',body:JSON.stringify(body)});onDone()}catch(reason){setError((reason as Error).message)}finally{setSaving(false)}};
-  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div><div className="form-help"><CircleAlert/><span>{resource==='sales'?'Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.':'Les couleurs et les libellés vous indiquent immédiatement l’état de chaque élément.'}</span></div><div className="form-grid">{formFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>{error&&<div className="error">{error}</div>}<div className="modal-actions"><button type="button" onClick={onClose}>Annuler</button><button className="primary" type="submit" disabled={saving}>{saving?'Enregistrement…':'Enregistrer les modifications'}</button></div></form></div>;
+  const submit=async(event:FormEvent)=>{
+    event.preventDefault();setSaving(true);setError('');
+    try{
+      const body=Object.fromEntries(formFields.filter(field=>!(field==='password'&&!form[field])).map(field=>[field,toPayloadValue(field,form[field])]));
+      const saved=await api<Entity>(endpoint(resource,row?.id),{method:mode==='edit'?'PUT':'POST',body:JSON.stringify(body)});
+      const target=Number(row?.id??saved?.id);
+      if(acceptsPhotos&&photos.length&&target){
+        // En série : le serveur numérote les photos et marque la première comme
+        // principale, ordre qu'un envoi concurrent rendrait imprévisible.
+        for(const file of photos){
+          const payload=new FormData();
+          payload.append('image',file);
+          payload.append('alt',String(form.name??title));
+          await apiForm(`/api/products/${target}/images`,payload);
+        }
+      }
+      onDone();
+    }catch(reason){setError((reason as Error).message)}
+    finally{setSaving(false)}
+  };
+  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div><div className="form-help"><CircleAlert/><span>{resource==='sales'?'Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.':'Les couleurs et les libellés vous indiquent immédiatement l’état de chaque élément.'}</span></div><div className="form-grid">{formFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>{acceptsPhotos&&<div className="photo-picker">
+      <div className="photo-picker-head"><span>Photos</span><label className="photo-add"><ImagePlus/><span>Ajouter des photos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event=>{addPhotos(event.target.files);event.target.value=''}}/></label></div>
+      {previews.length===0
+        ?<p className="photo-empty">Aucune photo en attente. La première ajoutée deviendra la photo principale.</p>
+        :<ul className="photo-list">{previews.map((item,index)=><li key={item.url}><img src={item.url} alt={item.name}/>{index===0&&<em>Principale</em>}<button type="button" onClick={()=>dropPhoto(index)} aria-label={`Retirer ${item.name}`}><X/></button></li>)}</ul>}
+      <small className="photo-note">JPEG, PNG ou WebP, 10 Mo maximum par fichier. L’envoi a lieu après l’enregistrement de la fiche.</small>
+    </div>}{error&&<div className="error">{error}</div>}<div className="modal-actions"><button type="button" onClick={onClose}>Annuler</button><button className="primary" type="submit" disabled={saving}>{saving?(photos.length?'Envoi des photos…':'Enregistrement…'):mode==='edit'?'Enregistrer les modifications':'Créer'}</button></div></form></div>;
 }
 
 function Field({name,value,options,onChange}:{name:string;value:string|boolean;options?:Choice[];onChange:(value:string|boolean)=>void}){

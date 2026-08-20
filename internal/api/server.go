@@ -1,8 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"math"
 	"os"
 	"path/filepath"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,10 +30,34 @@ type dashboardTrend struct {
 	Count  int64     `json:"count"`
 }
 
+// loginLimiter freine les tentatives de connexion.
+//
+// Rien ne les limitait : vingt-cinq mots de passe erronés passaient en 1,4
+// seconde, soit environ dix-huit essais par seconde, sans ralentissement ni
+// trace. La fenêtre est volontairement large pour ne pas gêner un vendeur qui
+// se trompe deux fois de suite, mais elle rend la force brute inopérante.
+func loginLimiter() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        15,
+		Expiration: 5 * time.Minute,
+		// Seuls les échecs comptent : un vendeur qui tape juste ne doit jamais
+		// se retrouver enfermé dehors parce qu'un collègue s'est trompé.
+		SkipSuccessfulRequests: true,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return "login:" + c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Trop de tentatives de connexion. Réessayez dans quelques minutes.",
+			})
+		},
+	})
+}
+
 func (s *Server) Register(app *fiber.App) {
 	app.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok", "service": "senvalise-api"}) })
 	app.Static("/uploads", "/uploads")
-	app.Post("/api/auth/login", s.login)
+	app.Post("/api/auth/login", loginLimiter(), s.login)
 	app.Get("/api/shop/products", s.shopProducts)
 	app.Post("/api/shop/contact", s.createContact)
 	s.RegisterShop(app)
@@ -287,16 +315,37 @@ func (s *Server) list(c *fiber.Ctx, name string) error {
 		return fiber.ErrNotFound
 	}
 	db := preload(s.DB, name).Order("id desc")
-	if q := c.Query("q"); q != "" {
-		db = db.Where("CAST(id AS TEXT) LIKE ?", "%"+q+"%")
+	if q := strings.TrimSpace(c.Query("q")); q != "" {
+		// La recherche ne portait que sur l'identifiant : taper un nom de
+		// client ne renvoyait rien. Elle couvre désormais les colonnes utiles
+		// de chaque ressource, sans distinction de casse.
+		db = applySearch(db, name, q)
 	}
 	limit, _ := strconv.Atoi(c.Query("limit", "100"))
+	if limit <= 0 {
+		limit = 100
+	}
 	if limit > 500 {
 		limit = 500
 	}
-	if e := db.Limit(limit).Find(out).Error; e != nil {
-		return e
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
+	if offset < 0 {
+		offset = 0
 	}
+	// Le total permet à l'écran de savoir qu'il reste des pages : sans lui,
+	// tout ce qui dépassait la 500e ligne devenait inatteignable.
+	var total int64
+	countQuery := s.DB.Model(modelFor(name))
+	if q := strings.TrimSpace(c.Query("q")); q != "" {
+		countQuery = applySearch(countQuery, name, q)
+	}
+	if e := countQuery.Count(&total).Error; e != nil {
+		return dbError(e, "comptage "+name)
+	}
+	if e := db.Limit(limit).Offset(offset).Find(out).Error; e != nil {
+		return dbError(e, "lecture "+name)
+	}
+	c.Set("X-Total-Count", strconv.FormatInt(total, 10))
 	return s.respond(c, out)
 }
 func (s *Server) show(c *fiber.Ctx, name string) error {
@@ -332,7 +381,7 @@ func (s *Server) create(c *fiber.Ctx, name string) error {
 		u.PasswordHash = string(hash)
 	}
 	if e := s.DB.Create(out).Error; e != nil {
-		return fiber.NewError(422, e.Error())
+		return dbError(e, "création "+name)
 	}
 	return c.Status(201).JSON(out)
 }
@@ -369,24 +418,29 @@ func (s *Server) update(c *fiber.Ctx, name string) error {
 		}
 	}
 	if e := s.DB.Save(out).Error; e != nil {
-		return fiber.NewError(422, e.Error())
+		return dbError(e, "modification "+name)
 	}
 	return c.JSON(out)
 }
+// remove applique les règles de suppression de integrity.go.
+//
+// Le bouton corbeille échouait auparavant sur une violation de clé étrangère
+// dès que la fiche avait des enfants — une erreur SQL en anglais s'affichait
+// à la place d'une explication. Les lignes sans existence propre sont
+// désormais supprimées avec leur parent, et ce qui porte de l'histoire
+// comptable est refusé avec un motif compréhensible.
 func (s *Server) remove(c *fiber.Ctx, name string) error {
-	out := modelFor(name)
-	if out == nil {
+	if modelFor(name) == nil {
 		return fiber.ErrNotFound
 	}
-	if e := s.DB.Delete(out, c.Params("id")).Error; e != nil {
-		return fiber.NewError(422, e.Error())
+	if e := s.deleteWithChildren(name, c.Params("id")); e != nil {
+		return e
 	}
+	removed, _ := strconv.ParseUint(c.Params("id"), 10, 64)
+	s.log(c, "delete", name, uint(removed), name+" #"+c.Params("id"))
 	return c.SendStatus(204)
 }
 
-func ref(prefix string) string {
-	return fmt.Sprintf("%s-%s", prefix, time.Now().Format("20060102-150405.000"))
-}
 func (s *Server) adjust(tx *gorm.DB, variantID uint, qty int64, userID uint, reason, reference string) error {
 	var v models.ProductVariant
 	if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&v, variantID).Error; e != nil {
@@ -413,11 +467,15 @@ func (s *Server) adjustStock(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
-		return s.adjust(tx, in.VariantID, in.Quantity, c.Locals("userID").(uint), in.Reason, ref("STK"))
+		if _, e := lockVariants(tx, []uint{in.VariantID}); e != nil {
+			return e
+		}
+		return s.adjust(tx, in.VariantID, in.Quantity, c.Locals("userID").(uint), in.Reason, s.ref("STK"))
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "stock-adjust", "variants", in.VariantID, fmt.Sprintf("%+d — %s", in.Quantity, in.Reason))
 	return c.SendStatus(201)
 }
 
@@ -542,8 +600,21 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 		return fiber.NewError(422, "Taux de TVA invalide")
 	}
 	defaults := config.InvoiceDefaults
-	sale := models.Sale{Reference: ref("VTE"), CustomerID: in.CustomerID, UserID: c.Locals("userID").(uint), Channel: "pos", PaymentMethod: in.PaymentMethod, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
+	sale := models.Sale{Reference: s.ref("VTE"), CustomerID: in.CustomerID, UserID: c.Locals("userID").(uint), Channel: "pos", PaymentMethod: in.PaymentMethod, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		// Le stock se verrouille avant toute écriture, et par identifiant
+		// croissant. Insérer la ligne de vente d'abord posait un verrou
+		// partagé sur la déclinaison via la clé étrangère, que le verrou
+		// exclusif demandé ensuite devait faire monter en grade : deux caisses
+		// simultanées s'interbloquaient et PostgreSQL en tuait une.
+		ids := make([]uint, 0, len(in.Items))
+		for _, l := range in.Items {
+			ids = append(ids, l.VariantID)
+		}
+		locked, e := lockVariants(tx, ids)
+		if e != nil {
+			return e
+		}
 		if e := tx.Create(&sale).Error; e != nil {
 			return e
 		}
@@ -552,10 +623,7 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 			if l.Quantity <= 0 || l.Discount < 0 {
 				return fmt.Errorf("quantité ou remise invalide")
 			}
-			var v models.ProductVariant
-			if e := tx.First(&v, l.VariantID).Error; e != nil {
-				return e
-			}
+			v := locked[l.VariantID]
 			price := l.UnitPrice
 			if price == 0 {
 				price = v.Price
@@ -605,13 +673,17 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 			return e
 		}
 		if applied > 0 {
-			return tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: sale.UserID, Method: in.PaymentMethod, Amount: applied, Status: "active", Reference: ref("REG")}).Error
+			if e := tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: sale.UserID, Method: in.PaymentMethod, Amount: applied, Status: "active", Reference: s.ref("REG")}).Error; e != nil {
+				return e
+			}
+			return s.trackCash(tx, sale.UserID, in.PaymentMethod, applied)
 		}
 		return nil
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "sale", "sales", sale.ID, fmt.Sprintf("%s — %d F, %s", sale.Reference, sale.Total, sale.PaymentMethod))
 	preload(s.DB, "sales").First(&sale, sale.ID)
 	return c.Status(201).JSON(sale)
 }
@@ -660,15 +732,19 @@ func (s *Server) addSalePayment(c *fiber.Ctx) error {
 	if in.Amount > remaining {
 		return fiber.NewError(422, fmt.Sprintf("Le règlement dépasse le reste à payer de %d F", remaining))
 	}
-	payment := models.SalePayment{SaleID: sale.ID, UserID: c.Locals("userID").(uint), Method: in.Method, Amount: in.Amount, Status: "active", Reference: ref("REG")}
+	payment := models.SalePayment{SaleID: sale.ID, UserID: c.Locals("userID").(uint), Method: in.Method, Amount: in.Amount, Status: "active", Reference: s.ref("REG")}
 	if e := s.DB.Transaction(func(tx *gorm.DB) error {
 		if e := tx.Create(&payment).Error; e != nil {
 			return e
 		}
-		return syncSalePayments(tx, &sale)
+		if e := syncSalePayments(tx, &sale); e != nil {
+			return e
+		}
+		return s.trackCash(tx, payment.UserID, payment.Method, payment.Amount)
 	}); e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "payment", "sales", sale.ID, fmt.Sprintf("règlement de %d F (%s)", payment.Amount, payment.Method))
 	return c.Status(201).JSON(payment)
 }
 
@@ -693,10 +769,15 @@ func (s *Server) cancelSalePayment(c *fiber.Ctx) error {
 		if e := tx.Model(&payment).Updates(map[string]any{"status": "cancelled", "cancel_reason": in.Reason, "cancelled_at": &now}).Error; e != nil {
 			return e
 		}
-		return syncSalePayments(tx, &sale)
+		if e := syncSalePayments(tx, &sale); e != nil {
+			return e
+		}
+		// L'argent ressort du tiroir : la caisse doit le savoir.
+		return s.trackCash(tx, payment.UserID, payment.Method, -payment.Amount)
 	}); e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "payment-cancel", "sales", sale.ID, fmt.Sprintf("annulation du règlement %s (%d F)", payment.Reference, payment.Amount))
 	return c.JSON(payment)
 }
 
@@ -711,13 +792,26 @@ func (s *Server) cancelAllSalePayments(c *fiber.Ctx) error {
 	}
 	now := time.Now()
 	if e := s.DB.Transaction(func(tx *gorm.DB) error {
+		var active []models.SalePayment
+		if e := tx.Where("sale_id = ? AND status = ?", sale.ID, "active").Find(&active).Error; e != nil {
+			return e
+		}
 		if e := tx.Model(&models.SalePayment{}).Where("sale_id = ? AND status = ?", sale.ID, "active").Updates(map[string]any{"status": "cancelled", "cancel_reason": in.Reason, "cancelled_at": &now}).Error; e != nil {
 			return e
 		}
-		return syncSalePayments(tx, &sale)
+		if e := syncSalePayments(tx, &sale); e != nil {
+			return e
+		}
+		for _, payment := range active {
+			if e := s.trackCash(tx, payment.UserID, payment.Method, -payment.Amount); e != nil {
+				return e
+			}
+		}
+		return nil
 	}); e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "payment-cancel-all", "sales", sale.ID, "annulation de tous les règlements de "+sale.Reference)
 	return c.SendStatus(204)
 }
 
@@ -975,6 +1069,12 @@ func (s *Server) addQuoteLine(c *fiber.Ctx, in lineInput) error {
 		if duplicate > 0 {
 			return fmt.Errorf("ce produit est déjà présent : modifiez sa ligne existante")
 		}
+		// Verrou exclusif avant d'écrire la ligne, pour la même raison qu'à
+		// l'encaissement : la clé étrangère poserait sinon un verrou partagé
+		// qu'il faudrait promouvoir ensuite.
+		if _, e := lockVariants(tx, []uint{in.VariantID}); e != nil {
+			return fmt.Errorf("produit introuvable")
+		}
 		var variant models.ProductVariant
 		if e := tx.Preload("Product").First(&variant, in.VariantID).Error; e != nil {
 			return fmt.Errorf("produit introuvable")
@@ -1072,6 +1172,12 @@ func (s *Server) addBusinessLine(c *fiber.Ctx, kind string) error {
 		if duplicate > 0 {
 			return fmt.Errorf("ce produit est déjà présent : modifiez sa ligne existante")
 		}
+		// Verrou exclusif avant d'écrire la ligne, pour la même raison qu'à
+		// l'encaissement : la clé étrangère poserait sinon un verrou partagé
+		// qu'il faudrait promouvoir ensuite.
+		if _, e := lockVariants(tx, []uint{in.VariantID}); e != nil {
+			return fmt.Errorf("produit introuvable")
+		}
 		var variant models.ProductVariant
 		if e := tx.Preload("Product").First(&variant, in.VariantID).Error; e != nil {
 			return fmt.Errorf("produit introuvable")
@@ -1131,18 +1237,29 @@ func (s *Server) receiveArrival(c *fiber.Ctx) error {
 	if a.Status == "received" {
 		return fiber.NewError(409, "Arrivage déjà réceptionné")
 	}
+	if len(a.Items) == 0 {
+		return fiber.NewError(422, "Cet arrivage ne contient aucune ligne : rien à réceptionner.")
+	}
+	landed := landedCosts(a)
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		ids := make([]uint, 0, len(a.Items))
+		for _, i := range a.Items {
+			ids = append(ids, i.VariantID)
+		}
+		if _, e := lockVariants(tx, ids); e != nil {
+			return e
+		}
 		for _, i := range a.Items {
 			if e := s.adjust(tx, i.VariantID, i.Quantity, c.Locals("userID").(uint), "arrival", a.Reference); e != nil {
 				return e
 			}
-			var v models.ProductVariant
-			tx.First(&v, i.VariantID)
-			newCost := i.LandedCost
-			if newCost == 0 {
-				newCost = i.UnitCost
+			cost := landed[i.ID]
+			if e := tx.Model(&models.ArrivalItem{}).Where("id = ?", i.ID).Update("landed_cost", cost).Error; e != nil {
+				return e
 			}
-			tx.Model(&v).Update("cost", newCost)
+			if e := tx.Model(&models.ProductVariant{}).Where("id = ?", i.VariantID).Update("cost", cost).Error; e != nil {
+				return e
+			}
 		}
 		now := time.Now()
 		return tx.Model(&a).Updates(map[string]any{"status": "received", "received_at": now}).Error
@@ -1150,7 +1267,45 @@ func (s *Server) receiveArrival(c *fiber.Ctx) error {
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "arrival-receive", "arrivals", a.ID, a.Reference)
+	s.DB.Preload("Items").First(&a, a.ID)
 	return c.JSON(a)
+}
+
+// landedCosts calcule le coût de revient unitaire réel de chaque ligne d'un
+// arrivage : prix d'achat converti en francs, augmenté de sa part de transport,
+// de douane et de frais divers.
+//
+// Ces montants étaient saisis sur l'arrivage puis purement ignorés. Le coût de
+// la déclinaison reprenait le prix d'achat brut, et un prix saisi en yuans
+// était traité comme des francs CFA. La marge affichée dans les rapports s'en
+// trouvait surévaluée de la totalité des frais d'importation.
+//
+// La ventilation se fait au prorata de la valeur d'achat de chaque ligne : une
+// ligne qui pèse 40 % de la valeur du conteneur en supporte 40 % des frais.
+func landedCosts(a models.Arrival) map[uint]int64 {
+	rate := a.ExchangeRate
+	if rate <= 0 {
+		rate = 1 // devise déjà en francs, ou taux non renseigné
+	}
+	converted := make(map[uint]int64, len(a.Items))
+	var base int64
+	for _, i := range a.Items {
+		unit := int64(math.Round(float64(i.UnitCost) * rate))
+		converted[i.ID] = unit
+		base += unit * i.Quantity
+	}
+	overhead := a.Shipping + a.Customs + a.OtherFees
+	out := make(map[uint]int64, len(a.Items))
+	for _, i := range a.Items {
+		unit := converted[i.ID]
+		if overhead > 0 && base > 0 && i.Quantity > 0 {
+			share := float64(overhead) * float64(unit*i.Quantity) / float64(base)
+			unit += int64(math.Round(share / float64(i.Quantity)))
+		}
+		out[i.ID] = unit
+	}
+	return out
 }
 
 type returnLineInput struct {
@@ -1166,34 +1321,173 @@ type returnInput struct {
 	Items                []returnLineInput `json:"items"`
 }
 
+// processReturn enregistre un retour client.
+//
+// La version précédente ne chargeait jamais la facture : elle acceptait un
+// retour de 9 999 unités sur une vente de 2, un retour sur une facture
+// inexistante, et n'inscrivait aucun remboursement au crédit du client — la
+// facture restait affichée comme intégralement soldée. Tout se vérifie
+// désormais contre la vente d'origine, retours antérieurs compris.
 func (s *Server) processReturn(c *fiber.Ctx) error {
 	var in returnInput
 	if c.BodyParser(&in) != nil || len(in.Items) == 0 {
 		return fiber.ErrBadRequest
 	}
-	r := models.SaleReturn{Reference: ref("RET"), SaleID: in.SaleID, UserID: c.Locals("userID").(uint), Reason: in.Reason, RefundMethod: in.RefundMethod, Restock: in.Restock}
+	if in.SaleID == 0 {
+		return fiber.NewError(422, "Un retour doit être rattaché à une facture.")
+	}
+	if strings.TrimSpace(in.Reason) == "" {
+		return fiber.NewError(422, "Indiquez le motif du retour.")
+	}
+	userID := c.Locals("userID").(uint)
+	r := models.SaleReturn{Reference: s.ref("RET"), SaleID: in.SaleID, UserID: userID,
+		Reason: in.Reason, RefundMethod: in.RefundMethod, Restock: in.Restock}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		var sale models.Sale
+		if e := tx.Preload("Items").First(&sale, in.SaleID).Error; e != nil {
+			return fmt.Errorf("facture introuvable")
+		}
+		if sale.Status == "cancelled" {
+			return fmt.Errorf("cette facture est annulée : aucun retour n'est possible")
+		}
+		if in.RefundMethod == "" {
+			in.RefundMethod = sale.PaymentMethod
+			r.RefundMethod = in.RefundMethod
+		}
+
+		// Ce qui a été vendu, ligne par ligne, et ce qui en a déjà été rendu.
+		sold := map[uint]models.SaleItem{}
+		for _, item := range sale.Items {
+			sold[item.VariantID] = item
+		}
+		type prior struct{ quantity, amount int64 }
+		already := map[uint]prior{}
+		var previousRefunds int64
+		var earlier []models.ReturnItem
+		tx.Table("return_items").
+			Joins("JOIN sale_returns ON sale_returns.id = return_items.sale_return_id").
+			Where("sale_returns.sale_id = ?", sale.ID).
+			Select("return_items.*").Scan(&earlier)
+		for _, item := range earlier {
+			p := already[item.VariantID]
+			already[item.VariantID] = prior{p.quantity + item.Quantity, p.amount + item.Amount}
+			previousRefunds += item.Amount
+		}
+
+		ids := make([]uint, 0, len(in.Items))
+		for _, line := range in.Items {
+			ids = append(ids, line.VariantID)
+		}
+		if _, e := lockVariants(tx, ids); e != nil {
+			return e
+		}
 		if e := tx.Create(&r).Error; e != nil {
 			return e
 		}
-		for _, i := range in.Items {
-			r.Amount += i.Amount
-			if e := tx.Create(&models.ReturnItem{SaleReturnID: r.ID, VariantID: i.VariantID, Quantity: i.Quantity, Amount: i.Amount}).Error; e != nil {
+
+		seen := map[uint]bool{}
+		for _, line := range in.Items {
+			item, ok := sold[line.VariantID]
+			if !ok {
+				return fmt.Errorf("cet article ne figure pas sur la facture %s", sale.Reference)
+			}
+			if seen[line.VariantID] {
+				return fmt.Errorf("le même article apparaît deux fois dans le retour")
+			}
+			seen[line.VariantID] = true
+			if line.Quantity <= 0 {
+				return fmt.Errorf("quantité de retour invalide")
+			}
+			if line.Amount < 0 {
+				return fmt.Errorf("montant de remboursement invalide")
+			}
+			restant := item.Quantity - already[line.VariantID].quantity
+			if line.Quantity > restant {
+				if restant <= 0 {
+					return fmt.Errorf("cet article a déjà été entièrement retourné")
+				}
+				return fmt.Errorf("quantité trop élevée : %d unité(s) retournable(s) au maximum", restant)
+			}
+			// Le remboursement ne peut pas dépasser ce que la ligne a
+			// réellement rapporté, au prorata des unités rendues.
+			maximum := item.Total*line.Quantity/item.Quantity - already[line.VariantID].amount
+			if maximum < 0 {
+				maximum = 0
+			}
+			if line.Amount > maximum {
+				return fmt.Errorf("remboursement trop élevé : %d F au maximum pour cet article", maximum)
+			}
+			r.Amount += line.Amount
+			if e := tx.Create(&models.ReturnItem{SaleReturnID: r.ID, VariantID: line.VariantID,
+				Quantity: line.Quantity, Amount: line.Amount}).Error; e != nil {
 				return e
 			}
 			if in.Restock {
-				if e := s.adjust(tx, i.VariantID, i.Quantity, r.UserID, "return", r.Reference); e != nil {
+				if e := s.adjust(tx, line.VariantID, line.Quantity, userID, "return", r.Reference); e != nil {
 					return e
 				}
 			}
 		}
-		return tx.Save(&r).Error
+
+		// On ne rembourse jamais plus que ce que le client a versé.
+		if r.Amount+previousRefunds > sale.Paid {
+			return fmt.Errorf("remboursement de %d F impossible : seuls %d F ont été encaissés sur cette facture",
+				r.Amount, sale.Paid-previousRefunds)
+		}
+		if e := tx.Save(&r).Error; e != nil {
+			return e
+		}
+		// Le remboursement s'inscrit en règlement négatif : sans cela la
+		// facture restait « soldée » après avoir rendu l'argent.
+		if r.Amount > 0 {
+			if e := tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: userID, Method: r.RefundMethod,
+				Amount: -r.Amount, Status: "active", Reference: r.Reference}).Error; e != nil {
+				return e
+			}
+			if e := syncSalePayments(tx, &sale); e != nil {
+				return e
+			}
+			if e := s.trackCash(tx, userID, r.RefundMethod, -r.Amount); e != nil {
+				return e
+			}
+		}
+		return nil
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	s.log(c, "return", "returns", r.ID, fmt.Sprintf("%s — %d F remboursés", r.Reference, r.Amount))
+	s.DB.Preload("Items").First(&r, r.ID)
 	return c.Status(201).JSON(r)
 }
+// trackCash répercute un encaissement ou un remboursement en espèces sur la
+// session de caisse ouverte du vendeur.
+//
+// ExpectedAmount restait figé au fond d'ouverture : à la clôture, l'écart de
+// caisse était impossible à constater, ce qui est pourtant la raison d'être
+// d'une session. Seules les espèces comptent — un règlement Wave ou par carte
+// ne passe pas par le tiroir.
+func (s *Server) trackCash(tx *gorm.DB, userID uint, method string, amount int64) error {
+	if amount == 0 || method != "cash" {
+		return nil
+	}
+	var session models.CashSession
+	if tx.Clauses(lockForUpdate()).Where("user_id = ? AND status = 'open'", userID).First(&session).Error != nil {
+		// Encaisser sans session ouverte reste permis : il n'y a simplement
+		// pas de tiroir à mouvementer. La vente ne doit pas échouer pour ça.
+		return nil
+	}
+	direction, category := "in", "vente"
+	if amount < 0 {
+		direction, category = "out", "remboursement"
+	}
+	if e := tx.Create(&models.CashMovement{CashSessionID: session.ID, UserID: userID,
+		Direction: direction, Category: category, Amount: amount}).Error; e != nil {
+		return e
+	}
+	return tx.Model(&session).Update("expected_amount", session.ExpectedAmount+amount).Error
+}
+
 func (s *Server) openCash(c *fiber.Ctx) error {
 	var in struct {
 		OpeningAmount int64 `json:"openingAmount"`
@@ -1215,9 +1509,19 @@ func (s *Server) closeCash(c *fiber.Ctx) error {
 	}
 	c.BodyParser(&in)
 	now := time.Now()
-	if e := s.DB.Model(&models.CashSession{}).Where("id=? AND status='open'", c.Params("id")).Updates(map[string]any{"status": "closed", "closing_amount": in.ClosingAmount, "closed_at": now}).Error; e != nil {
-		return e
+	// Une mise à jour sans ligne touchée renvoyait 204, comme si la caisse
+	// avait été clôturée. Le vendeur croyait son tiroir fermé.
+	result := s.DB.Model(&models.CashSession{}).Where("id=? AND status='open'", c.Params("id")).Updates(map[string]any{"status": "closed", "closing_amount": in.ClosingAmount, "closed_at": now})
+	if result.Error != nil {
+		return dbError(result.Error, "clôture de caisse")
 	}
+	if result.RowsAffected == 0 {
+		return fiber.NewError(404, "Aucune session de caisse ouverte sous cet identifiant.")
+	}
+	var session models.CashSession
+	s.DB.First(&session, c.Params("id"))
+	s.log(c, "cash-close", "cash-sessions", session.ID, fmt.Sprintf("attendu %d F, compté %d F, écart %d F",
+		session.ExpectedAmount, session.ClosingAmount, session.ClosingAmount-session.ExpectedAmount))
 	return c.SendStatus(204)
 }
 func (s *Server) depositVault(c *fiber.Ctx) error {
@@ -1236,11 +1540,13 @@ func (s *Server) depositVault(c *fiber.Ctx) error {
 		if e := tx.Model(&v).Update("balance", gorm.Expr("balance + ?", in.Amount)).Error; e != nil {
 			return e
 		}
-		return tx.Create(&models.VaultDeposit{VaultID: v.ID, Amount: in.Amount, Method: in.Method, Reference: ref("DEP")}).Error
+		return tx.Create(&models.VaultDeposit{VaultID: v.ID, Amount: in.Amount, Method: in.Method, Reference: s.ref("DEP")}).Error
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
+	vaultID, _ := strconv.ParseUint(c.Params("id"), 10, 64)
+	s.log(c, "vault-deposit", "vaults", uint(vaultID), fmt.Sprintf("versement de %d F (%s)", in.Amount, in.Method))
 	return c.SendStatus(201)
 }
 
@@ -1338,7 +1644,7 @@ func (s *Server) createExpense(c *fiber.Ctx) error {
 		return e
 	}
 	expense := models.Expense{
-		Reference: ref("DPS"), SpentOn: expenseDay(in.SpentOn), Category: expenseCategory(in.Category),
+		Reference: s.ref("DPS"), SpentOn: expenseDay(in.SpentOn), Category: expenseCategory(in.Category),
 		Label: strings.TrimSpace(in.Label), Amount: in.Amount, PaymentMethod: in.PaymentMethod,
 		SupplierID: in.SupplierID, UserID: c.Locals("userID").(uint), Note: strings.TrimSpace(in.Note),
 	}
@@ -1582,7 +1888,7 @@ func (s *Server) createOrder(c *fiber.Ctx) error {
 	if c.BodyParser(&o) != nil || len(o.Items) == 0 {
 		return fiber.ErrBadRequest
 	}
-	o.Reference = ref("CMD")
+	o.Reference = s.ref("CMD")
 	o.Status = "pending"
 	var total int64
 	for i := range o.Items {
@@ -1618,7 +1924,7 @@ func (s *Server) inventory(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 	uid := c.Locals("userID").(uint)
-	reference := ref("INV")
+	reference := s.ref("INV")
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		for _, item := range in.Items {
 			var v models.ProductVariant
@@ -1640,6 +1946,33 @@ func (s *Server) inventory(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"reference": reference})
 }
 
+// imageExtension déduit le format à partir des premiers octets du fichier,
+// pas de son nom.
+//
+// Seule l'extension était contrôlée : un script renommé en .png passait sans
+// difficulté. Nginx sert ce dossier en statique et n'exécute rien, donc le
+// risque restait faible, mais la vérification doit porter sur le contenu — et
+// c'est aussi ce qui empêche un PDF renommé de finir dans une galerie photo.
+func imageExtension(f *multipart.FileHeader) (string, error) {
+	handle, err := f.Open()
+	if err != nil {
+		return "", fiber.NewError(400, "Fichier illisible")
+	}
+	defer handle.Close()
+	head := make([]byte, 12)
+	n, _ := io.ReadFull(handle, head)
+	head = head[:n]
+	switch {
+	case bytes.HasPrefix(head, []byte{0xFF, 0xD8, 0xFF}):
+		return ".jpg", nil
+	case bytes.HasPrefix(head, []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}):
+		return ".png", nil
+	case len(head) >= 12 && bytes.HasPrefix(head, []byte("RIFF")) && bytes.Equal(head[8:12], []byte("WEBP")):
+		return ".webp", nil
+	}
+	return "", fiber.NewError(415, "Ce fichier n\u2019est pas une image PNG, JPG ou WebP.")
+}
+
 func saveInvoiceImage(c *fiber.Ctx, prefix string) (string, error) {
 	f, err := c.FormFile("image")
 	if err != nil {
@@ -1648,9 +1981,11 @@ func saveInvoiceImage(c *fiber.Ctx, prefix string) (string, error) {
 	if f.Size > 5<<20 {
 		return "", fiber.NewError(413, "Image limitée à 5 Mo")
 	}
-	ext := strings.ToLower(filepath.Ext(f.Filename))
-	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true}
-	if !allowed[ext] {
+	ext, err := imageExtension(f)
+	if err != nil {
+		return "", err
+	}
+	if ext == ".webp" {
 		return "", fiber.NewError(415, "Seules les images PNG et JPG sont acceptées")
 	}
 	if err = os.MkdirAll("uploads", 0755); err != nil {
@@ -1718,10 +2053,9 @@ func (s *Server) uploadProductImage(c *fiber.Ctx) error {
 	if f.Size > 10<<20 {
 		return fiber.NewError(413, "Image limitée à 10 Mo")
 	}
-	ext := strings.ToLower(filepath.Ext(f.Filename))
-	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
-	if !allowed[ext] {
-		return fiber.NewError(415, "Format non accepté")
+	ext, err := imageExtension(f)
+	if err != nil {
+		return err
 	}
 	if err = os.MkdirAll("uploads", 0755); err != nil {
 		return err
@@ -1798,19 +2132,37 @@ func (s *Server) convertQuote(c *fiber.Ctx) error {
 	}
 	var sale models.Sale
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		// La conversion sort la marchandise du stock, exactement comme
+		// l'encaissement au comptoir. Elle ne le faisait pas : la facture
+		// partait, le stock restait. Pire, retoucher ensuite une ligne de
+		// cette facture ajustait bien le stock — réduire une quantité créait
+		// donc des unités qui n'en étaient jamais sorties.
+		ids := make([]uint, 0, len(quote.Items))
+		for _, item := range quote.Items {
+			ids = append(ids, item.VariantID)
+		}
+		if _, e := lockVariants(tx, ids); e != nil {
+			return e
+		}
 		defaults := s.readCheckoutSettings().InvoiceDefaults
-		sale = models.Sale{Reference: ref("VTE"), QuoteID: &quote.ID, CustomerID: quote.CustomerID, UserID: c.Locals("userID").(uint), Channel: "quote", Status: "pending", PaymentMethod: "credit", Subtotal: quote.Subtotal, Discount: quote.Discount, TaxRate: quote.TaxRate, Tax: quote.Tax, Total: quote.Total, Paid: 0, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
+		sale = models.Sale{Reference: s.ref("VTE"), QuoteID: &quote.ID, CustomerID: quote.CustomerID, UserID: c.Locals("userID").(uint), Channel: "quote", Status: "pending", PaymentMethod: "credit", Subtotal: quote.Subtotal, Discount: quote.Discount, TaxRate: quote.TaxRate, Tax: quote.Tax, Total: quote.Total, Paid: 0, InvoiceCompanyName: defaults.CompanyName, InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address, InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote, CompanySignatureURL: defaults.CompanySignature}
 		for _, item := range quote.Items {
 			sale.Items = append(sale.Items, models.SaleItem{VariantID: item.VariantID, Quantity: item.Quantity, UnitPrice: item.UnitPrice, Discount: item.Discount, Total: item.Total})
 		}
 		if e := tx.Create(&sale).Error; e != nil {
 			return e
 		}
+		for _, item := range sale.Items {
+			if e := s.adjust(tx, item.VariantID, -item.Quantity, sale.UserID, "quote_convert", sale.Reference); e != nil {
+				return e
+			}
+		}
 		return tx.Model(&quote).Updates(map[string]any{"status": "accepted", "converted_sale_id": sale.ID}).Error
 	})
 	if err != nil {
 		return fiber.NewError(422, err.Error())
 	}
+	s.log(c, "quote-convert", "quotes", quote.ID, quote.Reference+" → "+sale.Reference)
 	return c.Status(201).JSON(sale)
 }
 
@@ -1823,7 +2175,7 @@ func (s *Server) createDeliveryNote(c *fiber.Ctx) error {
 	if s.DB.Where("sale_id = ?", sale.ID).First(&existing).Error == nil {
 		return fiber.NewError(409, "Un bon de livraison existe déjà pour cette facture")
 	}
-	note := models.DeliveryNote{Reference: ref("BL"), Status: "ready", SaleID: sale.ID, CustomerID: sale.CustomerID, UserID: c.Locals("userID").(uint), Notes: "Bon de livraison généré depuis la facture " + sale.Reference}
+	note := models.DeliveryNote{Reference: s.ref("BL"), Status: "ready", SaleID: sale.ID, CustomerID: sale.CustomerID, UserID: c.Locals("userID").(uint), Notes: "Bon de livraison généré depuis la facture " + sale.Reference}
 	for _, item := range sale.Items {
 		note.Items = append(note.Items, models.DeliveryNoteItem{VariantID: item.VariantID, Description: item.Variant.Product.Name, Quantity: item.Quantity})
 	}

@@ -215,22 +215,30 @@ func (s *Server) shopAdminOrderInvoice(c *fiber.Ctx) error {
 	userID, _ := c.Locals("userID").(uint)
 	customerID := order.CustomerID
 	sale := models.Sale{
-		Reference: ref("WEB"), CustomerID: &customerID, UserID: userID, Channel: "online",
+		Reference: s.ref("WEB"), CustomerID: &customerID, UserID: userID, Channel: "online",
 		PaymentMethod: order.PaymentMethod, InvoiceCompanyName: defaults.CompanyName,
 		InvoiceTagline: defaults.Tagline, InvoicePhone: defaults.Phone, InvoiceAddress: defaults.Address,
 		InvoiceThankYouTitle: defaults.ThankYouTitle, InvoiceFooterNote: defaults.FooterNote,
 		CompanySignatureURL: defaults.CompanySignature,
 	}
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		// Verrou exclusif sur le stock avant toute insertion, sinon la clé
+		// étrangère de la ligne de vente pose un verrou partagé qu'il faudrait
+		// ensuite promouvoir — source d'interblocage entre deux facturations.
+		ids := make([]uint, 0, len(order.Items))
+		for _, item := range order.Items {
+			ids = append(ids, item.VariantID)
+		}
+		locked, e := lockVariants(tx, ids)
+		if e != nil {
+			return fmt.Errorf("article introuvable dans la commande")
+		}
 		if e := tx.Create(&sale).Error; e != nil {
 			return e
 		}
 		var subtotal int64
 		for _, item := range order.Items {
-			var variant models.ProductVariant
-			if e := tx.First(&variant, item.VariantID).Error; e != nil {
-				return fmt.Errorf("article introuvable pour « %s »", item.ProductName)
-			}
+			variant := locked[item.VariantID]
 			total := item.UnitPrice * item.Quantity
 			subtotal += total
 			line := models.SaleItem{SaleID: sale.ID, VariantID: variant.ID, Quantity: item.Quantity,

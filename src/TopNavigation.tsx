@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {ChevronDown,Menu,Plus,ShoppingBag,X} from 'lucide-react';
+import {ChevronDown,Menu,ShoppingBag,X} from 'lucide-react';
 import {allNav,dashboardItem,groups,NavGroup,NavItem,User} from './Sidebar';
 
 type Props={user:User;page:string;onPage:(id:string)=>void};

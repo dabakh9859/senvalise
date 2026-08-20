@@ -2,12 +2,14 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormlog "gorm.io/gorm/logger"
 	"senvalise/internal/models"
 )
 
@@ -16,10 +18,22 @@ func Open() (*gorm.DB, error) {
 	if dsn == "" {
 		dsn = "postgres://senvalise:senvalise@localhost:5432/senvalise?sslmode=disable"
 	}
+	// Les semeurs utilisent First() + ErrRecordNotFound comme sonde « cet
+	// enregistrement existe-t-il deja ? ». Le journaliseur par defaut traite
+	// chacune de ces sondes comme une erreur : un demarrage sur base neuve
+	// deversait quarante lignes rouges sans qu'aucune ne signale un probleme,
+	// ce qui aurait masque une vraie erreur. On garde les requetes lentes et
+	// les vraies erreurs, on tait les absences attendues.
+	gormLogger := gormlog.New(log.New(os.Stdout, "", log.LstdFlags), gormlog.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  gormlog.Warn,
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  false,
+	})
 	var db *gorm.DB
 	var err error
 	for i := 0; i < 30; i++ {
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormLogger})
 		if err == nil {
 			break
 		}
@@ -38,6 +52,12 @@ func Open() (*gorm.DB, error) {
 	}
 	db.Config.DisableForeignKeyConstraintWhenMigrating = false
 	if err := db.AutoMigrate(schema...); err != nil {
+		return nil, err
+	}
+	// Les references de document viennent d'une sequence plutot que d'un
+	// horodatage : deux ventes enregistrees dans la meme milliseconde
+	// recevaient la meme reference, et l'index unique en rejetait une.
+	if err := db.Exec("CREATE SEQUENCE IF NOT EXISTS document_refs START 1").Error; err != nil {
 		return nil, err
 	}
 	return db, seed(db)
@@ -65,28 +85,11 @@ func seed(db *gorm.DB) error {
 }
 
 func seedDefaults(db *gorm.DB) error {
-	var imageCount int64
-	db.Model(&models.ProductImage{}).Count(&imageCount)
-	if imageCount == 0 {
-		photos := map[string]string{
-			"Teranga 55":     "https://images.unsplash.com/photo-1581553680321-4fffae59fccd?auto=format&fit=crop&w=900&q=85",
-			"Ndar 55":        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85",
-			"Gorée Weekend":  "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=85",
-			"Saloum 75":      "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?auto=format&fit=crop&w=900&q=85",
-			"Baobab 85":      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=900&q=85",
-			"Duo Teranga":    "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=85",
-			"Sac Horizon":    "https://images.unsplash.com/photo-1577733966973-d680bffd2e80?auto=format&fit=crop&w=900&q=85",
-			"Trousse Nomade": "https://images.unsplash.com/photo-1559563458-527698bf5295?auto=format&fit=crop&w=900&q=85",
-		}
-		for name, url := range photos {
-			var product models.Product
-			if db.Where("name = ?", name).First(&product).Error == nil {
-				if err := db.Create(&models.ProductImage{ProductID: product.ID, URL: url, Alt: name, Primary: true}).Error; err != nil {
-					return err
-				}
-			}
-		}
-	}
+	// Les photos de catalogue appartiennent a seedShop, qui pose la galerie
+	// locale de chaque produit. Un bloc en attachait ici depuis Unsplash, avant
+	// meme que les produits n'existent : sur une base neuve les huit recherches
+	// echouaient et journalisaient une erreur, et sur une base existante
+	// seedShop supprimait ensuite ces memes images. Rien ne le remplace.
 	var setting models.Setting
 	if db.Where("key = ?", "checkout_config").First(&setting).Error == gorm.ErrRecordNotFound {
 		// Ne pas sortir ici : le catalogue et le jeu de démonstration se seedent

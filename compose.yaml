@@ -26,6 +26,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-gerant@senvalise.sn}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
       SEED_DEMO: ${SEED_DEMO:-true}
+      APP_ENV: ${APP_ENV:-development}
       APP_ORIGIN: http://localhost:3000,http://127.0.0.1:3000,http://localhost:4000,http://127.0.0.1:4000
       TZ: Africa/Dakar
     depends_on:

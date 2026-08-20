@@ -1,0 +1,316 @@
+package api
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"sort"
+	"sync/atomic"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
+	"senvalise/internal/models"
+)
+
+// Intégrité des données et messages d'erreur.
+//
+// Trois besoins se rejoignent ici. Les erreurs PostgreSQL ne doivent jamais
+// sortir telles quelles : elles nomment les tables et les contraintes, ce qui
+// n'aide pas l'utilisateur et renseigne un attaquant. Les suppressions doivent
+// se comporter de façon prévisible plutôt que d'échouer sur une violation de
+// clé étrangère. Et les références de document doivent être uniques, y compris
+// quand deux caisses enregistrent une vente dans la même milliseconde.
+
+// ---------- traduction des erreurs de base ----------
+
+// dbError transforme une erreur PostgreSQL en message métier. La cause réelle
+// part dans les journaux du serveur, seul endroit où elle a sa place.
+func dbError(e error, context string) error {
+	if e == nil {
+		return nil
+	}
+	var pg *pgconn.PgError
+	if errors.As(e, &pg) {
+		log.Printf("erreur base (%s) : %s %s %s", context, pg.Code, pg.ConstraintName, pg.Message)
+		switch pg.Code {
+		case "23505":
+			return fiber.NewError(409, "Cette valeur existe déjà : "+uniqueHint(pg.ConstraintName))
+		case "23503":
+			return fiber.NewError(409, "Cet enregistrement est rattaché à d’autres données et ne peut pas être modifié ainsi.")
+		case "23502":
+			return fiber.NewError(422, "Un champ obligatoire est vide.")
+		case "23514":
+			return fiber.NewError(422, "Une valeur saisie est hors des limites autorisées.")
+		case "22001":
+			return fiber.NewError(422, "Une valeur saisie est trop longue.")
+		}
+		return fiber.NewError(422, "L’enregistrement a été refusé par la base de données.")
+	}
+	if errors.Is(e, gorm.ErrRecordNotFound) {
+		return fiber.ErrNotFound
+	}
+	log.Printf("erreur (%s) : %v", context, e)
+	return fiber.NewError(422, "L’opération n’a pas pu être enregistrée.")
+}
+
+// uniqueHint nomme le champ en cause à partir du nom de l'index, sans révéler
+// la structure des tables.
+func uniqueHint(constraint string) string {
+	switch {
+	case contains(constraint, "email"):
+		return "cette adresse e-mail est déjà utilisée."
+	case contains(constraint, "reference"):
+		return "cette référence est déjà attribuée."
+	case contains(constraint, "slug"):
+		return "cet identifiant d’URL est déjà pris."
+	case contains(constraint, "sku"):
+		return "ce SKU est déjà utilisé par une autre déclinaison."
+	case contains(constraint, "barcode"):
+		return "ce code-barres est déjà utilisé."
+	case contains(constraint, "key"):
+		return "cette clé de réglage existe déjà."
+	}
+	return "un enregistrement identique est déjà présent."
+}
+
+func contains(haystack, needle string) bool {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// ---------- références de document ----------
+
+// ref compose une référence unique à partir d'une séquence PostgreSQL.
+//
+// L'ancienne version n'utilisait qu'un horodatage à la milliseconde : deux
+// ventes enregistrées dans la même milliseconde recevaient la même référence,
+// et l'index unique en rejetait une — une vente réelle perdue, avec une erreur
+// SQL brute au comptoir. Une séquence ne revient jamais en arrière et ne
+// participe pas aux transactions, donc un rollback ne peut pas la faire
+// rejouer un numéro déjà servi.
+func (s *Server) ref(prefix string) string {
+	var n int64
+	if e := s.DB.Raw("SELECT nextval('document_refs')").Scan(&n).Error; e != nil || n == 0 {
+		// Repli défensif : mieux vaut une référence horodatée qu'aucune vente.
+		log.Printf("séquence de référence indisponible (%v), repli horodaté", e)
+		return fallbackRef(prefix)
+	}
+	return fmt.Sprintf("%s-%s-%05d", prefix, time.Now().Format("20060102"), n)
+}
+
+// fallbackCounter garantit l'unicité du repli. L'horodatage seul, même à la
+// microseconde, se répète sur deux appels rapprochés — c'est précisément le
+// défaut que la séquence corrige, il ne faut pas le réintroduire ici.
+var fallbackCounter atomic.Uint64
+
+func fallbackRef(prefix string) string {
+	return fmt.Sprintf("%s-%s-%06d", prefix, time.Now().Format("20060102-150405"), fallbackCounter.Add(1)%1000000)
+}
+
+// ---------- verrouillage du stock ----------
+
+// lockVariants prend un verrou exclusif sur chaque déclinaison concernée, par
+// identifiant croissant, avant toute écriture.
+//
+// L'ordre et l'antériorité comptent tous les deux. Insérer d'abord la ligne de
+// vente posait un verrou partagé sur la déclinaison via la clé étrangère, que
+// le verrou exclusif demandé ensuite devait faire monter en grade : deux
+// caisses simultanées se bloquaient mutuellement et PostgreSQL en tuait une.
+// Verrouiller en premier supprime la promotion ; verrouiller dans un ordre
+// stable supprime l'interblocage croisé entre deux paniers multi-lignes.
+func lockVariants(tx *gorm.DB, ids []uint) (map[uint]models.ProductVariant, error) {
+	seen := map[uint]bool{}
+	ordered := make([]uint, 0, len(ids))
+	for _, id := range ids {
+		if id != 0 && !seen[id] {
+			seen[id] = true
+			ordered = append(ordered, id)
+		}
+	}
+	sort.Slice(ordered, func(a, b int) bool { return ordered[a] < ordered[b] })
+	out := make(map[uint]models.ProductVariant, len(ordered))
+	for _, id := range ordered {
+		var v models.ProductVariant
+		if e := tx.Clauses(lockForUpdate()).First(&v, id).Error; e != nil {
+			return nil, fmt.Errorf("déclinaison introuvable (%d)", id)
+		}
+		out[id] = v
+	}
+	return out, nil
+}
+
+// ---------- suppressions ----------
+
+type relation struct{ table, column string }
+
+type blocker struct {
+	rel     relation
+	message string
+}
+
+// deleteChildren liste ce qui doit disparaître avec l'enregistrement parent :
+// des lignes qui n'ont aucune existence propre.
+var deleteChildren = map[string][]relation{
+	"sales":          {{"sale_payments", "sale_id"}, {"sale_items", "sale_id"}},
+	"returns":        {{"return_items", "sale_return_id"}},
+	"quotes":         {{"quote_items", "quote_id"}},
+	"delivery-notes": {{"delivery_note_items", "delivery_note_id"}},
+	"arrivals":       {{"arrival_items", "arrival_id"}},
+	"orders":         {{"order_items", "order_id"}},
+	"vaults":         {{"vault_deposits", "vault_id"}},
+	"cash-sessions":  {{"cash_movements", "cash_session_id"}},
+	"customers":      {{"customer_addresses", "customer_id"}},
+	"products":       {{"product_specs", "product_id"}, {"product_colorways", "product_id"}, {"product_images", "product_id"}},
+	"variants":       {{"stock_movements", "variant_id"}},
+}
+
+// deleteBlockers liste ce qui interdit la suppression : des données qui ont
+// une valeur comptable ou historique propre. Mieux vaut un refus explicite
+// qu'un effacement silencieux de l'historique.
+var deleteBlockers = map[string][]blocker{
+	"sales": {
+		{relation{"sale_returns", "sale_id"}, "Cette facture a fait l’objet d’un retour. Annulez le retour avant de la supprimer."},
+		{relation{"delivery_notes", "sale_id"}, "Un bon de livraison est rattaché à cette facture. Supprimez-le d’abord."},
+	},
+	"customers": {
+		{relation{"sales", "customer_id"}, "Ce client a des factures. Désactivez sa fiche plutôt que de la supprimer."},
+		{relation{"quotes", "customer_id"}, "Ce client a des devis. Désactivez sa fiche plutôt que de la supprimer."},
+		{relation{"orders", "customer_id"}, "Ce client a des commandes en ligne. Désactivez sa fiche plutôt que de la supprimer."},
+		{relation{"vaults", "customer_id"}, "Ce client possède un coffre. Clôturez le coffre avant de supprimer la fiche."},
+	},
+	"variants": {
+		{relation{"sale_items", "variant_id"}, "Cette déclinaison figure sur des factures. Désactivez-la plutôt que de la supprimer."},
+		{relation{"quote_items", "variant_id"}, "Cette déclinaison figure sur des devis. Désactivez-la plutôt que de la supprimer."},
+		{relation{"delivery_note_items", "variant_id"}, "Cette déclinaison figure sur des bons de livraison. Désactivez-la."},
+		{relation{"return_items", "variant_id"}, "Cette déclinaison figure sur des retours. Désactivez-la."},
+		{relation{"arrival_items", "variant_id"}, "Cette déclinaison figure sur des arrivages. Désactivez-la."},
+		{relation{"order_items", "variant_id"}, "Cette déclinaison figure sur des commandes en ligne. Désactivez-la."},
+	},
+	"products": {
+		{relation{"product_variants", "product_id"}, "Ce produit a des déclinaisons. Supprimez-les d’abord, ou désactivez le produit."},
+	},
+	"categories": {
+		{relation{"products", "category_id"}, "Des produits utilisent cette catégorie. Reclassez-les avant de la supprimer."},
+	},
+	"brands": {
+		{relation{"products", "brand_id"}, "Des produits utilisent cette marque. Reclassez-les avant de la supprimer."},
+	},
+	"suppliers": {
+		{relation{"arrivals", "supplier_id"}, "Ce fournisseur a des arrivages. Son historique doit être conservé."},
+		{relation{"expenses", "supplier_id"}, "Ce fournisseur apparaît dans les dépenses. Son historique doit être conservé."},
+	},
+	"users": {
+		{relation{"sales", "user_id"}, "Cet utilisateur a enregistré des ventes. Désactivez son compte plutôt que de le supprimer."},
+		{relation{"quotes", "user_id"}, "Cet utilisateur a établi des devis. Désactivez son compte plutôt que de le supprimer."},
+		{relation{"stock_movements", "user_id"}, "Cet utilisateur a réalisé des mouvements de stock. Désactivez son compte."},
+	},
+	"quotes": {
+		{relation{"sales", "quote_id"}, "Ce devis a été converti en facture. Supprimez la facture d’abord."},
+	},
+	"arrivals": {},
+}
+
+// countRelated compte les lignes qui pointent vers l'enregistrement.
+func countRelated(db *gorm.DB, rel relation, id string) (int64, error) {
+	var n int64
+	e := db.Table(rel.table).Where(rel.column+" = ?", id).Count(&n).Error
+	return n, e
+}
+
+// deleteWithChildren applique les règles ci-dessus dans une transaction :
+// refus motivé si l'enregistrement porte de l'histoire, sinon suppression des
+// lignes filles puis du parent.
+func (s *Server) deleteWithChildren(name, id string) error {
+	for _, b := range deleteBlockers[name] {
+		n, e := countRelated(s.DB, b.rel, id)
+		if e != nil {
+			return dbError(e, "vérification avant suppression")
+		}
+		if n > 0 {
+			return fiber.NewError(409, b.message)
+		}
+	}
+	out := modelFor(name)
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		for _, child := range deleteChildren[name] {
+			if e := tx.Exec("DELETE FROM "+child.table+" WHERE "+child.column+" = ?", id).Error; e != nil {
+				return dbError(e, "suppression des lignes rattachées")
+			}
+		}
+		// Un devis converti garde un lien vers sa facture, et inversement :
+		// on desserre le lien avant de retirer l'une des deux extrémités.
+		switch name {
+		case "sales":
+			if e := tx.Exec("UPDATE quotes SET converted_sale_id = NULL WHERE converted_sale_id = ?", id).Error; e != nil {
+				return dbError(e, "détachement du devis")
+			}
+		case "quotes":
+			if e := tx.Exec("UPDATE sales SET quote_id = NULL WHERE quote_id = ?", id).Error; e != nil {
+				return dbError(e, "détachement de la facture")
+			}
+		}
+		result := tx.Delete(out, id)
+		if result.Error != nil {
+			return dbError(result.Error, "suppression")
+		}
+		if result.RowsAffected == 0 {
+			return fiber.ErrNotFound
+		}
+		return nil
+	})
+}
+
+// ---------- recherche ----------
+
+// searchColumns décrit ce sur quoi porte le paramètre ?q= de chaque ressource.
+// Il ne cherchait auparavant que dans l'identifiant, ce qui rendait la barre
+// de recherche inopérante dès qu'on tapait un nom.
+var searchColumns = map[string][]string{
+	"categories":       {"name", "slug", "description"},
+	"brands":           {"name", "slug"},
+	"suppliers":        {"name", "phone", "email", "address"},
+	"customers":        {"name", "phone", "email", "address", "zone"},
+	"products":         {"name", "slug", "description", "blurb", "tag"},
+	"variants":         {"sku", "barcode", "color", "size"},
+	"stock-movements":  {"reference", "reason", "note", "type"},
+	"arrivals":         {"reference", "status", "currency"},
+	"sales":            {"reference", "status", "payment_method", "channel"},
+	"returns":          {"reference", "reason", "refund_method"},
+	"quotes":           {"reference", "status", "notes"},
+	"delivery-notes":   {"reference", "status", "notes"},
+	"orders":           {"reference", "status", "payment_method", "delivery_zone", "address"},
+	"vaults":           {"status", "goal_ref"},
+	"cash-sessions":    {"status"},
+	"cash-movements":   {"direction", "category", "note"},
+	"messages":         {"recipient", "channel", "type", "subject", "body", "status"},
+	"message-templates": {"name", "channel", "type", "subject", "body"},
+	"home-blocks":      {"kind", "title", "body", "link"},
+	"activity-logs":    {"action", "entity", "details"},
+	"delivery-zones":   {"name", "slug", "area"},
+	"contact-messages": {"name", "email", "phone", "subject", "body", "status"},
+	"expenses":         {"reference", "label", "category", "payment_method", "note"},
+	"users":            {"name", "email", "role"},
+	"product-images":   {"url", "alt"},
+}
+
+// applySearch ajoute la clause de recherche. La casse et les accents sont
+// ignorés côté SQL pour que « Fatou » trouve « fatou » et « FATOU ».
+func applySearch(db *gorm.DB, name, q string) *gorm.DB {
+	columns := searchColumns[name]
+	if len(columns) == 0 {
+		return db.Where("CAST(id AS TEXT) LIKE ?", "%"+q+"%")
+	}
+	clause := "CAST(id AS TEXT) LIKE ?"
+	args := []any{"%" + q + "%"}
+	for _, column := range columns {
+		clause += " OR " + column + " ILIKE ?"
+		args = append(args, "%"+q+"%")
+	}
+	return db.Where("("+clause+")", args...)
+}

@@ -1,4 +1,4 @@
-import {FormEvent,useEffect,useMemo,useState} from 'react';
+import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
 import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
 import {api,Entity,money} from './api';
@@ -33,11 +33,19 @@ export default function InvoiceWorkspace(props:Props){
   // Memes verrous que l'API, pour ne pas proposer un bouton qui sera refuse.
   const locked=String(doc.status)==='cancelled'||(props.kind==='quote'&&Boolean(doc.convertedSaleId))||(props.kind==='delivery'&&String(doc.status)==='delivered');
   const linkedInvoice=(doc.convertedSale??doc.sale) as Entity|undefined;
-  const invoiceInfo={companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:doc.companySignatureUrl||defaults.companySignatureUrl};
+  // Memoise pour que l'effet de remise a zero du formulaire puisse declarer
+  // ses dependances honnetement : invoiceInfo ne change que si le document ou
+  // les reglages changent, ce qui etait deja la condition de declenchement.
+  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:doc.companySignatureUrl||defaults.companySignatureUrl}),[doc,defaults]);
   const editLine=editing?.startsWith('item:')?items.find(row=>String(row.id)===editing.slice(5)):undefined;
   useEffect(()=>{Promise.all([api<Entity[]>('/api/customers?limit=500'),api<Variant[]>('/api/variants?limit=500'),api<{invoiceDefaults:InvoiceDefaults}>('/api/checkout-settings')]).then(([customerRows,variantRows,settings])=>{setCustomers(customerRows);setVariants(variantRows.filter(row=>row.active!==false));setDefaults({...baseInvoiceDefaults,...settings.invoiceDefaults})}).catch(()=>{})},[]);
-  useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[props.document,defaults]);
-  useEffect(()=>{if(editLine)setForm(current=>({...current,lineQuantity:String(editLine.quantity??1),lineUnitPrice:String(editLine.unitPrice??0),lineDiscount:String(editLine.discount??0)}))},[editLine?.id]);
+  useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[doc,defaults,invoiceInfo,remaining]);
+  // Les champs de la ligne ne se rechargent qu'au changement de ligne. Une
+  // dependance sur editLine seul les reecrirait a chaque rafraichissement de
+  // la facture, en ecrasant une saisie en cours ; le garde par identifiant
+  // conserve le comportement voulu tout en declarant la vraie dependance.
+  const loadedLine=useRef('');
+  useEffect(()=>{if(!editLine){loadedLine.current='';return}const key=String(editLine.id);if(loadedLine.current===key)return;loadedLine.current=key;setForm(current=>({...current,lineQuantity:String(editLine.quantity??1),lineUnitPrice:String(editLine.unitPrice??0),lineDiscount:String(editLine.discount??0)}))},[editLine]);
   const openEdit=(section:string)=>{if(!props.isAdmin)return;if(!brandingEditable&&(section==='branding'||section==='content'))return;setError('');setEditing(section)};
   const refreshError=(reason:unknown)=>setError((reason as Error).message);
   const submit=async(event:FormEvent)=>{event.preventDefault();setSaving(true);setError('');try{
@@ -136,7 +144,11 @@ function CustomerSearchSelect({customers,value,onChange}:{customers:Entity[];val
 function AddProductPanel({kind,variants,form,field}:{kind:Kind;variants:Variant[];form:Record<string,string>;field:(name:string,value:string)=>void}){
   const [query,setQuery]=useState('');
   const selected=variants.find(row=>String(row.id)===form.addVariantId);
-  useEffect(()=>{if(selected)field('addUnitPrice',String(selected.price??0))},[selected?.id]);
+  // Le prix propose ne se reapplique qu'au changement d'article choisi :
+  // dependre de field, recree a chaque rendu du parent, ecraserait un prix
+  // saisi a la main.
+  const pricedVariant=useRef('');
+  useEffect(()=>{if(!selected){pricedVariant.current='';return}const key=String(selected.id);if(pricedVariant.current===key)return;pricedVariant.current=key;field('addUnitPrice',String(selected.price??0))},[selected,field]);
   const normalized=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const filtered=variants.filter(row=>normalized(`${row.product?.name??''} ${row.sku??''} ${row.barcode??''} ${row.color??''} ${row.size??''}`).includes(normalized(query))).slice(0,20);
   const choose=(variant:Variant)=>{field('addVariantId',String(variant.id));setQuery('')};

@@ -1,6 +1,6 @@
-import {FormEvent,useEffect,useMemo,useState} from 'react';
+import {FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
 import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
-import {api,apiForm,Entity,money} from './api';
+import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
 
@@ -37,6 +37,7 @@ const configuredFields:Record<string,string[]>={
   settings:['key','value','secret']
 };
 
+const PAGE_SIZE=100;
 const readonly=new Set(['id','createdAt','updatedAt','items','variants','images','deposits','movements']);
 const moneyFields=new Set(['total','subtotal','discount','tax','paid','price','cost','unitPrice','unitCost','landedCost','balance','goal','fee','amount','shipping','customs','otherFees','deliveryFee','openingAmount','expectedAmount','closingAmount']);
 const numericFields=new Set([...moneyFields,'productId','variantId','categoryId','brandId','customerId','supplierId','userId','saleId','parentId','cashSessionId','arrivalId','orderId','documentId','vaultId','saleReturnId','stock','stockBefore','stockAfter','quantity','alertAt','position','exchangeRate','volume','weight','lat','lon']);
@@ -114,6 +115,10 @@ export default function ResourcePage({title,resource,user}:Props){
   const[data,setData]=useState<Entity[]>([]);
   const[loading,setLoading]=useState(true);
   const[query,setQuery]=useState('');
+  // La recherche part au serveur : filtrer côté navigateur ne voyait que
+  // les lignes déjà chargées, donc jamais au-delà de la première page.
+  const[total,setTotal]=useState(0);
+  const[loadingMore,setLoadingMore]=useState(false);
   const[dialog,setDialog]=useState<Dialog>(null);
   const[error,setError]=useState('');
   const isAdmin=user.role==='manager';
@@ -129,9 +134,12 @@ export default function ResourcePage({title,resource,user}:Props){
   const cancelAllPayments=async()=>{if(!dialog?.row)return;await api(`${endpoint('sales',dialog.row.id)}/payments/cancel-all`,{method:'POST',body:JSON.stringify({reason:'Annulation globale par le gérant'})});await refreshDialog('sales')};
   const convertQuote=async(row:Entity)=>{try{const sale=await api<Entity>(`/api/quotes/${row.id}/convert`,{method:'POST'});setDialog(null);load();alert(`Devis accepté et converti en facture ${String(sale.reference)}.`)}catch(reason){setError((reason as Error).message)}};
   const createDelivery=async(row:Entity)=>{try{const note=await api<Entity>(`/api/sales/${row.id}/delivery-note`,{method:'POST'});setDialog(null);alert(`Bon de livraison ${String(note.reference)} généré.`)}catch(reason){setError((reason as Error).message)}};
-  const load=()=>{setLoading(true);setError('');api<Entity[]>(endpoint(resource)).then(setData).catch(reason=>setError((reason as Error).message)).finally(()=>setLoading(false))};
-  useEffect(load,[resource]);
-  const shown=useMemo(()=>data.filter(row=>JSON.stringify(row).toLowerCase().includes(query.toLowerCase())),[data,query]);
+  const pageUrl=useCallback((search:string,offset:number)=>`${endpoint(resource)}?limit=${PAGE_SIZE}&offset=${offset}${search?`&q=${encodeURIComponent(search)}`:''}`,[resource]);
+  const load=useCallback(()=>{setLoading(true);setError('');apiPage<Entity>(pageUrl(query,0)).then(page=>{setData(page.rows);setTotal(page.total)}).catch(reason=>setError((reason as Error).message)).finally(()=>setLoading(false))},[pageUrl,query]);
+  const loadMore=()=>{setLoadingMore(true);apiPage<Entity>(pageUrl(query,data.length)).then(page=>{setData(current=>[...current,...page.rows]);setTotal(page.total)}).catch(reason=>setError((reason as Error).message)).finally(()=>setLoadingMore(false))};
+  // Une frappe ne doit pas déclencher une requête par caractère.
+  useEffect(()=>{const timer=setTimeout(load,250);return()=>clearTimeout(timer)},[load]);
+  const shown=data;
   const columns=useMemo(()=>{const preferred=['reference','name','sku','email','phone','type','reason','status','active','online','stock','quantity','price','total','paid','balance','role','createdAt'];const keys=new Set(data.flatMap(Object.keys));return preferred.filter(key=>keys.has(key)).slice(0,6)},[data]);
   const openDetail=async(row:Entity)=>{setError('');try{const full=await api<Entity>(endpoint(resource,row.id));setDialog({mode:'detail',row:full})}catch(reason){setError((reason as Error).message)}};
   const remove=async(row:Entity,resourceName=resource)=>{if(!confirm(`Supprimer définitivement « ${recordTitle(row)} » ?`))return;try{await api(endpoint(resourceName,row.id),{method:'DELETE'});if(dialog?.row?.id===row.id)setDialog(null);load()}catch(reason){setError((reason as Error).message)}};
@@ -140,6 +148,7 @@ export default function ResourcePage({title,resource,user}:Props){
     <Legend resource={resource}/>
     {error&&<div className="error resource-error">{error}</div>}
     {resource==='products'?<ProductLibrary rows={shown} loading={loading} isAdmin={isAdmin} onOpen={openDetail} onEdit={row=>setDialog({mode:'edit',row})} onDelete={remove} onReload={load}/>:<div className="panel table-panel">{loading?<Loading/>:shown.length===0?<Empty title={title}/>:<div className="table-wrap"><table className="records-table"><thead><tr>{columns.map(column=><th key={column}>{labels[column]??column}</th>)}<th className="actions-heading">Actions</th></tr></thead><tbody>{shown.map(row=><tr key={row.id} tabIndex={0} onClick={()=>void openDetail(row)} onKeyDown={event=>{if(event.key==='Enter')void openDetail(row)}}>{columns.map(column=><td key={column}><SemanticValue field={column} value={row[column]} row={row}/></td>)}<td className="row-actions" onClick={event=>event.stopPropagation()}><button className="action-button" title="Voir la fiche" aria-label={`Voir ${recordTitle(row)}`} onClick={()=>void openDetail(row)}><Eye/><span>Voir</span></button>{isAdmin&&<><button className="action-button" title="Modifier cet enregistrement" aria-label={`Modifier ${recordTitle(row)}`} onClick={()=>setDialog({mode:'edit',row})}><Pencil/><span>Modifier</span></button><button className="action-button danger" title="Supprimer cet enregistrement" aria-label={`Supprimer ${recordTitle(row)}`} onClick={()=>void remove(row)}><Trash2/><span>Supprimer</span></button></>}</td></tr>)}</tbody></table></div>}</div>}
+    {!loading&&shown.length>0&&<div className="list-footer"><span>{shown.length} sur {total} {total>1?'enregistrements':'enregistrement'}</span>{shown.length<total&&<button className="compact" disabled={loadingMore} onClick={loadMore}>{loadingMore?'Chargement…':'Charger la suite'}</button>}</div>}
     {dialog?.mode==='detail'&&dialog.row&&(['sales','quotes','delivery-notes'].includes(dialog.resource??resource)?<DocumentWorkspace document={dialog.row} kind={(dialog.resource??resource)==='quotes'?'quote':(dialog.resource??resource)==='delivery-notes'?'delivery':'invoice'} isAdmin={isAdmin} onClose={()=>setDialog(null)} onDelete={()=>void remove(dialog.row!,dialog.resource??resource)} onUpdate={updateDocument} onUpdateLine={updateLine} onAddLine={addLine} onDeleteLine={deleteLine} onUploadSignature={uploadSignature} onAddPayment={addPayment} onCancelPayment={cancelPayment} onCancelAllPayments={cancelAllPayments} onConvert={(dialog.resource??resource)==='quotes'?()=>void convertQuote(dialog.row!):undefined} onGenerateDelivery={(dialog.resource??resource)==='sales'?()=>void createDelivery(dialog.row!):undefined} onOpenInvoice={row=>void openLinked('sales',row)} onOpenQuote={row=>void openLinked('quotes',row)} onOpenDelivery={row=>void openLinked('delivery-notes',row)}/>:<DetailDialog title={title} resource={dialog.resource??resource} row={dialog.row} isAdmin={isAdmin} onClose={()=>setDialog(null)} onEdit={()=>setDialog({mode:'edit',row:dialog.row})} onDelete={()=>void remove(dialog.row!)}/>)} 
     {(dialog?.mode==='create'||dialog?.mode==='edit')&&<RecordForm title={title} resource={resource} row={dialog.row} mode={dialog.mode} onClose={()=>setDialog(null)} onDone={()=>{setDialog(null);load()}}/>}
   </>;

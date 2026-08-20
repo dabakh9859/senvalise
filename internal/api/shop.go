@@ -34,8 +34,10 @@ func (s *Server) RegisterShop(app *fiber.App) {
 	g := app.Group("/api/shop")
 	g.Get("/catalog", s.shopCatalog)
 	g.Get("/zones", s.shopZones)
-	g.Post("/auth/register", s.shopRegister)
-	g.Post("/auth/login", s.shopLogin)
+	// Mêmes garde-fous que côté gestion : la boutique est la porte la plus
+	// exposée, et l'inscription se prête aussi au remplissage automatique.
+	g.Post("/auth/register", loginLimiter(), s.shopRegister)
+	g.Post("/auth/login", loginLimiter(), s.shopLogin)
 
 	me := g.Group("", auth.Customer)
 	me.Get("/me", s.shopMe)
@@ -470,7 +472,7 @@ func (s *Server) shopDeposit(c *fiber.Ctx) error {
 			return e
 		}
 		if e := tx.Create(&models.VaultDeposit{
-			VaultID: v.ID, Amount: in.Amount, Method: in.Method, Reference: ref("VER"),
+			VaultID: v.ID, Amount: in.Amount, Method: in.Method, Reference: s.ref("VER"),
 		}).Error; e != nil {
 			return e
 		}
@@ -622,8 +624,20 @@ func (s *Server) shopPayFromVault(c *fiber.Ctx) error {
 			}
 		}
 
+		// Verrou exclusif sur le stock avant de créer la commande : la clé
+		// étrangère des lignes pose sinon un verrou partagé que l'ajustement
+		// devrait promouvoir, ce qui interbloque deux commandes simultanées
+		// portant sur le même article.
+		ids := make([]uint, 0, len(items))
+		for _, item := range items {
+			ids = append(ids, item.VariantID)
+		}
+		if _, err := lockVariants(tx, ids); err != nil {
+			return err
+		}
+
 		order = models.Order{
-			Reference: ref("CMD"), CustomerID: row.ID, Status: "pending",
+			Reference: s.ref("CMD"), CustomerID: row.ID, Status: "pending",
 			PaymentMethod: "vault", Total: total, DeliveryFee: shipping,
 			DeliveryZone: zone, Address: address, Items: items,
 		}

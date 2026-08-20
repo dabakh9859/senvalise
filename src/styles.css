@@ -598,3 +598,11 @@
 .photo-list button{position:absolute;top:-6px;right:-6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--bad)}
 .photo-list button svg{width:12px;height:12px}
 .photo-note{font-size:11px;color:var(--muted)}
+
+
+/* Pied de liste : compte des enregistrements et chargement de la suite.
+   La liste s'arretait silencieusement a la premiere page, sans rien indiquer. */
+.list-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel);font-size:12.5px;color:var(--muted)}
+.list-footer button{height:32px;padding:0 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;font-size:12.5px;font-weight:600}
+.list-footer button:hover:not(:disabled){background:var(--active)}
+.list-footer button:disabled{opacity:.55;cursor:default}

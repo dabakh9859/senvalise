@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
-import {ArrowRight,Boxes,MessageSquare,RefreshCw,ShoppingCart,TriangleAlert,Users,WalletCards} from 'lucide-react';
+import {ArrowRight,Boxes,RefreshCw,ShoppingCart,TriangleAlert,Users,WalletCards} from 'lucide-react';
 import {api,money} from './api';
 
 // Vue d'ensemble de la boutique en ligne : ce qui attend une action, et l'état

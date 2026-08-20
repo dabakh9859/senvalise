@@ -45,9 +45,10 @@ services:
       - "4000:8080"    # boutique en ligne
     volumes:
       # La boutique est un site statique : on la monte plutot que de la cuire
-      # dans l'image, elle vit hors du contexte de build et se modifie sans
-      # reconstruire le conteneur.
-      - ../senvalise_site/site-senvalise:/usr/share/nginx/boutique:ro
+      # dans l'image, elle se modifie sans reconstruire le conteneur. Le
+      # chemin pointait vers un depot voisin, hors du contexte : cloner
+      # senvalise seul donnait une boutique vide.
+      - ./site:/usr/share/nginx/boutique:ro
     depends_on:
       - api
     restart: unless-stopped

@@ -20,6 +20,7 @@ passe dans `.env` avant le premier démarrage (`ADMIN_PASSWORD`).
 - `internal/models` : modèle commercial PostgreSQL ;
 - `internal/api` : API REST et transactions métier ;
 - `src` : SPA React/Vite ;
+- `site` : boutique en ligne, pages statiques servies par le meme nginx ;
 - `deploy` : reverse proxy Nginx ;
 - `compose.yaml` : PostgreSQL, API et interface.
 

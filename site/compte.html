@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte | Sen Valise</title>
+<meta name="description" content="Connexion et création de compte Sen Valise.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=11">
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<header class="nav is-stuck">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html">Boutique</a>
+      <a href="coffre.html">Le coffre</a>
+      <a href="index.html#matiere">Matière</a>
+      <a href="index.html#finitions">Finitions</a>
+      <a href="index.html#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="index.html#matiere">Matière</a>
+  <a href="index.html#finitions">Finitions</a>
+  <a href="index.html#garantie">Garantie</a>
+  <a href="compte.html" data-account-link>Compte</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+  <div class="wrap page-head">
+    <h1 class="display">Votre compte</h1>
+  </div>
+
+  <div class="wrap" style="padding-bottom:var(--section-y)">
+    <div class="auth">
+
+      <div class="notice">
+        <svg class="ico" aria-hidden="true"><use href="#i-lock-simple"></use></svg>
+        <div>
+          <b>Votre compte est enregistré chez Sen Valise.</b> Le mot de passe est chiffré
+          sur nos serveurs, jamais conservé en clair. Votre coffre et vos commandes vous
+          suivent d'un appareil à l'autre. Aucun paiement par carte n'est encore branché :
+          les versements au coffre se règlent en boutique ou par transfert.
+        </div>
+      </div>
+
+      <div class="auth__card">
+        <div class="auth__switch" role="tablist" aria-label="Connexion ou inscription">
+          <button type="button" role="tab" id="tab-login" aria-selected="true"
+                  aria-controls="panel-login" data-auth-tab="login">Se connecter</button>
+          <button type="button" role="tab" id="tab-signup" aria-selected="false"
+                  aria-controls="panel-signup" data-auth-tab="signup">Créer un compte</button>
+        </div>
+
+        <form id="panel-login" role="tabpanel" aria-labelledby="tab-login" data-login novalidate>
+          <div class="field">
+            <label for="login-email">Adresse e-mail</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.sn" required>
+            <p class="err" role="alert" data-err="email"></p>
+          </div>
+          <div class="field">
+            <label for="login-pass">Mot de passe</label>
+            <input id="login-pass" name="pass" type="password" autocomplete="current-password" required>
+            <p class="err" role="alert" data-err="pass"></p>
+          </div>
+          <button class="btn btn--primary btn--block" type="submit">
+            <span class="btn-label">Se connecter</span>
+          </button>
+          <p class="auth__alt">Pas encore de compte ? Utilisez l'onglet « Créer un compte ».</p>
+        </form>
+
+        <form id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" data-signup novalidate hidden>
+          <div class="field">
+            <label for="su-name">Nom complet</label>
+            <input id="su-name" name="name" type="text" autocomplete="name" placeholder="Aïssatou Diagne" required>
+            <p class="err" role="alert" data-err="name"></p>
+          </div>
+          <div class="field">
+            <label for="su-email">Adresse e-mail</label>
+            <input id="su-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.sn" required>
+            <p class="err" role="alert" data-err="email"></p>
+          </div>
+          <div class="field">
+            <label for="su-phone">Téléphone <span style="color:var(--muted);font-weight:400">(facultatif)</span></label>
+            <input id="su-phone" name="phone" type="tel" autocomplete="tel" placeholder="+221 77 148 20 36">
+            <p class="err" role="alert" data-err="phone"></p>
+          </div>
+          <div class="field">
+            <label for="su-pass">Mot de passe</label>
+            <input id="su-pass" name="pass" type="password" autocomplete="new-password" required>
+            <p class="hint">Huit caractères minimum. Choisissez-en un que vous n'utilisez nulle part ailleurs.</p>
+            <p class="err" role="alert" data-err="pass"></p>
+          </div>
+          <button class="btn btn--primary btn--block" type="submit">
+            <span class="btn-label">Créer mon compte</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+  // Déjà identifié : on ne repropose pas le formulaire.
+  if (SV.Auth.current()) { location.replace("mon-coffre.html"); return; }
+
+  var params = new URLSearchParams(location.search);
+  var next = params.get("suite");
+  var ALLOWED = ["mon-coffre.html", "parametres.html", "panier.html"];
+  var target = ALLOWED.indexOf(next) > -1 ? next : "mon-coffre.html";
+
+  var tabs = SV.$$("[data-auth-tab]");
+  var panels = { login: SV.$("[data-login]"), signup: SV.$("[data-signup]") };
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.setAttribute("aria-selected", String(t === tab)); });
+      Object.keys(panels).forEach(function (k) {
+        panels[k].hidden = k !== tab.dataset.authTab;
+      });
+      var first = panels[tab.dataset.authTab].querySelector("input");
+      if (first) first.focus();
+    });
+  });
+
+  function clearErrors(form) {
+    SV.$$("[data-err]", form).forEach(function (p) { p.textContent = ""; });
+    SV.$$(".field", form).forEach(function (f) { f.classList.remove("is-invalid"); });
+  }
+
+  function showError(form, field, message) {
+    var p = SV.$('[data-err="' + field + '"]', form) || SV.$("[data-err]", form);
+    if (p) {
+      p.textContent = message;
+      var wrap = p.closest(".field");
+      if (wrap) {
+        wrap.classList.add("is-invalid");
+        var input = wrap.querySelector("input");
+        if (input) input.focus();
+      }
+    }
+  }
+
+  function busy(form, on, label) {
+    var btn = form.querySelector('button[type="submit"]');
+    btn.classList.toggle("is-busy", on);
+    btn.disabled = on;
+    btn.querySelector(".btn-label").textContent = label;
+  }
+
+  SV.$("[data-login]").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var form = e.currentTarget;
+    clearErrors(form);
+    busy(form, true, "Connexion");
+    SV.Auth.login(form.email.value, form.pass.value).then(function (res) {
+      if (!res.ok) {
+        busy(form, false, "Se connecter");
+        showError(form, res.field, res.message);
+        return;
+      }
+      location.href = target;
+    });
+  });
+
+  SV.$("[data-signup]").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var form = e.currentTarget;
+    clearErrors(form);
+    busy(form, true, "Création");
+    SV.Auth.signup(form.name.value, form.email.value, form.phone.value, form.pass.value).then(function (res) {
+      if (!res.ok) {
+        busy(form, false, "Créer mon compte");
+        showError(form, res.field, res.message);
+        return;
+      }
+      location.href = target;
+    });
+  });
+};
+</script>
+
+</body>
+</html>

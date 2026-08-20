@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon coffre | Sen Valise</title>
+<meta name="description" content="Alimentez votre coffre Sen Valise à votre rythme, puis commandez.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=11">
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<header class="nav is-stuck">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html">Boutique</a>
+      <a href="coffre.html">Le coffre</a>
+      <a href="index.html#matiere">Matière</a>
+      <a href="index.html#finitions">Finitions</a>
+      <a href="index.html#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="parametres.html">Paramètres</a>
+  <a href="parametres.html#commandes">Mes commandes</a>
+  <a href="compte.html" data-account-link>Compte</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+  <div class="wrap page-head">
+    <p class="eyebrow" data-hello></p>
+    <h1 class="display" style="margin-top:.7rem">Mon coffre</h1>
+    <p class="lede" style="margin-top:1rem;max-width:56ch">
+      Mettez de côté à votre rythme, autant de fois que vous voulez. Quand le coffre
+      couvre le montant de votre panier, vous commandez sans rien avancer de plus.
+    </p>
+  </div>
+
+  <div class="wrap" style="padding-bottom:var(--section-y);display:grid;gap:clamp(1.25rem,3vw,2rem)">
+
+    <div class="notice">
+      <svg class="ico" aria-hidden="true"><use href="#i-lock-simple"></use></svg>
+      <div>
+        <b>Votre solde est tenu par la boutique.</b> Chaque versement est enregistré et
+        apparaît dans nos comptes, et payer avec le coffre crée une vraie commande. Seule
+        l'étape de paiement du versement reste à brancher : Wave, Orange Money et le
+        virement se règlent pour l'instant auprès de la boutique, qui crédite le coffre.
+      </div>
+    </div>
+
+    <div class="vault">
+      <section class="vault__panel">
+        <div>
+          <p class="vault__k">Solde du coffre</p>
+          <p class="vault__balance num" data-balance>0 F</p>
+        </div>
+
+        <div data-goal-wrap>
+          <div class="progress">
+            <div class="progress__fill" data-goal-fill style="width:0%"></div>
+          </div>
+          <p class="progress__legend">
+            <span data-goal-left></span>
+            <span>Objectif <b class="num" data-goal-amount></b></span>
+          </p>
+        </div>
+
+        <hr class="rule">
+
+        <form data-deposit novalidate style="display:grid;gap:1rem">
+          <h2 class="h3">Alimenter le coffre</h2>
+
+          <div class="amount-chips" data-quick>
+            <button type="button" data-amount="10000">10 000 F</button>
+            <button type="button" data-amount="25000">25 000 F</button>
+            <button type="button" data-amount="50000">50 000 F</button>
+            <button type="button" data-amount="100000">100 000 F</button>
+          </div>
+
+          <div class="field">
+            <label for="dep-amount">Montant à verser</label>
+            <input id="dep-amount" name="amount" type="number" inputmode="numeric"
+                   min="1000" max="2000000" step="500" placeholder="25000" required>
+            <p class="hint">Entre 1 000 F et 2 000 000 F par versement.</p>
+            <p class="err" role="alert" data-err></p>
+          </div>
+
+          <fieldset style="border:0;padding:0;display:grid;gap:.55rem">
+            <legend class="vault__k" style="margin-bottom:.2rem">Moyen de paiement</legend>
+            <div class="methods">
+              <label><input type="radio" name="method" value="wave" checked>Wave</label>
+              <label><input type="radio" name="method" value="om">Orange Money</label>
+              <label><input type="radio" name="method" value="carte">Carte bancaire</label>
+            </div>
+          </fieldset>
+
+          <button class="btn btn--primary" type="submit">
+            <svg class="ico" aria-hidden="true"><use href="#i-plus"></use></svg>
+            <span class="btn-label">Verser au coffre</span>
+          </button>
+        </form>
+      </section>
+
+      <div style="display:grid;gap:clamp(1.25rem,3vw,2rem)">
+        <section class="vault__panel">
+          <h2 class="h3">Mon objectif</h2>
+          <p class="body-sm">
+            Visez un modèle précis, ou fixez un montant libre. L'objectif ne bloque rien,
+            il sert juste à suivre votre progression.
+          </p>
+          <form data-goal novalidate style="display:grid;gap:.9rem">
+            <div class="field">
+              <label for="goal-ref">Modèle visé</label>
+              <select id="goal-ref" name="ref"></select>
+            </div>
+            <div class="field">
+              <label for="goal-amount">Montant de l'objectif</label>
+              <input id="goal-amount" name="amount" type="number" inputmode="numeric" min="0" step="500" placeholder="0">
+              <p class="hint">Laissez 0 pour ne pas fixer d'objectif.</p>
+            </div>
+            <button class="btn btn--ghost btn--sm" type="submit">
+              <span class="btn-label">Enregistrer l'objectif</span>
+            </button>
+          </form>
+        </section>
+
+        <section class="vault__panel" data-cart-panel>
+          <h2 class="h3">Votre panier</h2>
+          <div data-cart-state></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="vault__panel">
+      <h2 class="h3">Mouvements</h2>
+      <div class="tx" data-tx></div>
+    </section>
+
+    <p class="body-sm">
+      <a class="link-arrow" href="parametres.html">
+        Paramètres, adresses et suivi de commandes
+        <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+      </a>
+    </p>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+  if (!SV.Auth.guard()) return;
+
+  var me = SV.Auth.current();
+  SV.$("[data-hello]").textContent = "Bonjour " + me.name.split(" ")[0];
+
+  var SHIPPING_FREE_FROM = window.SV_SHIPPING.freeFrom;
+  var SHIPPING_FEE = window.SV_SHIPPING.fee;
+
+  /* ---------- objectif : liste des modèles ---------- */
+
+  var select = SV.$("#goal-ref");
+  select.innerHTML = '<option value="">Montant libre</option>' +
+    SV_PRODUCTS.map(function (p) {
+      return '<option value="' + p.ref + '">' + p.name + ", " + SV.money(p.price) + "</option>";
+    }).join("");
+
+  select.addEventListener("change", function () {
+    var p = SV.findProduct(select.value);
+    if (p) SV.$("#goal-amount").value = p.price;
+  });
+
+  /* ---------- rendu ---------- */
+
+  function renderVault() {
+    var v = SV.Account.vault();
+    SV.$("[data-balance]").textContent = SV.money(v.balance);
+
+    var wrap = SV.$("[data-goal-wrap]");
+    if (v.goal > 0) {
+      wrap.hidden = false;
+      var pct = Math.min(100, Math.round((v.balance / v.goal) * 100));
+      SV.$("[data-goal-fill]").style.width = pct + "%";
+      SV.$("[data-goal-amount]").textContent = SV.money(v.goal);
+      SV.$("[data-goal-left]").textContent = v.balance >= v.goal
+        ? "Objectif atteint"
+        : "Encore " + SV.money(v.goal - v.balance) + " (" + pct + " %)";
+    } else {
+      wrap.hidden = true;
+    }
+
+    SV.$("#goal-amount").value = v.goal || "";
+    select.value = v.goalRef || "";
+  }
+
+  function renderTx() {
+    var tx = SV.Account.vault().tx;
+    var box = SV.$("[data-tx]");
+    if (!tx.length) {
+      box.innerHTML = '<p class="body-sm">Aucun mouvement pour le moment.</p>';
+      return;
+    }
+    box.innerHTML = tx.map(function (t) {
+      var d = new Date(t.at);
+      var when = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) +
+        " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      var title = t.type === "depot"
+        ? "Versement par " + (SV.Account.methods[t.method] || t.method)
+        : "Commande " + (t.orderId || "");
+      return '<div class="tx__row">' +
+          "<div><b>" + title + "</b><span>" + when + "</span></div>" +
+          '<div class="tx__amount' + (t.amount < 0 ? " is-out" : "") + '">' +
+            (t.amount > 0 ? "+ " : "− ") + SV.money(Math.abs(t.amount)) +
+          "</div>" +
+        "</div>";
+    }).join("");
+  }
+
+  function renderCart() {
+    var box = SV.$("[data-cart-state]");
+    var items = SV.Cart.items();
+    if (!items.length) {
+      box.innerHTML = '<p class="body-sm">Votre panier est vide.</p>' +
+        '<a class="btn btn--ghost btn--sm" href="boutique.html" style="margin-top:.9rem">Voir la boutique</a>';
+      return;
+    }
+    var sub = SV.Cart.subtotal();
+    var ship = sub >= SHIPPING_FREE_FROM ? 0 : SHIPPING_FEE;
+    var total = sub + ship;
+    var balance = SV.Account.vault().balance;
+    var enough = balance >= total;
+
+    box.innerHTML =
+      '<div class="totals">' +
+        "<div><span>" + SV.Cart.count() + " article" + (SV.Cart.count() > 1 ? "s" : "") +
+          '</span><span class="num">' + SV.money(sub) + "</span></div>" +
+        "<div><span>Livraison</span><span class=\"num\">" + (ship ? SV.money(ship) : "Offerte") + "</span></div>" +
+        '<div class="grand"><span>Total</span><span class="num">' + SV.money(total) + "</span></div>" +
+      "</div>" +
+      '<p class="body-sm" style="margin-top:.9rem">' +
+        (enough
+          ? "Votre coffre couvre cette commande."
+          : "Il manque <b>" + SV.money(total - balance) + "</b> dans le coffre.") +
+      "</p>" +
+      '<a class="btn ' + (enough ? "btn--primary" : "btn--ghost") + ' btn--sm" href="panier.html" style="margin-top:.9rem">' +
+        (enough ? "Passer au panier" : "Voir le panier") + "</a>";
+  }
+
+  function renderAll() { renderVault(); renderTx(); renderCart(); }
+  renderAll();
+  SV.Cart.onChange(renderCart);
+
+  /* ---------- versement ---------- */
+
+  var depForm = SV.$("[data-deposit]");
+  var amountInput = SV.$("#dep-amount");
+
+  SV.$$("[data-quick] button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      amountInput.value = b.dataset.amount;
+      amountInput.focus();
+    });
+  });
+
+  // Reflet de l'état coché, pour les navigateurs sans :has()
+  function paintMethods() {
+    SV.$$(".methods label").forEach(function (l) {
+      l.classList.toggle("is-on", l.querySelector("input").checked);
+    });
+  }
+  SV.$$('.methods input[name="method"]').forEach(function (i) {
+    i.addEventListener("change", paintMethods);
+  });
+  paintMethods();
+
+  depForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var err = SV.$("[data-err]", depForm);
+    var field = amountInput.closest(".field");
+    var btn = depForm.querySelector('button[type="submit"]');
+    var checked = depForm.querySelector('input[name="method"]:checked');
+
+    err.textContent = "";
+    field.classList.remove("is-invalid");
+
+    var res = { ok: false, message: "Montant invalide." };
+    var amount = parseInt(amountInput.value, 10);
+
+    if (!amountInput.value || isNaN(amount)) {
+      field.classList.add("is-invalid");
+      err.textContent = "Entrez un montant.";
+      amountInput.focus();
+      return;
+    }
+
+    btn.classList.add("is-busy");
+    btn.disabled = true;
+    btn.querySelector(".btn-label").textContent = "Enregistrement…";
+
+    SV.Account.deposit(amount, checked ? checked.value : "").then(function (res) {
+      btn.classList.remove("is-busy");
+      btn.disabled = false;
+      btn.querySelector(".btn-label").textContent = "Verser au coffre";
+
+      if (!res.ok) {
+        field.classList.add("is-invalid");
+        err.textContent = res.message;
+        amountInput.focus();
+        return;
+      }
+      amountInput.value = "";
+      renderAll();
+      SV.toast(SV.money(amount) + " versés, solde " + SV.money(res.balance));
+    });
+  });
+
+  /* ---------- objectif ---------- */
+
+  SV.$("[data-goal]").addEventListener("submit", function (e) {
+    e.preventDefault();
+    SV.Account.setGoal(SV.$("#goal-amount").value, select.value).then(function (res) {
+      if (!res.ok) { SV.toast(res.message); return; }
+      renderVault();
+      SV.toast("Objectif enregistré");
+    });
+  });
+};
+</script>
+
+</body>
+</html>

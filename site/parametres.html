@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paramètres | Sen Valise</title>
+<meta name="description" content="Vos informations, vos zones de livraison et le suivi de vos commandes.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/main.css?v=11">
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Aller au contenu</a>
+<span class="nav-sentinel" aria-hidden="true"></span>
+
+<header class="nav is-stuck">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html" aria-label="Sen Valise, accueil">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="9" width="26" height="20" rx="6"/>
+        <path d="M12 9V7.5A2.5 2.5 0 0 1 14.5 5h3A2.5 2.5 0 0 1 20 7.5V9h-2.5V7.8h-3V9H12Z"/>
+        <path d="M9.5 14h13v1.8h-13z"/>
+      </svg>
+      Sen Valise
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="boutique.html">Boutique</a>
+      <a href="coffre.html">Le coffre</a>
+      <a href="index.html#matiere">Matière</a>
+      <a href="index.html#finitions">Finitions</a>
+      <a href="index.html#garantie">Garantie</a>
+      <a href="compte.html" data-account-link>Compte</a>
+    </nav>
+    <div class="nav__tools">
+      <button class="icon-btn" data-theme-toggle type="button" aria-label="Changer de thème"></button>
+      <button class="icon-btn cart-btn" data-open-cart type="button" aria-label="Ouvrir le panier">
+        <svg class="ico" aria-hidden="true"><use href="#i-shopping-bag-open"></use></svg>
+        <span class="cart-btn__count num" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn nav__burger" data-burger type="button" aria-expanded="false" aria-label="Ouvrir le menu">
+        <svg class="ico" aria-hidden="true"><use href="#i-list"></use></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-menu glass" aria-label="Navigation mobile">
+  <a href="mon-coffre.html">Mon coffre</a>
+  <a href="#livraison">Zones de livraison</a>
+  <a href="#commandes">Mes commandes</a>
+  <a href="boutique.html">Boutique</a>
+  <a href="coffre.html">Le coffre</a>
+  <a href="panier.html">Panier</a>
+</nav>
+
+<main id="main">
+  <div class="wrap page-head">
+    <h1 class="display">Paramètres</h1>
+  </div>
+
+  <div class="wrap acct" style="padding-bottom:var(--section-y)">
+
+    <aside class="acct__side" aria-label="Sections du compte">
+      <a href="#profil">Mes informations</a>
+      <a href="#securite">Mot de passe</a>
+      <a href="#livraison">Zones de livraison</a>
+      <a href="#commandes">Mes commandes</a>
+      <hr>
+      <a href="mon-coffre.html">Mon coffre</a>
+      <a href="#" data-logout>Se déconnecter</a>
+    </aside>
+
+    <div class="acct__main">
+
+      <section class="acct__block" id="profil">
+        <h2>Mes informations</h2>
+        <div class="panel">
+          <form data-profile novalidate style="display:grid;gap:1rem">
+            <div class="field">
+              <label for="pf-name">Nom complet</label>
+              <input id="pf-name" name="name" type="text" autocomplete="name" required>
+              <p class="err" role="alert" data-err="name"></p>
+            </div>
+            <div class="field">
+              <label for="pf-email">Adresse e-mail</label>
+              <input id="pf-email" name="email" type="email" autocomplete="email" required>
+              <p class="err" role="alert" data-err="email"></p>
+            </div>
+            <div class="field">
+              <label for="pf-phone">Téléphone</label>
+              <input id="pf-phone" name="phone" type="tel" autocomplete="tel" placeholder="+221 77 148 20 36">
+              <p class="hint">Le livreur appelle ce numéro avant de passer.</p>
+              <p class="err" role="alert" data-err="phone"></p>
+            </div>
+            <div>
+              <button class="btn btn--primary btn--sm" type="submit">
+                <span class="btn-label">Enregistrer</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="acct__block" id="securite">
+        <h2>Mot de passe</h2>
+        <div class="panel">
+          <form data-pass novalidate style="display:grid;gap:1rem">
+            <div class="field">
+              <label for="pw-current">Mot de passe actuel</label>
+              <input id="pw-current" name="current" type="password" autocomplete="current-password" required>
+              <p class="err" role="alert" data-err="current"></p>
+            </div>
+            <div class="field">
+              <label for="pw-next">Nouveau mot de passe</label>
+              <input id="pw-next" name="next" type="password" autocomplete="new-password" required>
+              <p class="hint">Huit caractères minimum.</p>
+              <p class="err" role="alert" data-err="next"></p>
+            </div>
+            <div>
+              <button class="btn btn--ghost btn--sm" type="submit">
+                <span class="btn-label">Changer le mot de passe</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="acct__block" id="livraison">
+        <h2>Zones de livraison</h2>
+
+        <div class="notice">
+          <svg class="ico" aria-hidden="true"><use href="#i-shield-check"></use></svg>
+          <div>
+            <b>Votre position ne quitte pas votre navigateur.</b> Le bouton ci-dessous demande
+            l'accès à votre localisation uniquement pour trouver la zone la plus proche, en
+            comparant vos coordonnées à une liste enregistrée dans la page. Aucun service de
+            cartographie n'est appelé, rien n'est envoyé à un serveur.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 class="h3" data-addr-title>Ajouter une adresse</h3>
+
+          <form data-addr novalidate style="display:grid;gap:1rem">
+            <input type="hidden" name="id">
+
+            <div>
+              <button class="btn btn--ghost btn--sm" type="button" data-geo>
+                <svg class="ico" aria-hidden="true"><use href="#i-airplane-tilt"></use></svg>
+                <span class="btn-label">Repérer ma position</span>
+              </button>
+              <p class="geo-out" data-geo-out role="status"></p>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="ad-label">Libellé</label>
+                <input id="ad-label" name="label" type="text" placeholder="Domicile, Bureau" required>
+              </div>
+              <div class="field">
+                <label for="ad-zone">Zone</label>
+                <select id="ad-zone" name="zone" required></select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="ad-detail">Adresse</label>
+              <input id="ad-detail" name="detail" type="text" placeholder="14 rue Saint-Michel, en face de la pharmacie" required>
+            </div>
+
+            <div class="field">
+              <label for="ad-note">Indications pour le livreur <span style="color:var(--muted);font-weight:400">(facultatif)</span></label>
+              <input id="ad-note" name="note" type="text" placeholder="Portail bleu, sonner deux fois">
+            </div>
+
+            <label style="display:flex;gap:.6rem;align-items:center;font-size:.9rem">
+              <input type="checkbox" name="isDefault" style="width:auto">
+              Adresse de livraison par défaut
+            </label>
+
+            <p class="err" role="alert" data-err></p>
+
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              <button class="btn btn--primary btn--sm" type="submit">
+                <span class="btn-label">Enregistrer l'adresse</span>
+              </button>
+              <button class="btn btn--ghost btn--sm" type="button" data-addr-cancel hidden>Annuler</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="addr-list" data-addr-list></div>
+      </section>
+
+      <section class="acct__block" id="commandes">
+        <h2>Mes commandes</h2>
+        <p class="body-sm">
+          Le suivi avance avec le temps écoulé depuis la commande, tant qu'aucun
+          transporteur n'est branché. La boutique peut marquer une commande livrée,
+          et c'est alors ce statut qui s'affiche.
+        </p>
+        <div data-orders style="display:grid;gap:1rem"></div>
+      </section>
+
+      <section class="acct__block" id="danger">
+        <h2>Supprimer le compte</h2>
+        <div class="panel">
+          <p class="body-sm">
+            Ferme votre accès en ligne. Vos commandes passées restent dans les registres
+            de la boutique, comme pour un achat en magasin. Un coffre encore approvisionné
+            doit être soldé avant la fermeture.
+          </p>
+          <div>
+            <button class="btn btn--ghost btn--sm" type="button" data-destroy>
+              <svg class="ico" aria-hidden="true"><use href="#i-trash"></use></svg>
+              <span class="btn-label">Supprimer définitivement</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__bottom">
+      <span>© 2026 Sen Valise. Dakar, Sénégal.</span>
+      <span>Paiement Wave, Orange Money et carte bancaire.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.SV_PAGE = function () {
+  if (!SV.Auth.guard()) return;
+
+  var me = SV.Auth.current();
+
+  /* ---------- profil ---------- */
+
+  var pf = SV.$("[data-profile]");
+  pf.name.value = me.name;
+  pf.email.value = me.email;
+  pf.phone.value = me.phone || "";
+
+  function clearErrors(form) {
+    SV.$$("[data-err]", form).forEach(function (p) { p.textContent = ""; });
+    SV.$$(".field", form).forEach(function (f) { f.classList.remove("is-invalid"); });
+  }
+
+  function showError(form, field, message) {
+    var p = SV.$('[data-err="' + field + '"]', form) || SV.$("[data-err]", form);
+    if (!p) return;
+    p.textContent = message;
+    var wrap = p.closest(".field");
+    if (wrap) {
+      wrap.classList.add("is-invalid");
+      var input = wrap.querySelector("input");
+      if (input) input.focus();
+    }
+  }
+
+  pf.addEventListener("submit", function (e) {
+    e.preventDefault();
+    clearErrors(pf);
+    SV.Auth.updateProfile(pf.name.value, pf.email.value, pf.phone.value).then(function (res) {
+      if (!res.ok) { showError(pf, res.field, res.message); return; }
+      SV.paintAccountNav();
+      SV.toast("Informations enregistrées");
+    });
+  });
+
+  /* ---------- mot de passe ---------- */
+
+  var pw = SV.$("[data-pass]");
+  pw.addEventListener("submit", function (e) {
+    e.preventDefault();
+    clearErrors(pw);
+    var btn = pw.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    SV.Auth.changePass(pw.current.value, pw.next.value).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) { showError(pw, res.field, res.message); return; }
+      pw.reset();
+      SV.toast("Mot de passe changé");
+    });
+  });
+
+  /* ---------- zones de livraison ---------- */
+
+  var zoneSelect = SV.$("#ad-zone");
+  zoneSelect.innerHTML = '<option value="">Choisir une zone</option>' +
+    SV.Geo.zones.map(function (z) {
+      return '<option value="' + z.id + '">' + z.name + " (" + z.area + ", " + z.delay + ")</option>";
+    }).join("");
+
+  var addrForm = SV.$("[data-addr]");
+  var geoOut = SV.$("[data-geo-out]");
+  var cancelBtn = SV.$("[data-addr-cancel]");
+  var formTitle = SV.$("[data-addr-title]");
+
+  SV.$("[data-geo]").addEventListener("click", function () {
+    var btn = this;
+    geoOut.classList.remove("is-err");
+    geoOut.textContent = "Recherche de votre position, autorisez l'accès si votre navigateur le demande.";
+    btn.disabled = true;
+
+    SV.Geo.locate(function (lat, lon, acc) {
+      btn.disabled = false;
+      var hit = SV.Geo.nearest(lat, lon);
+      addrForm.dataset.lat = lat.toFixed(5);
+      addrForm.dataset.lon = lon.toFixed(5);
+
+      if (hit.covered) {
+        zoneSelect.value = hit.zone.id;
+        geoOut.textContent = "Zone la plus proche : " + hit.zone.name + ", à environ " +
+          hit.distance.toFixed(1) + " km. Livraison sous " + hit.zone.delay +
+          ". Position précise à " + Math.round(acc) + " m près, corrigez la zone si besoin.";
+      } else {
+        geoOut.classList.add("is-err");
+        geoOut.textContent = "Vous semblez à " + Math.round(hit.distance) + " km de " +
+          hit.zone.name + ", hors de nos zones desservies. Choisissez une zone à la main " +
+          "ou écrivez-nous sur WhatsApp.";
+      }
+    }, function (message) {
+      btn.disabled = false;
+      geoOut.classList.add("is-err");
+      geoOut.textContent = message;
+    });
+  });
+
+  function resetAddrForm() {
+    addrForm.reset();
+    addrForm.id.value = "";
+    delete addrForm.dataset.lat;
+    delete addrForm.dataset.lon;
+    geoOut.textContent = "";
+    geoOut.classList.remove("is-err");
+    SV.$("[data-err]", addrForm).textContent = "";
+    formTitle.textContent = "Ajouter une adresse";
+    cancelBtn.hidden = true;
+  }
+
+  cancelBtn.addEventListener("click", resetAddrForm);
+
+  addrForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var err = SV.$("[data-err]", addrForm);
+    err.textContent = "";
+
+    var addr = {
+      id: addrForm.id.value || "",
+      label: addrForm.label.value.trim(),
+      zone: addrForm.zone.value,
+      detail: addrForm.detail.value.trim(),
+      note: addrForm.note.value.trim(),
+      isDefault: addrForm.isDefault.checked,
+      lat: addrForm.dataset.lat || "",
+      lon: addrForm.dataset.lon || ""
+    };
+
+    SV.Account.saveAddress(addr).then(function (res) {
+      if (!res.ok) { err.textContent = res.message; return; }
+      resetAddrForm();
+      renderAddresses();
+      SV.toast("Adresse enregistrée");
+    });
+  });
+
+  function renderAddresses() {
+    var list = SV.Account.addresses();
+    var box = SV.$("[data-addr-list]");
+    if (!list.length) {
+      box.innerHTML = '<p class="body-sm">Aucune adresse enregistrée pour le moment.</p>';
+      return;
+    }
+    box.innerHTML = list.map(function (a) {
+      var z = SV.Geo.byId(a.zone);
+      var coords = a.lat ? " · " + a.lat + ", " + a.lon : "";
+      return '<div class="addr' + (a.isDefault ? " is-default" : "") + '">' +
+          '<div class="addr__info">' +
+            "<b>" + a.label + "</b>" +
+            (a.isDefault ? '<span class="addr__tag">Par défaut</span>' : "") +
+            "<p>" + a.detail + "<br>" +
+              (z ? z.name + " · livraison sous " + z.delay : a.zone) + coords +
+              (a.note ? "<br>" + a.note : "") +
+            "</p>" +
+          "</div>" +
+          '<div class="addr__acts">' +
+            (a.isDefault ? "" : '<button type="button" data-default="' + a.id + '">Définir par défaut</button>') +
+            '<button type="button" data-edit="' + a.id + '">Modifier</button>' +
+            '<button type="button" data-del="' + a.id + '">Supprimer</button>' +
+          "</div>" +
+        "</div>";
+    }).join("");
+  }
+
+  SV.$("[data-addr-list]").addEventListener("click", function (e) {
+    var t = e.target.closest("button");
+    if (!t) return;
+
+    if (t.dataset.default) {
+      SV.Account.setDefaultAddress(t.dataset.default).then(function (res) {
+        if (!res.ok) { SV.toast(res.message); return; }
+        renderAddresses();
+        SV.toast("Adresse par défaut mise à jour");
+      });
+      return;
+    }
+
+    if (t.dataset.del) {
+      SV.Account.removeAddress(t.dataset.del).then(function (res) {
+        if (!res.ok) { SV.toast(res.message); return; }
+        renderAddresses();
+        SV.toast("Adresse supprimée");
+      });
+      return;
+    }
+
+    if (t.dataset.edit) {
+      var a = SV.Account.addresses().filter(function (x) { return String(x.id) === t.dataset.edit; })[0];
+      if (!a) return;
+      addrForm.id.value = a.id;
+      addrForm.label.value = a.label;
+      addrForm.zone.value = a.zone;
+      addrForm.detail.value = a.detail;
+      addrForm.note.value = a.note || "";
+      addrForm.isDefault.checked = !!a.isDefault;
+      if (a.lat) { addrForm.dataset.lat = a.lat; addrForm.dataset.lon = a.lon; }
+      formTitle.textContent = "Modifier l'adresse";
+      cancelBtn.hidden = false;
+      addrForm.scrollIntoView({ behavior: "smooth", block: "center" });
+      addrForm.label.focus();
+    }
+  });
+
+  renderAddresses();
+
+  /* ---------- commandes ---------- */
+
+  function renderOrders() {
+    var orders = SV.Account.orders();
+    var box = SV.$("[data-orders]");
+    if (!orders.length) {
+      box.innerHTML = '<div class="panel"><p class="body-sm">Aucune commande pour le moment. ' +
+        'Alimentez votre coffre, puis réglez votre panier avec.</p>' +
+        '<div><a class="btn btn--ghost btn--sm" href="mon-coffre.html">Voir mon coffre</a></div></div>';
+      return;
+    }
+
+    box.innerHTML = orders.map(function (o) {
+      var st = SV.Account.status(o);
+      var d = new Date(o.at);
+      var when = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+      var z = o.address ? SV.Geo.byId(o.address.zone) : null;
+
+      var steps = SV.Account.steps.map(function (label, i) {
+        return '<div class="track__step' + (i <= st.step ? " is-done" : "") + '">' +
+            '<div class="track__bar"></div><span>' + label + "</span></div>";
+      }).join("");
+
+      var lines = o.lines.map(function (l) {
+        return '<div class="order__line">' +
+            '<img src="' + l.img + '" alt="" loading="lazy">' +
+            "<span>" + l.name + '</span><span class="q">×' + l.qty + "</span>" +
+            '<span class="p">' + SV.money(l.price * l.qty) + "</span>" +
+          "</div>";
+      }).join("");
+
+      return '<article class="order">' +
+          '<div class="order__head">' +
+            "<div><b>Commande " + o.id + "</b><br><span>Passée le " + when + "</span></div>" +
+            '<div class="order__total num">' + SV.money(o.total) + "</div>" +
+          "</div>" +
+          '<div class="track">' + steps + "</div>" +
+          '<p class="track__hint"><b>' + st.label + ".</b> " + st.hint + "</p>" +
+          '<div class="order__lines">' + lines + "</div>" +
+          (o.address
+            ? '<p class="body-sm">Livraison : ' + o.address.label + ", " + o.address.detail +
+              (z ? " · " + z.name : "") + "</p>"
+            : "") +
+        "</article>";
+    }).join("");
+  }
+
+  renderOrders();
+
+  /* ---------- déconnexion et suppression ---------- */
+
+  SV.$("[data-logout]").addEventListener("click", function (e) {
+    e.preventDefault();
+    SV.Auth.logout();
+    location.href = "index.html";
+  });
+
+  SV.$("[data-destroy]").addEventListener("click", function () {
+    var btn = this;
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.querySelector(".btn-label").textContent = "Confirmer la suppression";
+      setTimeout(function () {
+        if (btn.dataset.armed === "1") {
+          btn.dataset.armed = "";
+          btn.querySelector(".btn-label").textContent = "Supprimer définitivement";
+        }
+      }, 6000);
+      return;
+    }
+    SV.Auth.destroy().then(function (res) {
+      if (!res.ok) { SV.toast(res.message); return; }
+      location.href = "index.html";
+    });
+  });
+};
+</script>
+
+</body>
+</html>

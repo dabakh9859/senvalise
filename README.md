@@ -1,20 +1,25 @@
 # Sen Valise
 
-Boutique en ligne de valises et bagages. Site statique, sans build ni dépendance à installer.
+Boutique en ligne de valises et bagages. Pages statiques, sans build ni
+dépendance à installer, mais **branchées sur l'API de gestion** : le catalogue,
+les comptes clients, le coffre et les commandes viennent de là.
 
 ## Lancer le site
 
+La boutique est servie par le même nginx que l'espace de gestion, donc sur la
+même origine que l'API — aucun CORS, aucune URL à configurer. Depuis
+`senvalise_stock` :
+
 ```bash
-cd ~/Documents/site-senvalise
-python3 -m http.server 8000
+docker compose up -d --build
 ```
 
-Puis ouvrir <http://localhost:8000>.
+Puis ouvrir <http://localhost:4000> pour la boutique, <http://localhost:3000>
+pour la gestion.
 
-Le site fonctionne aussi en ouvrant `index.html` directement dans le navigateur
-(scripts classiques, sprite d'icônes injecté en ligne, aucune requête `fetch`).
-Seule exception : la géolocalisation des zones de livraison exige un contexte
-sécurisé, donc `localhost` ou `https`, pas `file://`.
+Le site ne fonctionne plus en `file://` ni derrière un simple serveur de
+fichiers : sans `/api`, le catalogue reste vide. C'était déjà le cas pour la
+géolocalisation, qui exige un contexte sécurisé.
 
 ## Pages
 
@@ -53,7 +58,8 @@ sécurisé, donc `localhost` ou `https`, pas `file://`.
 assets/
   css/main.css     tokens, composants, responsive
   css/fonts.css    Geist auto-hébergé (généré, ne pas éditer à la main)
-  js/data.js       catalogue : produits, finitions, catégories
+  js/api.js        couche réseau : jeton, appels /api/shop (à charger en premier)
+  js/data.js       catalogue chargé depuis l'API, expose SV_PRODUCTS et consorts
   js/account.js    comptes, coffre, adresses, commandes, zones (à charger avant app.js)
   js/app.js        thème, navigation, panier, tiroir, révélations, toasts
   js/icons.js      sprite d'icônes Phosphor (généré)
@@ -194,12 +200,17 @@ pourquoi les cartes apparaissaient d'un bloc.
 
 ## Comptes et coffre
 
-> **Ce n'est pas un système d'authentification.** Le site est statique : il n'y a
-> ni serveur ni base de données. Les comptes, les soldes et les commandes vivent
-> dans le `localStorage` du navigateur du visiteur. N'importe qui ayant accès à
-> ce navigateur peut lire ou modifier ces données depuis la console. Aucun
-> paiement n'est traité. C'est écrit dans l'interface, sur la page compte et sur
-> la page coffre, pour que personne n'y saisisse un vrai mot de passe.
+Les comptes vivent désormais côté serveur. Le mot de passe est haché en bcrypt
+par l'API, jamais stocké en clair ni transmis au-delà de la requête de
+connexion. Le navigateur ne garde qu'un jeton signé, valable 24 heures, sous la
+clé `sv.token`. Un client retrouve donc son coffre et ses commandes depuis
+n'importe quel appareil, et le gérant les voit dans le back-office.
+
+Ce qui n'est **pas** encore branché : l'encaissement des versements. Wave,
+Orange Money et le virement sont proposés comme moyens, mais aucun opérateur
+n'est appelé — c'est la boutique qui crédite le coffre après réception. Le
+paiement d'une commande par le coffre, lui, est bien réel : il débite le solde,
+crée la commande et décrémente le stock.
 
 Tout est dans `assets/js/account.js`, qui expose `SV.Auth`, `SV.Account` et
 `SV.Geo`.
@@ -252,7 +263,7 @@ déjà posé.
 
 ## État des données
 
-Le catalogue vit dans `assets/js/data.js`. Chaque produit porte un champ
+Le catalogue vit en base et se modifie dans le back-office ; `assets/js/data.js` ne fait plus que le charger. Chaque produit porte un champ
 `cabin` : il ne se déduit pas de la catégorie, puisque le Gorée Weekend est
 rangé dans « sacs » tout en passant en cabine. C'est ce champ qui alimente la
 colonne Cabine du comparatif.
@@ -261,12 +272,13 @@ Clés dans `localStorage` :
 
 | Clé | Rôle |
 | --- | --- |
-| `sv.cart` | Contenu du panier |
+| `sv.cart` | Contenu du panier, seul état encore purement local |
 | `sv.theme` | `light` ou `dark`, écrase la préférence système |
 | `sv.announce` | `off` quand le bandeau promo a été masqué |
-| `sv.users` | Comptes : nom, e-mail, téléphone, sel et empreinte du mot de passe |
-| `sv.session` | Identifiant du compte connecté |
-| `sv.user.<id>` | Coffre, adresses et commandes du compte |
+| `sv.token` | Jeton de session, remis par l'API à la connexion |
+
+Comptes, coffre, adresses et commandes ne sont plus dans le navigateur : ils
+sont servis par `/api/shop` et rechargés à chaque ouverture de page.
 
 L'offre du mois court toujours jusqu'au dernier jour du mois en cours : la date
 et le compte à rebours sont calculés au chargement, la page n'affiche donc
@@ -274,14 +286,14 @@ jamais une échéance dépassée.
 
 ## Cache des assets
 
-Les feuilles de style et les scripts sont appelés avec `?v=8`. Firefox garde
+Les feuilles de style et les scripts sont appelés avec `?v=11`. Firefox garde
 sinon l'ancienne version en cache pendant plusieurs heures et les modifications
 n'apparaissent pas. **Après toute modification de `main.css` ou d'un fichier de
 `assets/js/`, incrémentez ce numéro dans les huit pages HTML.**
 
-Le bouton « Passer commande » n'est pas branché : aucun paiement n'est traité.
-C'est le point d'accroche à remplacer par une vraie passerelle (Wave, Orange
-Money, carte).
+Le bouton « Passer commande » reste non branché pour les paiements hors coffre :
+c'est le point d'accroche à remplacer par une vraie passerelle (Wave, Orange
+Money, carte). Le paiement par le coffre, lui, est fonctionnel de bout en bout.
 
 ## Crédits
 

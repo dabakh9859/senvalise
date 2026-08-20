@@ -10,12 +10,13 @@
 <link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- Applies the stored theme before first paint, so dark-mode visitors never see a flash of the light palette. -->
 <script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
-<link rel="stylesheet" href="assets/css/main.css?v=8">
+<link rel="stylesheet" href="assets/css/main.css?v=11">
 <noscript><style>.reveal{opacity:1;transform:none}.hero__copy>*,.hero__media{animation:none;opacity:1;transform:none}</style></noscript>
-<script src="assets/js/icons.js?v=8" defer></script>
-<script src="assets/js/data.js?v=8" defer></script>
-<script src="assets/js/account.js?v=8" defer></script>
-<script src="assets/js/app.js?v=8" defer></script>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
 </head>
 <body>
 
@@ -130,8 +131,8 @@ window.SV_PAGE = function () {
   var lines   = document.querySelector("[data-cart-lines]");
   var summary = document.querySelector("[data-summary]");
 
-  var SHIPPING_FREE_FROM = 100000;
-  var SHIPPING_FEE = 4000;
+  var SHIPPING_FREE_FROM = window.SV_SHIPPING.freeFrom;
+  var SHIPPING_FEE = window.SV_SHIPPING.fee;
 
   function render() {
     var items = SV.Cart.items();
@@ -231,8 +232,7 @@ window.SV_PAGE = function () {
     btn.disabled = true;
     btn.querySelector(".btn-label").textContent = "Débit du coffre";
 
-    setTimeout(function () {
-      var res = SV.Account.payFromVault(snapshot, sub, ship, SV.Account.defaultAddress());
+    SV.Account.payFromVault(snapshot, sub, ship, SV.Account.defaultAddress()).then(function (res) {
       if (!res.ok) {
         btn.classList.remove("is-busy");
         btn.disabled = false;
@@ -242,7 +242,7 @@ window.SV_PAGE = function () {
       }
       SV.Cart.clear();
       showConfirmation(res.order);
-    }, 900);
+    });
   });
 
   function showConfirmation(order) {

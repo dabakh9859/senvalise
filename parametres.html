@@ -10,12 +10,13 @@
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
 <script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
-<link rel="stylesheet" href="assets/css/main.css?v=8">
+<link rel="stylesheet" href="assets/css/main.css?v=11">
 <noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
-<script src="assets/js/icons.js?v=8" defer></script>
-<script src="assets/js/data.js?v=8" defer></script>
-<script src="assets/js/account.js?v=8" defer></script>
-<script src="assets/js/app.js?v=8" defer></script>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
 </head>
 <body>
 
@@ -204,8 +205,9 @@
       <section class="acct__block" id="commandes">
         <h2>Mes commandes</h2>
         <p class="body-sm">
-          Le suivi est simulé : il avance avec le temps écoulé depuis la commande, puisque
-          aucun transporteur n'est branché sur cette maquette.
+          Le suivi avance avec le temps écoulé depuis la commande, tant qu'aucun
+          transporteur n'est branché. La boutique peut marquer une commande livrée,
+          et c'est alors ce statut qui s'affiche.
         </p>
         <div data-orders style="display:grid;gap:1rem"></div>
       </section>
@@ -214,8 +216,9 @@
         <h2>Supprimer le compte</h2>
         <div class="panel">
           <p class="body-sm">
-            Efface votre compte, votre coffre et vos commandes de ce navigateur.
-            L'opération est immédiate et sans retour.
+            Ferme votre accès en ligne. Vos commandes passées restent dans les registres
+            de la boutique, comme pour un achat en magasin. Un coffre encore approvisionné
+            doit être soldé avant la fermeture.
           </p>
           <div>
             <button class="btn btn--ghost btn--sm" type="button" data-destroy>
@@ -272,10 +275,11 @@ window.SV_PAGE = function () {
   pf.addEventListener("submit", function (e) {
     e.preventDefault();
     clearErrors(pf);
-    var res = SV.Auth.updateProfile(pf.name.value, pf.email.value, pf.phone.value);
-    if (!res.ok) { showError(pf, res.field, res.message); return; }
-    SV.paintAccountNav();
-    SV.toast("Informations enregistrées");
+    SV.Auth.updateProfile(pf.name.value, pf.email.value, pf.phone.value).then(function (res) {
+      if (!res.ok) { showError(pf, res.field, res.message); return; }
+      SV.paintAccountNav();
+      SV.toast("Informations enregistrées");
+    });
   });
 
   /* ---------- mot de passe ---------- */
@@ -367,11 +371,12 @@ window.SV_PAGE = function () {
       lon: addrForm.dataset.lon || ""
     };
 
-    var res = SV.Account.saveAddress(addr);
-    if (!res.ok) { err.textContent = res.message; return; }
-    resetAddrForm();
-    renderAddresses();
-    SV.toast("Adresse enregistrée");
+    SV.Account.saveAddress(addr).then(function (res) {
+      if (!res.ok) { err.textContent = res.message; return; }
+      resetAddrForm();
+      renderAddresses();
+      SV.toast("Adresse enregistrée");
+    });
   });
 
   function renderAddresses() {
@@ -407,21 +412,25 @@ window.SV_PAGE = function () {
     if (!t) return;
 
     if (t.dataset.default) {
-      SV.Account.setDefaultAddress(t.dataset.default);
-      renderAddresses();
-      SV.toast("Adresse par défaut mise à jour");
+      SV.Account.setDefaultAddress(t.dataset.default).then(function (res) {
+        if (!res.ok) { SV.toast(res.message); return; }
+        renderAddresses();
+        SV.toast("Adresse par défaut mise à jour");
+      });
       return;
     }
 
     if (t.dataset.del) {
-      SV.Account.removeAddress(t.dataset.del);
-      renderAddresses();
-      SV.toast("Adresse supprimée");
+      SV.Account.removeAddress(t.dataset.del).then(function (res) {
+        if (!res.ok) { SV.toast(res.message); return; }
+        renderAddresses();
+        SV.toast("Adresse supprimée");
+      });
       return;
     }
 
     if (t.dataset.edit) {
-      var a = SV.Account.addresses().filter(function (x) { return x.id === t.dataset.edit; })[0];
+      var a = SV.Account.addresses().filter(function (x) { return String(x.id) === t.dataset.edit; })[0];
       if (!a) return;
       addrForm.id.value = a.id;
       addrForm.label.value = a.label;
@@ -509,8 +518,10 @@ window.SV_PAGE = function () {
       }, 6000);
       return;
     }
-    SV.Auth.destroy();
-    location.href = "index.html";
+    SV.Auth.destroy().then(function (res) {
+      if (!res.ok) { SV.toast(res.message); return; }
+      location.href = "index.html";
+    });
   });
 };
 </script>

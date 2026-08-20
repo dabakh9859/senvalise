@@ -10,12 +10,13 @@
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="assets/fonts/geist-500-latin.woff2" as="font" type="font/woff2" crossorigin>
 <script>try{var t=localStorage.getItem("sv.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
-<link rel="stylesheet" href="assets/css/main.css?v=8">
+<link rel="stylesheet" href="assets/css/main.css?v=11">
 <noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
-<script src="assets/js/icons.js?v=8" defer></script>
-<script src="assets/js/data.js?v=8" defer></script>
-<script src="assets/js/account.js?v=8" defer></script>
-<script src="assets/js/app.js?v=8" defer></script>
+<script src="assets/js/icons.js?v=11" defer></script>
+<script src="assets/js/api.js?v=11" defer></script>
+<script src="assets/js/data.js?v=11" defer></script>
+<script src="assets/js/account.js?v=11" defer></script>
+<script src="assets/js/app.js?v=11" defer></script>
 </head>
 <body>
 
@@ -77,9 +78,10 @@
     <div class="notice">
       <svg class="ico" aria-hidden="true"><use href="#i-lock-simple"></use></svg>
       <div>
-        <b>Aucun paiement réel n'est traité.</b> Les alimentations sont simulées et le solde
-        n'existe que dans ce navigateur. Sur une vraie boutique, cette page appellerait
-        l'API de Wave, d'Orange Money ou de votre banque.
+        <b>Votre solde est tenu par la boutique.</b> Chaque versement est enregistré et
+        apparaît dans nos comptes, et payer avec le coffre crée une vraie commande. Seule
+        l'étape de paiement du versement reste à brancher : Wave, Orange Money et le
+        virement se règlent pour l'instant auprès de la boutique, qui crédite le coffre.
       </div>
     </div>
 
@@ -196,8 +198,8 @@ window.SV_PAGE = function () {
   var me = SV.Auth.current();
   SV.$("[data-hello]").textContent = "Bonjour " + me.name.split(" ")[0];
 
-  var SHIPPING_FREE_FROM = 100000;
-  var SHIPPING_FEE = 4000;
+  var SHIPPING_FREE_FROM = window.SV_SHIPPING.freeFrom;
+  var SHIPPING_FEE = window.SV_SHIPPING.fee;
 
   /* ---------- objectif : liste des modèles ---------- */
 
@@ -337,11 +339,9 @@ window.SV_PAGE = function () {
 
     btn.classList.add("is-busy");
     btn.disabled = true;
-    btn.querySelector(".btn-label").textContent = "Paiement simulé";
+    btn.querySelector(".btn-label").textContent = "Enregistrement…";
 
-    // Le délai imite l'aller-retour vers l'opérateur, il ne fait rien d'autre.
-    setTimeout(function () {
-      res = SV.Account.deposit(amount, checked ? checked.value : "");
+    SV.Account.deposit(amount, checked ? checked.value : "").then(function (res) {
       btn.classList.remove("is-busy");
       btn.disabled = false;
       btn.querySelector(".btn-label").textContent = "Verser au coffre";
@@ -355,17 +355,18 @@ window.SV_PAGE = function () {
       amountInput.value = "";
       renderAll();
       SV.toast(SV.money(amount) + " versés, solde " + SV.money(res.balance));
-    }, 900);
+    });
   });
 
   /* ---------- objectif ---------- */
 
   SV.$("[data-goal]").addEventListener("submit", function (e) {
     e.preventDefault();
-    var res = SV.Account.setGoal(SV.$("#goal-amount").value, select.value);
-    if (!res.ok) { SV.toast(res.message); return; }
-    renderVault();
-    SV.toast("Objectif enregistré");
+    SV.Account.setGoal(SV.$("#goal-amount").value, select.value).then(function (res) {
+      if (!res.ok) { SV.toast(res.message); return; }
+      renderVault();
+      SV.toast("Objectif enregistré");
+    });
   });
 };
 </script>

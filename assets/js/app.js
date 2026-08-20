@@ -397,12 +397,23 @@
   /* ---------- boot ---------- */
 
   function boot() {
+    // Le theme et la navigation ne dependent de rien : on les pose tout de
+    // suite pour eviter un ecran nu pendant l'aller-retour reseau.
     initTheme();
     initNav();
     initDrawer();
-    initReveals();
-    paintCount();
-    if (typeof window.SV_PAGE === "function") window.SV_PAGE();
+
+    // Le catalogue et la session viennent de l'API. SV_PAGE lit SV_PRODUCTS
+    // et SV.Auth.current() des sa premiere ligne : il ne doit tourner
+    // qu'une fois les deux charges.
+    document.documentElement.classList.add("is-loading");
+    Promise.all([SV.Catalog.load(), SV.Session.hydrate()]).then(function () {
+      document.documentElement.classList.remove("is-loading");
+      if (!SV.Catalog.loaded && SV.Catalog.error) SV.toast(SV.Catalog.error);
+      initReveals();
+      paintCount();
+      if (typeof window.SV_PAGE === "function") window.SV_PAGE();
+    });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

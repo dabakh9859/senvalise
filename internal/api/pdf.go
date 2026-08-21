@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"time"
@@ -24,9 +25,42 @@ import (
 // Le document est reconstruit a chaque envoi plutot que stocke : un client qui
 // redemande sa facture apres un acompte doit recevoir le solde a jour.
 
-// Police : les fontes de base de fpdf sont encodees en cp1252, qui couvre tout
-// le francais. Cela evite d'embarquer un fichier TTF dans le binaire.
-const pdfFont = "Helvetica"
+// Police des documents.
+//
+// Inter est embarquee dans le binaire, en deux graisses : c'est la police du
+// site et de l'espace de gestion, et une facture ne doit pas arriver chez le
+// client dans une autre typographie que la boutique qui l'emet. Les deux
+// fichiers sont des instances statiques tirees de la fonte variable — fpdf ne
+// sait pas manipuler d'axe de variation, et une seule fonte variable aurait
+// donne un document sans aucun gras, alors que la facture s'appuie dessus pour
+// les totaux.
+//
+// Le repli sur Helvetica n'est pas decoratif : si la police manquait, il vaut
+// mieux une facture dans la fonte de base qu'une erreur au moment de l'envoi.
+//
+//go:embed fonts/Inter-Regular.ttf
+var interRegular []byte
+
+//go:embed fonts/Inter-Bold.ttf
+var interBold []byte
+
+// fallbackFont sert quand l'enregistrement d'Inter echoue.
+const fallbackFont = "Helvetica"
+
+// setupFont installe Inter et rend le nom de famille a utiliser, ainsi que la
+// fonction de transcodage du texte. Une fonte UTF-8 recoit les chaines telles
+// quelles ; les fontes de base, elles, attendent du cp1252.
+func setupFont(pdf *fpdf.Fpdf) (string, func(string) string) {
+	pdf.AddUTF8FontFromBytes("Inter", "", interRegular)
+	pdf.AddUTF8FontFromBytes("Inter", "B", interBold)
+	if pdf.Err() {
+		// On repart d'une erreur effacee : le document doit pouvoir se composer
+		// malgre l'echec de la police.
+		pdf.ClearError()
+		return fallbackFont, pdf.UnicodeTranslatorFromDescriptor("")
+	}
+	return "Inter", func(value string) string { return value }
+}
 
 type pdfLine struct {
 	Description string
@@ -264,7 +298,7 @@ func max64(a, b int64) int64 {
 // lignes, totaux, mot de remerciement et cartouche de signatures.
 func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
-	tr := pdf.UnicodeTranslatorFromDescriptor("") // cp1252 : les accents francais passent
+	pdfFont, tr := setupFont(pdf)
 	pdf.SetTitle(doc.Title+" "+doc.Reference, true)
 	pdf.SetAutoPageBreak(true, 22)
 	const left, right = 15.0, 195.0

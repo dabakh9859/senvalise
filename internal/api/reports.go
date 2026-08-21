@@ -206,7 +206,7 @@ func (s *Server) reports(c *fiber.Ctx) error {
 		"days": days, "products": products, "categories": categories,
 		"sellers": sellers, "methods": methods, "expenses": expenses,
 		"receivables": receivables, "journal": journal, "journalTruncated": truncated,
-		"stock": stock,
+		"stock":       stock,
 		"stockTotals": fiber.Map{"units": stockUnits, "cost": stockCost, "retail": stockRetail, "margin": stockRetail - stockCost},
 	})
 }

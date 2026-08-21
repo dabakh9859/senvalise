@@ -439,6 +439,10 @@ html[data-theme="dark"] .nav.is-stuck { box-shadow: 0 1px 0 var(--glass-ring), 0
   flex: none;
 }
 .brand__mark { width: 26px; height: 26px; }
+/* Logo téléversé : la hauteur est imposée, la largeur suit le rapport de
+   l'image. Un logo horizontal garde ainsi sa forme dans l'en-tête, là où une
+   taille carrée l'écraserait. */
+.brand__mark--image { width: auto; height: 26px; max-width: 150px; object-fit: contain; }
 .brand__mark rect { fill: var(--accent); }
 .brand__mark path { fill: var(--accent-ink); }
 /* Le jaune est porté par la poignée, pas par la sangle : la sangle fait 1,8

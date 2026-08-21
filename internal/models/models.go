@@ -346,12 +346,17 @@ type Vault struct {
 	Status     string         `json:"status"`
 	Deposits   []VaultDeposit `json:"deposits,omitempty"`
 }
+
+// VaultDeposit porte les deux sens du mouvement : un versement est positif, un
+// retrait negatif. Les separer en deux tables aurait duplique la regle de
+// solde et permis qu'un retrait existe sans son ecriture miroir.
 type VaultDeposit struct {
 	Base
 	VaultID   uint   `json:"vaultId"`
 	Amount    int64  `json:"amount"`
 	Method    string `json:"method"`
 	Reference string `json:"reference"`
+	Note      string `json:"note"`
 }
 type CashSession struct {
 	Base

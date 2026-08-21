@@ -64,6 +64,10 @@ func (s *Server) Register(app *fiber.App) {
 	// groupe authentifie ci-dessous, sinon le middleware du groupe s'applique a
 	// tout ce qui commence par « /api » et le client recoit un 401.
 	app.Get("/api/public/documents/:kind/:id/:token", s.publicDocument)
+	// Identite visuelle : la vitrine, l'ecran de connexion et l'onglet du
+	// navigateur ont besoin du logo avant toute authentification.
+	app.Get("/api/public/branding", s.publicBranding)
+	app.Get("/api/public/branding/:kind", s.brandingAsset)
 	s.RegisterShop(app)
 	a := app.Group("/api", auth.Required)
 	a.Get("/me", s.me)
@@ -143,6 +147,8 @@ func (s *Server) Register(app *fiber.App) {
 	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.
 	s.registerShopAdmin(a.Group("/boutique", auth.Manager))
 	s.registerMessaging(a)
+	s.registerVaults(a)
+	s.registerBranding(a)
 }
 
 func (s *Server) login(c *fiber.Ctx) error {
@@ -1479,6 +1485,14 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 // d'une session. Seules les espèces comptent — un règlement Wave ou par carte
 // ne passe pas par le tiroir.
 func (s *Server) trackCash(tx *gorm.DB, userID uint, method string, amount int64) error {
+	return s.trackCashAs(tx, userID, method, amount, "")
+}
+
+// trackCashAs permet de nommer l'origine du mouvement. Un versement au coffre
+// entre bien dans le tiroir, mais l'inscrire en « vente » ferait lire au
+// gerant un chiffre d'affaires qui n'existe pas : le journal de caisse doit
+// dire d'ou vient chaque billet.
+func (s *Server) trackCashAs(tx *gorm.DB, userID uint, method string, amount int64, category string) error {
 	if amount == 0 || method != "cash" {
 		return nil
 	}
@@ -1488,9 +1502,12 @@ func (s *Server) trackCash(tx *gorm.DB, userID uint, method string, amount int64
 		// pas de tiroir à mouvementer. La vente ne doit pas échouer pour ça.
 		return nil
 	}
-	direction, category := "in", "vente"
+	direction, fallback := "in", "vente"
 	if amount < 0 {
-		direction, category = "out", "remboursement"
+		direction, fallback = "out", "remboursement"
+	}
+	if category == "" {
+		category = fallback
 	}
 	if e := tx.Create(&models.CashMovement{CashSessionID: session.ID, UserID: userID,
 		Direction: direction, Category: category, Amount: amount}).Error; e != nil {
@@ -1535,31 +1552,11 @@ func (s *Server) closeCash(c *fiber.Ctx) error {
 		session.ExpectedAmount, session.ClosingAmount, session.ClosingAmount-session.ExpectedAmount))
 	return c.SendStatus(204)
 }
-func (s *Server) depositVault(c *fiber.Ctx) error {
-	var in struct {
-		Amount int64  `json:"amount"`
-		Method string `json:"method"`
-	}
-	if c.BodyParser(&in) != nil || in.Amount <= 0 {
-		return fiber.ErrBadRequest
-	}
-	e := s.DB.Transaction(func(tx *gorm.DB) error {
-		var v models.Vault
-		if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&v, c.Params("id")).Error; e != nil {
-			return e
-		}
-		if e := tx.Model(&v).Update("balance", gorm.Expr("balance + ?", in.Amount)).Error; e != nil {
-			return e
-		}
-		return tx.Create(&models.VaultDeposit{VaultID: v.ID, Amount: in.Amount, Method: in.Method, Reference: s.ref("DEP")}).Error
-	})
-	if e != nil {
-		return fiber.NewError(422, e.Error())
-	}
-	vaultID, _ := strconv.ParseUint(c.Params("id"), 10, 64)
-	s.log(c, "vault-deposit", "vaults", uint(vaultID), fmt.Sprintf("versement de %d F (%s)", in.Amount, in.Method))
-	return c.SendStatus(201)
-}
+
+// depositVault enregistre un versement au comptoir. Le corps de l'operation
+// vit dans vaults.go : versement et retrait partagent le meme verrou, la meme
+// ecriture d'historique et la meme alimentation de la caisse.
+func (s *Server) depositVault(c *fiber.Ctx) error { return s.vaultMove(c, 1) }
 
 // Expenses are the day-to-day running costs of the shop. Amounts stay whole
 // CFA francs, like every other amount in SenValise.

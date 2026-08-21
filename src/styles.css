@@ -729,3 +729,88 @@
 /* Le panneau d'envoi se positionne par rapport à la pièce affichée : sans ce
    repère, il se calerait sur la fenêtre et sortirait du dialogue. */
 .invoice-dialog .business-main{position:relative}
+
+/* ── Coffres clients ───────────────────────────────────────────────────────
+   La liste réutilise le gabarit de tableau des créances ; seuls la jauge
+   d'objectif et le bloc de mouvement sont propres à cet écran. */
+.vaults-page{display:flex;flex-direction:column;gap:14px}
+.vaults-page header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.vaults-page header h3{display:flex;align-items:center;gap:7px;font-size:13px;margin:0}
+.vaults-page header h3 svg{width:15px;height:15px}
+.vaults-page header p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.vaults-page header>div:last-child{display:flex;gap:7px;align-items:center}
+.vaults-page h4{font-size:11px;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+.vaults-page table{width:100%;border-collapse:collapse;font-size:12px}
+.vaults-page th{text-align:left;font-size:9px;letter-spacing:.05em;color:var(--muted);padding:7px 9px;border-bottom:1px solid var(--line)}
+.vaults-page td{padding:9px;border-bottom:1px solid var(--line);vertical-align:middle}
+.vaults-page td span{display:block;font-size:10px;color:var(--muted)}
+.vaults-page td span.campaign-badge{display:inline-block}
+.vaults-page .align-right{text-align:right}
+.vaults-page em{color:var(--muted)}
+.vault-list tbody tr{cursor:pointer}
+.vault-list tbody tr:hover{background:var(--soft)}
+.vaults-page tr.selected{background:var(--accent-surface)}
+.vaults-page .empty{font-size:11px;color:var(--muted);padding:18px 0;text-align:center}
+.vaults-page .settings-fields{grid-template-columns:1fr 1fr;align-items:end}
+.vaults-page .settings-fields>label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:10px;font-weight:650}
+.vaults-page .field-wide{grid-column:1/-1}
+.vaults-page input,.vaults-page select{border:1px solid var(--line);border-radius:7px;padding:9px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;outline:0}
+.vault-search{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:0 9px;background:var(--panel)}
+.vault-search svg{width:13px;height:13px;color:var(--muted)}
+.vault-search input{border:0;padding:8px 0;background:none;font-size:12px;outline:0;width:170px}
+
+/* Jauge d'objectif : la part déjà versée se lit d'un coup d'œil, ce qu'un
+   pourcentage seul ne donne pas dans une colonne étroite. */
+.goal-gauge{position:relative;height:16px;border-radius:20px;background:var(--sunken);overflow:hidden;min-width:90px}
+.goal-gauge i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:20px}
+.goal-gauge span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:650;color:var(--ink)}
+
+.vault-open-form{margin-bottom:16px;padding:14px;border:1px dashed var(--accent-line);border-radius:9px;background:var(--accent-surface)}
+.vault-open-actions{grid-column:1/-1;display:flex;gap:8px}
+.vault-actions{border:1px solid var(--line);border-radius:9px;padding:14px;background:var(--soft)}
+.vault-buttons{display:flex;gap:9px;margin-top:12px}
+.vault-buttons button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:7px;padding:9px 14px;font-size:12px;font-weight:650;cursor:pointer}
+.vault-buttons button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.vault-buttons button:disabled{opacity:.45;cursor:not-allowed}
+.vault-buttons svg{width:14px;height:14px}
+.vault-goal{margin-top:16px}
+.move-in{color:var(--ok)}
+.move-out{color:var(--bad)}
+
+/* ── Identité visuelle ─────────────────────────────────────────────────────
+   L'écran montre le logo tel qu'il sera servi, sur damier : un logo à fond
+   transparent doit se juger sur ce qui le distingue du fond, pas sur un carré
+   blanc qui masquerait le problème. */
+.branding-page .settings-fields{grid-template-columns:1fr 1fr;align-items:start}
+.branding-page .settings-fields>label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:10px;font-weight:650}
+.branding-page .field-wide{grid-column:1/-1}
+.branding-page input,.branding-page textarea{border:1px solid var(--line);border-radius:7px;padding:9px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;outline:0}
+.branding-page input[type=color]{padding:3px;height:37px;cursor:pointer}
+.branding-page small{color:var(--muted);font-weight:500;font-size:10px}
+.branding-upload{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.logo-frame{width:190px;height:110px;border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;justify-content:center;padding:12px;
+  background-color:var(--panel);
+  background-image:linear-gradient(45deg,var(--sunken) 25%,transparent 25%),linear-gradient(-45deg,var(--sunken) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--sunken) 75%),linear-gradient(-45deg,transparent 75%,var(--sunken) 75%);
+  background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+.logo-frame.small{width:96px;height:96px}
+.logo-frame img{max-width:100%;max-height:100%;object-fit:contain}
+.branding-upload-actions{display:flex;flex-direction:column;gap:9px;align-items:flex-start;flex:1;min-width:220px}
+.upload-button{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:7px;padding:9px 14px;font-size:12px;font-weight:650;cursor:pointer;background:var(--panel);color:var(--ink)}
+.upload-button:hover{border-color:var(--accent)}
+.upload-button svg{width:14px;height:14px}
+.upload-button input{display:none}
+.branding-usage{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px}
+.branding-usage li{border-left:2px solid var(--accent);padding-left:10px}
+.branding-usage b{display:block;font-size:11px}
+.branding-usage span{font-size:10px;color:var(--muted)}
+.branding-page header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 23px;border-bottom:1px solid var(--line)}
+.branding-page header h2{font-size:14px;margin:0}
+.branding-page header p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.branding-page{padding:0}
+.branding-page>.success,.branding-page>.error{margin:14px 23px 0}
+.branding-page h3{display:flex;align-items:center;gap:6px}
+.branding-page h3 svg{width:14px;height:14px}
+
+/* Logo dans la barre latérale et sur l'écran de connexion. */
+.rail-brand img{width:26px;height:26px;object-fit:contain;border-radius:6px}
+.login-brand img{width:38px;height:38px;object-fit:contain;border-radius:8px}

@@ -1,6 +1,6 @@
 import {
   BarChart3, BellRing, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
-  Megaphone, MessageSquare, Package, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
+  Megaphone, MessageSquare, Package, Palette, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
   Truck, Users, WalletCards, Wrench,
 } from 'lucide-react';
 
@@ -40,7 +40,7 @@ export const groups:NavGroup[]=[
     {id:'shop-catalog',label:'Catalogue en ligne',icon:Package,manager:true},
     {id:'home-blocks',label:'Page d’accueil',resource:'home-blocks',icon:Globe2,manager:true},
     {id:'shop-customers',label:'Clients du site',icon:Users,manager:true},
-    {id:'vaults',label:'Coffres clients',resource:'vaults',icon:WalletCards,manager:true},
+    {id:'vaults',label:'Coffres clients',icon:WalletCards,manager:true},
     {id:'shop-delivery',label:'Livraison',icon:Truck,manager:true},
     {id:'contacts',label:'Messages reçus',resource:'contact-messages',icon:MessageSquare,manager:true},
   ]},
@@ -52,6 +52,7 @@ export const groups:NavGroup[]=[
   {id:'settings-group',label:'Paramètres',icon:Settings,items:[
     {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards,manager:true},
     {id:'messaging',label:'WhatsApp et SMS',icon:MessageSquare,manager:true},
+    {id:'branding',label:'Logo et identité',icon:Palette,manager:true},
     {id:'categories',label:'Catégories',resource:'categories',icon:Tags,manager:true},
     {id:'users',label:'Utilisateurs',resource:'users',icon:Users,manager:true},
   ]},
@@ -59,11 +60,15 @@ export const groups:NavGroup[]=[
 
 export const allNav=[dashboardItem,...groups.flatMap(group=>group.items)];
 
-type Props={user:User;onPage:(id:string)=>void;onLogout:()=>void};
-export default function Sidebar({user,onPage,onLogout}:Props){
+type Props={user:User;onPage:(id:string)=>void;onLogout:()=>void;brand?:Brand};
+
+// Marque servie par /api/public/branding : la barre affichait « SV » en dur,
+// donc un logo televerse n'y apparaissait jamais.
+export type Brand={siteName:string;tagline:string;logoUrl:string};
+export default function Sidebar({user,onPage,onLogout,brand}:Props){
   const role=user.role==='manager'?'Administrateur':'Vendeur';
   return <aside className="sidebar compact-rail" aria-label="Accès rapide">
-    <button className="rail-brand" onClick={()=>onPage(user.role==='manager'?'dashboard':'pos')} title="SenValise" aria-label="Revenir à l’accueil"><span>SV</span></button>
+    <button className="rail-brand" onClick={()=>onPage(user.role==='manager'?'dashboard':'pos')} title={brand?.siteName??'SenValise'} aria-label="Revenir à l’accueil">{brand?.logoUrl?<img src={brand.logoUrl} alt=""/>:<span>{(brand?.siteName??'SenValise').slice(0,2).toUpperCase()}</span>}</button>
     <div className="rail-profile">
       <span className="avatar" title={`${user.name} — ${role}`}>{user.name.slice(0,1).toUpperCase()}</span>
       <ThemeToggle/>

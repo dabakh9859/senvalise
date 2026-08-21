@@ -57,6 +57,11 @@ type pdfDocument struct {
 	Remaining   int64
 	Notes       string
 	Seller      string
+	// Logo de l'entreprise, lu sur disque au moment du rendu. fpdf ne sait pas
+	// dessiner de SVG : un logo vectoriel reste absent du PDF, le bandeau de
+	// couleur tient alors lieu de marque.
+	LogoFormat string
+	Logo       []byte
 }
 
 var documentTitles = map[string]string{"invoice": "Facture", "quote": "Devis", "delivery": "Bon de livraison"}
@@ -279,16 +284,34 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf.AliasNbPages("{np}")
 	pdf.AddPage()
 
-	// Bandeau de marque.
+	// Bandeau de marque. Le logo televerse y prend la place du nom quand il
+	// existe : c'est la meme image que celle de la boutique et de l'onglet du
+	// navigateur, un document ne doit pas porter une autre marque que le site.
 	pdf.SetFillColor(21, 41, 214)
 	pdf.Rect(left, 12, width, 18, "F")
 	pdf.SetTextColor(255, 255, 255)
-	pdf.SetXY(left+5, 15)
+	textLeft := left + 5
+	if doc.LogoFormat != "" && len(doc.Logo) > 0 {
+		pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: doc.LogoFormat}, bytes.NewReader(doc.Logo))
+		if info := pdf.GetImageInfo("logo"); info != nil && info.Height() > 0 {
+			// Hauteur imposee, largeur deduite : un logo large ne doit pas
+			// deborder sur le telephone affiche a droite du bandeau.
+			height := 12.0
+			logoWidth := height * info.Width() / info.Height()
+			if logoWidth > 46 {
+				logoWidth = 46
+				height = logoWidth * info.Height() / info.Width()
+			}
+			pdf.ImageOptions("logo", left+5, 12+(18-height)/2, logoWidth, height, false, fpdf.ImageOptions{ImageType: doc.LogoFormat}, 0, "")
+			textLeft = left + 5 + logoWidth + 5
+		}
+	}
+	pdf.SetXY(textLeft, 15)
 	pdf.SetFont(pdfFont, "B", 13)
 	pdf.CellFormat(90, 6, tr(doc.Company.CompanyName), "", 0, "L", false, 0, "")
 	pdf.SetFont(pdfFont, "", 8.5)
 	pdf.CellFormat(80, 6, tr(doc.Company.Phone), "", 0, "R", false, 0, "")
-	pdf.SetXY(left+5, 21)
+	pdf.SetXY(textLeft, 21)
 	pdf.SetFont(pdfFont, "", 8.5)
 	pdf.CellFormat(90, 5, tr(doc.Company.Tagline), "", 0, "L", false, 0, "")
 	pdf.CellFormat(80, 5, tr(doc.Company.Address), "", 0, "R", false, 0, "")
@@ -556,6 +579,7 @@ func (s *Server) documentPDF(kind string, id uint) ([]byte, string, pdfDocument,
 	if err != nil {
 		return nil, "", doc, err
 	}
+	doc.LogoFormat, doc.Logo = s.brandingLogoFile()
 	raw, err := renderPDF(doc)
 	if err != nil {
 		return nil, "", doc, err

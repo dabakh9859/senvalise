@@ -9,3 +9,11 @@ Thumbs.db
 
 # Copies de travail créées pour les captures d'écran.
 _*.html
+
+# Jumeaux WebP des photos : fabriques par le script de deploiement a partir des
+# JPEG, et servis par nginx quand le navigateur les accepte. Ce sont des
+# fichiers derives — les versionner ferait grossir le depot d'un megaoctet et
+# demi a chaque retouche d'image, pour un contenu reconstructible en deux
+# secondes.
+*.jpg.webp
+*.png.webp

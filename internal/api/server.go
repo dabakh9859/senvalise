@@ -54,12 +54,35 @@ func loginLimiter() fiber.Handler {
 	})
 }
 
+// publicLimiter freine ce qui est ouvert a tous : catalogue, fiches produit,
+// formulaire de contact, plan du site. Seule la connexion etait protegee ; le
+// reste acceptait n'importe quel volume, ce qui permettait a un seul client
+// d'occuper la base et de rendre la boutique lente pour les autres.
+//
+// Le plafond est large — un visiteur qui parcourt le catalogue enchaine
+// facilement trente requetes en une minute — mais il coupe court a
+// l'aspiration systematique.
+func publicLimiter() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        120,
+		Expiration: time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return "public:" + c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Trop de requêtes. Patientez quelques instants.",
+			})
+		},
+	})
+}
+
 func (s *Server) Register(app *fiber.App) {
 	app.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok", "service": "senvalise-api"}) })
 	app.Static("/uploads", "/uploads")
 	app.Post("/api/auth/login", loginLimiter(), s.login)
-	app.Get("/api/shop/products", s.shopProducts)
-	app.Post("/api/shop/contact", s.createContact)
+	app.Get("/api/shop/products", publicLimiter(), s.shopProducts)
+	app.Post("/api/shop/contact", publicLimiter(), s.createContact)
 	// Lien signe d'un document, ouvert sans compte : il doit etre pose avant le
 	// groupe authentifie ci-dessous, sinon le middleware du groupe s'applique a
 	// tout ce qui commence par « /api » et le client recoit un 401.
@@ -68,6 +91,9 @@ func (s *Server) Register(app *fiber.App) {
 	// navigateur ont besoin du logo avant toute authentification.
 	app.Get("/api/public/branding", s.publicBranding)
 	app.Get("/api/public/branding/:kind", s.brandingAsset)
+	// Referencement : fiches produit a leur adresse propre, plan du site et
+	// robots.txt. Hors du prefixe « /api », ce sont des pages de la vitrine.
+	s.registerSEO(app)
 	s.RegisterShop(app)
 	a := app.Group("/api", auth.Required)
 	a.Get("/me", s.me)

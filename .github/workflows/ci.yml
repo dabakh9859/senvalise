@@ -1,0 +1,71 @@
+# Contrôles automatiques à chaque envoi de code.
+#
+# Les tests des règles métier — survente, retour plafonné, coffre à découvert,
+# tiroir-caisse — ont besoin d'un vrai PostgreSQL : ils vivent dans des
+# transactions, et aucun simulacre ne reproduit un verrou de ligne. La base est
+# donc montée en service à côté du travail, et son adresse passée par
+# TEST_DATABASE_URL. Sans elle, ces tests s'ignorent silencieusement : c'est
+# pratique en local, ce serait un mensonge en intégration continue.
+
+name: Contrôles
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  serveur:
+    name: Go — vet et tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: senvalise_test
+          POSTGRES_USER: senvalise
+          POSTGRES_PASSWORD: senvalise
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U senvalise -d senvalise_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Analyse statique
+        run: go vet ./cmd/... ./internal/...
+
+      - name: Format
+        # gofmt -l liste les fichiers mal formatés ; une liste non vide est un
+        # échec, sinon le format dérive un commit à la fois.
+        run: |
+          unformatted=$(gofmt -l cmd internal)
+          if [ -n "$unformatted" ]; then
+            echo "Fichiers à reformater :"; echo "$unformatted"; exit 1
+          fi
+
+      - name: Tests
+        env:
+          TEST_DATABASE_URL: postgres://senvalise:senvalise@localhost:5432/senvalise_test?sslmode=disable
+          JWT_SECRET: secret-de-test-uniquement-pour-la-ci
+        run: go test ./cmd/... ./internal/... -race -cover
+
+  interface:
+    name: Frontend — typage, lint, construction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build

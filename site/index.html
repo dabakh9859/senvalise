@@ -148,7 +148,7 @@
             <span class="sw" style="--c:#2f5d4f" aria-hidden="true"></span>
             <span class="lbl" data-hero-finishes>Quatre finitions</span>
           </a>
-          <a class="hero__from" href="produit.html?ref=teranga-55" data-hero-total>La plus vendue : Teranga 55</a>
+          <a class="hero__from" href="/p/teranga-55" data-hero-total>La plus vendue : Teranga 55</a>
         </div>
       </div>
 
@@ -157,7 +157,7 @@
           <img class="is-on" src="assets/img/hero.jpg" alt="Valise Ndar 65 en finition Noir Basalte, posée dans un hall clair"
                width="1600" height="2400" fetchpriority="high">
         </div>
-        <a class="hero__chip glass" href="produit.html?ref=ndar-65" data-hero-chip>
+        <a class="hero__chip glass" href="/p/ndar-65" data-hero-chip>
           <span class="k">Le modèle en photo</span>
           <span class="v" data-hero-name>Ndar 65</span>
           <span class="s"><span class="num" data-hero-price>189 000 F</span> · <span data-hero-color>Noir Basalte</span></span>
@@ -278,7 +278,7 @@
             <div><span class="n" data-cd="m">00</span><span class="u">min</span></div>
             <div><span class="n" data-cd="s">00</span><span class="u">sec</span></div>
           </div>
-          <a class="btn btn--ghost" href="produit.html?ref=duo-teranga">
+          <a class="btn btn--ghost" href="/p/duo-teranga">
             Voir le Duo Teranga
             <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
           </a>
@@ -365,7 +365,7 @@
           <div class="spec-tile"><div class="v">Roulements scellés</div><div class="k">Quatre roues, rotation 360°</div></div>
           <div class="spec-tile"><div class="v">Serrure TSA</div><div class="k">Intégrée, pas rapportée</div></div>
         </div>
-        <a class="link-arrow" href="produit.html?ref=teranga-55">
+        <a class="link-arrow" href="/p/teranga-55">
           Découvrir la Teranga 55
           <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
         </a>
@@ -623,9 +623,9 @@
         <h4>Boutique</h4>
         <ul>
           <li><a href="boutique.html">Tous les formats</a></li>
-          <li><a href="produit.html?ref=teranga-55">Teranga 55</a></li>
-          <li><a href="produit.html?ref=ndar-65">Ndar 65</a></li>
-          <li><a href="produit.html?ref=duo-teranga">Duo Teranga</a></li>
+          <li><a href="/p/teranga-55">Teranga 55</a></li>
+          <li><a href="/p/ndar-65">Ndar 65</a></li>
+          <li><a href="/p/duo-teranga">Duo Teranga</a></li>
         </ul>
       </div>
       <div class="footer__col">
@@ -726,7 +726,7 @@ window.SV_PAGE = function () {
     slides[i].classList.add("is-on");
 
     var s = HERO[i];
-    chip.href = "produit.html?ref=" + s.ref;
+    chip.href = "/p/" + encodeURIComponent(s.ref);
     chip.querySelector("[data-hero-name]").textContent = s.name;
     chip.querySelector("[data-hero-price]").textContent = s.price;
     chip.querySelector("[data-hero-color]").textContent = s.colorName;
@@ -793,7 +793,7 @@ window.SV_PAGE = function () {
   if (totalLink) {
     if (flagged) {
       totalLink.textContent = flagged.flag + " : " + flagged.name;
-      totalLink.href = "produit.html?ref=" + flagged.ref;
+      totalLink.href = "/p/" + encodeURIComponent(flagged.ref);
     } else {
       totalLink.textContent = spell(CATALOG.length, true) + " modèles en boutique";
     }
@@ -1014,14 +1014,14 @@ window.SV_PAGE = function () {
       ? '<span class="yes">Oui</span>'
       : '<span class="no">Non</span>';
     return '<tr>' +
-      '<td><a class="m" href="produit.html?ref=' + p.ref + '">' +
+      '<td><a class="m" href="/p/' + encodeURIComponent(p.ref) + '">' +
         '<img src="' + p.img + '" alt="" width="88" height="88" loading="lazy">' +
         '<span><b>' + p.name + '</b><span>' + p.tag + '</span></span></a></td>' +
       '<td class="num">' + p.volume + ' L</td>' +
       '<td class="num">' + String(p.weight).replace(".", ",") + ' kg</td>' +
       '<td>' + cabin + '</td>' +
       '<td class="price num">' + SV.money(p.price) + '</td>' +
-      '<td><a class="link-arrow" href="produit.html?ref=' + p.ref + '">Voir' +
+      '<td><a class="link-arrow" href="/p/' + encodeURIComponent(p.ref) + '">Voir' +
         '<svg class="ico" aria-hidden="true"><use href="#i-arrow-right"></use></svg></a></td>' +
       '</tr>';
   }).join("");

@@ -32,8 +32,8 @@ var depositMethods = map[string]string{
 
 func (s *Server) RegisterShop(app *fiber.App) {
 	g := app.Group("/api/shop")
-	g.Get("/catalog", s.shopCatalog)
-	g.Get("/zones", s.shopZones)
+	g.Get("/catalog", publicLimiter(), s.shopCatalog)
+	g.Get("/zones", publicLimiter(), s.shopZones)
 	// Mêmes garde-fous que côté gestion : la boutique est la porte la plus
 	// exposée, et l'inscription se prête aussi au remplissage automatique.
 	g.Post("/auth/register", loginLimiter(), s.shopRegister)
@@ -81,7 +81,11 @@ type shopProductOut struct {
 	Specs    []shopSpecOut `json:"specs"`
 }
 
-func (s *Server) shopCatalog(c *fiber.Ctx) error {
+// shopCatalogProducts construit le catalogue vu par la vitrine. Il est extrait
+// du gestionnaire HTTP parce que les fiches produit servies a leur adresse
+// propre (/p/<reference>) doivent lire exactement le meme catalogue : deux
+// constructions paralleles auraient fini par afficher deux prix.
+func (s *Server) shopCatalogProducts() ([]shopProductOut, []models.Category, error) {
 	var products []models.Product
 	if e := s.DB.Where("active = true AND online = true").
 		Preload("Images", func(db *gorm.DB) *gorm.DB { return db.Order("position asc, id asc") }).
@@ -89,7 +93,7 @@ func (s *Server) shopCatalog(c *fiber.Ctx) error {
 		Preload("Colorways", func(db *gorm.DB) *gorm.DB { return db.Order("position asc, id asc") }).
 		Preload("Variants", "active = true").
 		Order("position asc, id asc").Find(&products).Error; e != nil {
-		return e
+		return nil, nil, e
 	}
 
 	categories := map[uint]string{}
@@ -130,6 +134,14 @@ func (s *Server) shopCatalog(c *fiber.Ctx) error {
 			item.Specs = append(item.Specs, shopSpecOut{K: sp.Label, V: sp.Value})
 		}
 		out = append(out, item)
+	}
+	return out, rows, nil
+}
+
+func (s *Server) shopCatalog(c *fiber.Ctx) error {
+	out, rows, err := s.shopCatalogProducts()
+	if err != nil {
+		return err
 	}
 
 	var colorways []models.Colorway

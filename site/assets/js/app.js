@@ -249,13 +249,13 @@
     }).join("");
     return '' +
       '<article class="card reveal" style="--d:' + (delay || 0) + 'ms">' +
-        '<a class="card__media" href="produit.html?ref=' + p.ref + '" aria-label="' + p.name + ', ' + p.tag + '">' +
+        '<a class="card__media" href="/p/' + encodeURIComponent(p.ref) + '" aria-label="' + p.name + ', ' + p.tag + '">' +
           '<img src="' + p.img + '" alt="' + p.name + ' en ' + (COLORWAYS[p.colors[0]] || {}).name + '" width="600" height="600" loading="lazy">' +
           (flag ? '<span class="' + flagCls + '">' + flag + '</span>' : "") +
         '</a>' +
         '<div class="card__body">' +
           '<div class="card__title">' +
-            '<h3><a href="produit.html?ref=' + p.ref + '">' + p.name + '</a></h3>' +
+            '<h3><a href="/p/' + encodeURIComponent(p.ref) + '">' + p.name + '</a></h3>' +
             '<span class="card__price num">' + money(p.price) + '</span>' +
           '</div>' +
           '<p class="card__meta">' + p.tag + ', ' + p.volume + " L, " + String(p.weight).replace(".", ",") + ' kg</p>' +

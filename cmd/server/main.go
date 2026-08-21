@@ -20,13 +20,26 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app := fiber.New(fiber.Config{AppName: "SenValise", ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, ErrorHandler: func(c *fiber.Ctx, e error) error {
-		code := 500
-		if x, ok := e.(*fiber.Error); ok {
-			code = x.Code
-		}
-		return c.Status(code).JSON(fiber.Map{"error": e.Error()})
-	}})
+	// Derriere nginx, l'adresse du client vue par Fiber est celle du proxy :
+	// 127.0.0.1 pour tout le monde. Les limiteurs de debit rangeaient donc tous
+	// les visiteurs dans le meme seau — un seul suffisait a bloquer la boutique
+	// pour les autres, et une attaque par force brute sur la connexion
+	// enfermait dehors les vendeurs legitimes.
+	//
+	// La confiance est restreinte a la boucle locale : seul notre nginx peut
+	// donc annoncer une adresse, et un client exterieur ne peut pas se
+	// fabriquer une identite en posant lui-meme l'en-tete.
+	app := fiber.New(fiber.Config{AppName: "SenValise", ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second,
+		ProxyHeader:             fiber.HeaderXForwardedFor,
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:          []string{"127.0.0.1", "::1"},
+		ErrorHandler: func(c *fiber.Ctx, e error) error {
+			code := 500
+			if x, ok := e.(*fiber.Error); ok {
+				code = x.Code
+			}
+			return c.Status(code).JSON(fiber.Map{"error": e.Error()})
+		}})
 	app.Use(recover.New(), logger.New(), cors.New(cors.Config{AllowOrigins: origin(), AllowHeaders: "Origin, Content-Type, Accept, Authorization", ExposeHeaders: "X-Total-Count", AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"}))
 	app.Static("/uploads", "./uploads")
 	server := &api.Server{DB: db}

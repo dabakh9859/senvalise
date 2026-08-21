@@ -116,9 +116,9 @@
         <h4>Boutique</h4>
         <ul>
           <li><a href="boutique.html">Tous les formats</a></li>
-          <li><a href="produit.html?ref=teranga-55">Teranga 55</a></li>
-          <li><a href="produit.html?ref=ndar-65">Ndar 65</a></li>
-          <li><a href="produit.html?ref=duo-teranga">Duo Teranga</a></li>
+          <li><a href="/p/teranga-55">Teranga 55</a></li>
+          <li><a href="/p/ndar-65">Ndar 65</a></li>
+          <li><a href="/p/duo-teranga">Duo Teranga</a></li>
         </ul>
       </div>
       <div class="footer__col">
@@ -150,7 +150,12 @@
 window.SV_PAGE = function () {
   var host    = document.querySelector("[data-pdp]");
   var related = document.querySelector("[data-related]");
-  var ref     = new URLSearchParams(location.search).get("ref") || "teranga-55";
+  // La fiche vit desormais sur /p/<reference>. L'ancienne forme
+  // « produit.html?ref=… » reste lue : des liens partages, des favoris et des
+  // pages deja indexees la portent encore.
+  var path    = location.pathname.match(/^\/p\/([^/?#]+)/);
+  var ref     = (path && decodeURIComponent(path[1])) ||
+                new URLSearchParams(location.search).get("ref") || "teranga-55";
   var p       = SV.findProduct(ref);
 
   if (!p) {

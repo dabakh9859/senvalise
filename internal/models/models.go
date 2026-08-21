@@ -315,8 +315,8 @@ type DeliveryNoteItem struct {
 }
 type Order struct {
 	Base
-	Reference     string      `json:"reference" gorm:"uniqueIndex"`
-	CustomerID    uint        `json:"customerId"`
+	Reference  string `json:"reference" gorm:"uniqueIndex"`
+	CustomerID uint   `json:"customerId"`
 	// SaleID relie la commande web a la facture emise en gestion. Il rend la
 	// conversion tracable et empeche de facturer deux fois la meme commande.
 	SaleID        *uint       `json:"saleId"`
@@ -373,17 +373,65 @@ type CashMovement struct {
 	Amount        int64  `json:"amount"`
 	Note          string `json:"note"`
 }
+
+// Message est la file d'envoi autant que l'archive : une ligne est creee en
+// « queued », le facteur la reprend, l'envoie et la marque « sent » ou
+// « failed ». Rien ne part donc sans laisser de trace, et un echec reste
+// consultable avec son motif.
+//
+// Statuts : queued -> sending -> sent | failed. « skipped » couvre le
+// destinataire ecarte avant tout appel reseau (pas de numero, consentement
+// retire) : ce n'est pas un echec technique et cela ne doit pas etre reessaye.
 type Message struct {
 	Base
-	CustomerID *uint      `json:"customerId"`
-	Channel    string     `json:"channel"`
-	Type       string     `json:"type"`
-	Status     string     `json:"status"`
-	Recipient  string     `json:"recipient"`
-	Subject    string     `json:"subject"`
-	Body       string     `json:"body"`
-	Error      string     `json:"error"`
-	SentAt     *time.Time `json:"sentAt"`
+	CustomerID *uint  `json:"customerId"`
+	CampaignID *uint  `json:"campaignId" gorm:"index"`
+	Channel    string `json:"channel"`
+	Type       string `json:"type"`
+	Status     string `json:"status" gorm:"index"`
+	Recipient  string `json:"recipient"`
+	Subject    string `json:"subject"`
+	Body       string `json:"body"`
+	Error      string `json:"error"`
+	// Document joint, decrit par son genre et son identifiant plutot que par
+	// un fichier : le PDF est reconstruit a l'envoi, donc toujours a jour des
+	// derniers reglements, et rien de lourd ne dort en base.
+	DocKind string `json:"docKind"`
+	DocID   uint   `json:"docId"`
+	// Identifiant rendu par WAHA ou par Orange. Il permet de rapprocher un
+	// accuse de reception ou une reclamation de l'operateur.
+	ExternalID  string     `json:"externalId"`
+	Attempts    int        `json:"attempts"`
+	ScheduledAt *time.Time `json:"scheduledAt" gorm:"index"`
+	SentAt      *time.Time `json:"sentAt"`
+}
+
+// Campaign est une diffusion publicitaire : un modele de message, une audience
+// decrite par des criteres (et non par une liste figee, qui vieillirait entre
+// la creation et l'envoi), un canal et une date.
+//
+// L'audience n'est resolue qu'au lancement, puis materialisee en messages :
+// a partir de la, la campagne ne bouge plus et son bilan est stable.
+type Campaign struct {
+	Base
+	Name     string `json:"name"`
+	Channel  string `json:"channel"`
+	Status   string `json:"status" gorm:"index"`
+	Audience string `json:"audience"`
+	Zone     string `json:"zone"`
+	// Fenetre d'activite du client, en jours. 0 = sans condition.
+	ActiveDays  int        `json:"activeDays"`
+	Subject     string     `json:"subject"`
+	Body        string     `json:"body"`
+	MediaURL    string     `json:"mediaUrl"`
+	ScheduledAt *time.Time `json:"scheduledAt"`
+	StartedAt   *time.Time `json:"startedAt"`
+	FinishedAt  *time.Time `json:"finishedAt"`
+	Total       int        `json:"total"`
+	Sent        int        `json:"sent"`
+	Failed      int        `json:"failed"`
+	Skipped     int        `json:"skipped"`
+	UserID      uint       `json:"userId"`
 }
 type MessageTemplate struct {
 	Base

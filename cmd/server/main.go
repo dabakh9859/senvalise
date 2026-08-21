@@ -29,13 +29,18 @@ func main() {
 	}})
 	app.Use(recover.New(), logger.New(), cors.New(cors.Config{AllowOrigins: origin(), AllowHeaders: "Origin, Content-Type, Accept, Authorization", ExposeHeaders: "X-Total-Count", AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"}))
 	app.Static("/uploads", "./uploads")
-	(&api.Server{DB: db}).Register(app)
+	server := &api.Server{DB: db}
+	server.Register(app)
+	// Le facteur de la messagerie tourne avec le serveur : les messages mis en
+	// file par les ecrans partent sans qu'aucune requete ne reste ouverte.
+	server.StartOutbox()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	log.Fatal(app.Listen(":" + port))
 }
+
 // checkSecret refuse de demarrer en production avec le secret de developpement.
 //
 // JWT_SECRET retombait silencieusement sur une valeur connue quand la variable

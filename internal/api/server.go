@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"math"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -60,6 +60,10 @@ func (s *Server) Register(app *fiber.App) {
 	app.Post("/api/auth/login", loginLimiter(), s.login)
 	app.Get("/api/shop/products", s.shopProducts)
 	app.Post("/api/shop/contact", s.createContact)
+	// Lien signe d'un document, ouvert sans compte : il doit etre pose avant le
+	// groupe authentifie ci-dessous, sinon le middleware du groupe s'applique a
+	// tout ce qui commence par « /api » et le client recoit un 401.
+	app.Get("/api/public/documents/:kind/:id/:token", s.publicDocument)
 	s.RegisterShop(app)
 	a := app.Group("/api", auth.Required)
 	a.Get("/me", s.me)
@@ -77,8 +81,8 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/expenses", auth.Manager, s.createExpense)
 	a.Put("/expenses/:id", auth.Manager, s.updateExpense)
 	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
-	managerOnly := map[string]bool{"categories": true, "brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "messages": true, "message-templates": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
-	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
+	managerOnly := map[string]bool{"categories": true, "brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "messages": true, "message-templates": true, "campaigns": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
+	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "campaigns", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
 		if managerRead[r] {
 			a.Get("/"+r, auth.Manager, func(c *fiber.Ctx) error { return s.list(c, r) })
@@ -138,6 +142,7 @@ func (s *Server) Register(app *fiber.App) {
 	// pose auth.Customer sans préfixe, et Fiber applique ce middleware à tout
 	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.
 	s.registerShopAdmin(a.Group("/boutique", auth.Manager))
+	s.registerMessaging(a)
 }
 
 func (s *Server) login(c *fiber.Ctx) error {
@@ -202,6 +207,8 @@ func modelFor(name string) any {
 		return &models.MessageTemplate{}
 	case "home-blocks":
 		return &models.HomeBlock{}
+	case "campaigns":
+		return &models.Campaign{}
 	case "activity-logs":
 		return &models.ActivityLog{}
 	case "settings":
@@ -259,6 +266,8 @@ func sliceFor(name string) any {
 		return &[]models.MessageTemplate{}
 	case "home-blocks":
 		return &[]models.HomeBlock{}
+	case "campaigns":
+		return &[]models.Campaign{}
 	case "activity-logs":
 		return &[]models.ActivityLog{}
 	case "settings":
@@ -422,6 +431,7 @@ func (s *Server) update(c *fiber.Ctx, name string) error {
 	}
 	return c.JSON(out)
 }
+
 // remove applique les règles de suppression de integrity.go.
 //
 // Le bouton corbeille échouait auparavant sur une violation de clé étrangère
@@ -1460,6 +1470,7 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 	s.DB.Preload("Items").First(&r, r.ID)
 	return c.Status(201).JSON(r)
 }
+
 // trackCash répercute un encaissement ou un remboursement en espèces sur la
 // session de caisse ouverte du vendeur.
 //

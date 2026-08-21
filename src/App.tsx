@@ -14,6 +14,9 @@ const ShopOrders=lazy(()=>import('./ShopOrders'));
 const ShopCatalog=lazy(()=>import('./ShopCatalog'));
 const ShopCustomers=lazy(()=>import('./ShopCustomers'));
 const ShopDelivery=lazy(()=>import('./ShopDelivery'));
+const Messaging=lazy(()=>import('./Messaging'));
+const Campaigns=lazy(()=>import('./Campaigns'));
+const Debts=lazy(()=>import('./Debts'));
 
 
 export default function App(){
@@ -36,7 +39,7 @@ export default function App(){
     <main className="main-area">
       <TopNavigation user={user} page={page} onPage={setPage}/>
       {view!=='dashboard'&&<header className="page-header"><div><small>ESPACE DE TRAVAIL</small><h1>{current.label}</h1></div><time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date())}</time></header>}
-      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user}/>:null}</Suspense></section>
+      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:view==='messaging'?<Messaging/>:view==='campaigns'?<Campaigns/>:view==='debts'?<Debts/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user}/>:null}</Suspense></section>
     </main>
   </div>;
 }

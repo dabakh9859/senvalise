@@ -1,6 +1,6 @@
 import {
-  BarChart3, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
-  MessageSquare, Package, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
+  BarChart3, BellRing, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
+  Megaphone, MessageSquare, Package, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
   Truck, Users, WalletCards, Wrench,
 } from 'lucide-react';
 
@@ -30,6 +30,7 @@ export const groups:NavGroup[]=[
   ]},
   {id:'finance',label:'Finances',icon:CircleDollarSign,items:[
     {id:'cash-sessions',label:'Sessions de caisse',resource:'cash-sessions',icon:WalletCards},
+    {id:'debts',label:'Créances et relances',icon:BellRing,manager:true},
     {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt,manager:true},
     {id:'reports',label:'Rapports',icon:BarChart3,manager:true},
   ]},
@@ -44,11 +45,13 @@ export const groups:NavGroup[]=[
     {id:'contacts',label:'Messages reçus',resource:'contact-messages',icon:MessageSquare,manager:true},
   ]},
   {id:'tools',label:'Outils',icon:Wrench,items:[
-    {id:'messages',label:'Messages',resource:'messages',icon:MessageSquare,manager:true},
+    {id:'campaigns',label:'Campagnes pub',icon:Megaphone,manager:true},
+    {id:'messages',label:'Messages envoyés',resource:'messages',icon:MessageSquare,manager:true},
     {id:'templates',label:'Modèles',resource:'message-templates',icon:MessageSquare,manager:true},
   ]},
   {id:'settings-group',label:'Paramètres',icon:Settings,items:[
     {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards,manager:true},
+    {id:'messaging',label:'WhatsApp et SMS',icon:MessageSquare,manager:true},
     {id:'categories',label:'Catégories',resource:'categories',icon:Tags,manager:true},
     {id:'users',label:'Utilisateurs',resource:'users',icon:Users,manager:true},
   ]},

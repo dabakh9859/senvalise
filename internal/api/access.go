@@ -20,7 +20,7 @@ import (
 var managerRead = map[string]bool{
 	"suppliers": true, "arrivals": true, "vaults": true, "orders": true,
 	"home-blocks": true, "contact-messages": true, "messages": true,
-	"message-templates": true, "settings": true, "delivery-zones": true,
+	"message-templates": true, "campaigns": true, "settings": true, "delivery-zones": true,
 	"users": true, "activity-logs": true,
 }
 

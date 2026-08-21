@@ -606,3 +606,126 @@
 .list-footer button{height:32px;padding:0 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;font-size:12.5px;font-weight:600}
 .list-footer button:hover:not(:disabled){background:var(--active)}
 .list-footer button:disabled{opacity:.55;cursor:default}
+
+/* ── Messagerie, créances et campagnes ─────────────────────────────────────
+   Trois écrans ajoutés avec la messagerie WhatsApp / SMS. Ils réutilisent
+   .panel, .settings-section et .settings-fields ; seules les pièces qui
+   n'existaient pas ailleurs sont définies ici. */
+
+.messaging-page .settings-fields{grid-template-columns:1fr 1fr;align-items:start}
+.messaging-page .settings-fields>label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:10px;font-weight:650}
+.messaging-page .settings-fields .field-wide{grid-column:1/-1}
+.messaging-page .settings-fields input,.messaging-page .settings-fields select,.messaging-page .settings-fields textarea,
+.debts-page .settings-fields input,.debts-page .settings-fields select,.debts-page .settings-fields textarea,
+.campaigns-page .settings-fields input,.campaigns-page .settings-fields select,.campaigns-page .settings-fields textarea{
+  border:1px solid var(--line);border-radius:7px;padding:9px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;outline:0}
+.messaging-page .settings-fields input:focus,.messaging-page .settings-fields textarea:focus,
+.debts-page textarea:focus,.campaigns-page textarea:focus{border-color:var(--accent)}
+.messaging-page .settings-fields small,.debts-page .settings-fields small,.campaigns-page .settings-fields small{
+  color:var(--muted);font-weight:500;font-size:10px;line-height:1.5}
+.field-note{margin-left:6px;font-style:normal;color:var(--ok);font-size:9px;text-transform:none}
+
+/* État des canaux : trois cartes de même gabarit, la couleur du liseré porte
+   l'information — vert connecté, rouge injoignable. */
+.messaging-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.channel-card{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:9px;padding:14px;background:var(--soft);display:flex;flex-direction:column;gap:4px}
+.channel-card.ok{border-left-color:var(--ok)}
+.channel-card.ko{border-left-color:var(--bad)}
+.channel-card svg{width:17px;height:17px;color:var(--muted)}
+.channel-card strong{font-size:12px}
+.channel-card>span{font-size:11px;color:var(--muted)}
+.channel-card small{font-size:10px;color:var(--muted)}
+.channel-card .channel-error{color:var(--bad)}
+.channel-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.channel-actions button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 8px;font-size:10px;cursor:pointer}
+.channel-actions button:hover:not(:disabled){border-color:var(--accent)}
+.channel-actions button:disabled{opacity:.45;cursor:not-allowed}
+.channel-actions button.danger{color:var(--bad)}
+.channel-actions svg{width:12px;height:12px}
+
+/* Appairage : le code QR doit rester assez grand pour être scanné depuis un
+   téléphone tenu à distance de l'écran. */
+.qr-pairing{grid-column:1/-1;margin-top:14px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;
+  border:1px dashed var(--accent-line);background:var(--accent-surface);border-radius:9px;padding:16px}
+.qr-pairing h4{display:flex;align-items:center;gap:7px;font-size:12px;margin:0}
+.qr-pairing h4 svg{width:15px;height:15px}
+.qr-pairing p{font-size:11px;color:var(--muted);line-height:1.6;margin:6px 0 0;max-width:420px}
+.qr-pairing img{width:190px;height:190px;border-radius:8px;background:#fff;padding:8px}
+.qr-waiting{width:190px;height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:10px;color:var(--muted)}
+
+.hint{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;font-size:11px;color:var(--muted);line-height:1.6}
+.hint svg{width:14px;height:14px;flex:0 0 auto;margin-top:1px;color:var(--warn)}
+
+/* Créances : les quatre chiffres de tête, puis le composeur, puis le tableau. */
+.debts-page,.campaigns-page{display:flex;flex-direction:column;gap:14px}
+.debt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.debt-summary .stat{display:flex;flex-direction:column;gap:3px}
+.debt-summary .stat small{font-size:9px;letter-spacing:.06em;color:var(--muted)}
+.debt-summary .stat strong{font-size:20px}
+.debt-summary .stat span{font-size:10px;color:var(--muted)}
+.debts-page header,.campaigns-page header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.debts-page header h3,.campaigns-page header h3{display:flex;align-items:center;gap:7px;font-size:13px;margin:0}
+.debts-page header h3 svg,.campaigns-page header h3 svg{width:15px;height:15px}
+.debts-page header p,.campaigns-page header p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.debts-page header>div:last-child,.campaigns-page header>div:last-child{display:flex;gap:7px}
+.debts-page table,.campaigns-page table{width:100%;border-collapse:collapse;font-size:12px}
+.debts-page th,.campaigns-page th{text-align:left;font-size:9px;letter-spacing:.05em;color:var(--muted);padding:7px 9px;border-bottom:1px solid var(--line)}
+.debts-page td,.campaigns-page td{padding:9px;border-bottom:1px solid var(--line);vertical-align:middle}
+.debts-page td span,.campaigns-page td span:not(.age-badge):not(.campaign-badge){display:block;font-size:10px;color:var(--muted)}
+.debts-page tr.selected,.campaigns-page tr.selected{background:var(--accent-surface)}
+.campaigns-page tbody tr{cursor:pointer}
+.campaigns-page tbody tr:hover{background:var(--soft)}
+.debts-page .align-right{text-align:right}
+.debts-page em{color:var(--muted);font-size:11px}
+.debts-page .empty,.campaigns-page .empty{font-size:11px;color:var(--muted);padding:18px 0;text-align:center}
+
+/* Ancienneté : au-delà d'un mois la créance change de nature, la couleur le
+   dit plus vite qu'un nombre de jours. */
+.age-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:650;background:var(--ok-surface);color:var(--ok)}
+.age-badge.warn{background:var(--warn-surface);color:var(--warn)}
+.age-badge.late{background:var(--bad-surface);color:var(--bad)}
+
+.campaign-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:650;background:var(--soft);color:var(--muted)}
+.campaign-badge.sending,.campaign-badge.queued{background:var(--warn-surface);color:var(--warn)}
+.campaign-badge.sent{background:var(--ok-surface);color:var(--ok)}
+.campaign-badge.failed,.campaign-badge.cancelled{background:var(--bad-surface);color:var(--bad)}
+
+.campaigns-page .settings-fields{grid-template-columns:1fr 1fr;align-items:start}
+.campaigns-page .settings-fields>label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:10px;font-weight:650}
+.campaigns-page .field-wide,.debts-page .field-wide{grid-column:1/-1}
+.debts-page .settings-fields{grid-template-columns:1fr 1fr;align-items:start}
+.debts-page .settings-fields>label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:10px;font-weight:650}
+.debts-page .setting-switch,.campaigns-page .setting-switch,.messaging-page .setting-switch{flex-direction:row!important;align-items:center;gap:9px}
+.debts-page .setting-switch b,.campaigns-page .setting-switch b,.messaging-page .setting-switch b{display:block;font-size:11px;color:var(--ink)}
+.debts-page .setting-switch small,.campaigns-page .setting-switch small,.messaging-page .setting-switch small{display:block;color:var(--muted);font-weight:500}
+
+/* Aperçu d'audience : cinq destinataires suffisent à vérifier que les jetons
+   sont bien remplacés — c'est la seule question que l'on se pose avant un
+   envoi de masse. */
+.campaign-preview{margin-top:14px;border:1px solid var(--line);border-radius:9px;padding:14px;background:var(--soft)}
+.campaign-preview>strong{font-size:12px}
+.campaign-preview ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.campaign-preview li{border-left:2px solid var(--accent);padding-left:10px}
+.campaign-preview li b{font-size:11px}
+.campaign-preview li small{margin-left:7px;font-size:10px;color:var(--muted)}
+.campaign-preview li p{margin:3px 0 0;font-size:11px;color:var(--ink);line-height:1.6}
+
+/* Envoi d'un document depuis sa fiche : panneau posé sur le document, pas une
+   seconde fenêtre — le gérant garde la pièce sous les yeux pendant qu'il
+   choisit le canal. */
+.send-document{position:absolute;top:58px;right:18px;z-index:5;width:min(400px,calc(100% - 36px));
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-card);padding:14px}
+.send-document header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.send-document header strong{font-size:12px}
+.send-fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.send-fields>label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:650;color:var(--muted)}
+.send-fields .field-wide{grid-column:1/-1}
+.send-fields input,.send-fields select,.send-fields textarea{border:1px solid var(--line);border-radius:7px;padding:8px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;outline:0}
+.send-document footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
+.send-document footer span{font-size:10px;color:var(--muted);line-height:1.5}
+.send-document .success,.send-document .error{margin-top:10px;font-size:11px}
+
+/* Le panneau d'envoi se positionne par rapport à la pièce affichée : sans ce
+   repère, il se calerait sur la fenêtre et sortirait du dialogue. */
+.invoice-dialog .business-main{position:relative}

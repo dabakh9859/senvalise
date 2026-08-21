@@ -1,7 +1,7 @@
 import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
 import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
-import {api,Entity,money} from './api';
+import {api,Entity,money,openFile} from './api';
 
 type Kind='invoice'|'quote'|'delivery';
 type Payment=Entity&{method?:string;amount?:number;status?:string;reference?:string};
@@ -22,6 +22,12 @@ export default function InvoiceWorkspace(props:Props){
   const items=doc.items??[];const payments=doc.payments??[];const customer=(doc.customer??{}) as Entity;const user=(doc.user??{}) as Entity;
   const [editing,setEditing]=useState<string|null>(null);const [saving,setSaving]=useState(false);const [error,setError]=useState('');
   const [customers,setCustomers]=useState<Entity[]>([]);const [variants,setVariants]=useState<Variant[]>([]);const [defaults,setDefaults]=useState<InvoiceDefaults>(baseInvoiceDefaults);const [form,setForm]=useState<Record<string,string>>({});
+  // Envoi depuis le serveur : le document part avec son PDF en piece jointe.
+  // L'ancien bouton ouvrait wa.me avec un simple texte — le client recevait un
+  // message parlant d'une facture qu'il ne recevait pas.
+  const [sendOpen,setSendOpen]=useState(false);const [sendChannel,setSendChannel]=useState('whatsapp');
+  const [sendTo,setSendTo]=useState('');const [sendBody,setSendBody]=useState('');
+  const [sendState,setSendState]=useState<{busy:boolean;note:string;error:string}>({busy:false,note:'',error:''});
   const remaining=Math.max(0,Number(doc.total??0)-Number(doc.paid??0));
   const invoiceStatus=remaining===0&&Number(doc.total)>0?'Payée':Number(doc.paid)>0?'Partiellement réglée':'À régler';
   const status=props.kind==='invoice'?invoiceStatus:props.kind==='quote'?({draft:'Brouillon',sent:'Envoyé',accepted:'Accepté',cancelled:'Annulé'}[String(doc.status)]??'Brouillon'):({ready:'Prêt à livrer',delivered:'Livré',cancelled:'Annulé'}[String(doc.status)]??'Prêt à livrer');
@@ -68,11 +74,24 @@ export default function InvoiceWorkspace(props:Props){
   const paperFooter=`${title} ${String(doc.reference)} · ${invoiceInfo.companyName} · ${invoiceInfo.address} · ${invoiceInfo.phone}`;
   const print=()=>{void printDocument('business-document-print',paperTitle,paperFooter)};
   const download=print;
-  const share=(channel:'whatsapp'|'email')=>{const message=`Bonjour ${String(customer.name??'')}, voici votre ${title.toLowerCase()} ${doc.reference}.`;if(channel==='whatsapp')window.open(`https://wa.me/${String(customer.phone??'').replace(/\D/g,'')}?text=${encodeURIComponent(message)}`,'_blank','noopener,noreferrer');else window.location.href=`mailto:${String(customer.email??'')}?subject=${encodeURIComponent(`${title} ${doc.reference}`)}&body=${encodeURIComponent(message)}`};
+  const email=()=>{const message=`Bonjour ${String(customer.name??'')}, voici votre ${title.toLowerCase()} ${doc.reference}.`;window.location.href=`mailto:${String(customer.email??'')}?subject=${encodeURIComponent(`${title} ${doc.reference}`)}&body=${encodeURIComponent(message)}`};
+  const openSend=()=>{setSendTo(String(customer.phone??''));setSendBody('');setSendState({busy:false,note:'',error:''});setSendOpen(true)};
+  // Le PDF vient du serveur et non de l'impression du navigateur : c'est le
+  // meme fichier que celui recu par le client, donc ce qu'il faut relire en
+  // cas de contestation.
+  const openPdf=()=>{void openFile(`/api/documents/${props.kind}/${doc.id}/pdf`).catch(refreshError)};
+  const sendDocument=async()=>{
+    setSendState({busy:true,note:'',error:''});
+    try{
+      await api(`/api/documents/${props.kind}/${doc.id}/send`,{method:'POST',
+        body:JSON.stringify({channel:sendChannel,to:sendTo,message:sendBody})});
+      setSendState({busy:false,note:`${title.charAt(0)+title.slice(1).toLowerCase()} mis${props.kind==='delivery'?'':'e'} en file d'envoi.`,error:''});
+    }catch(reason){setSendState({busy:false,note:'',error:(reason as Error).message})}
+  };
   return <div className="overlay invoice-overlay" onMouseDown={props.onClose}>
     <section className={`invoice-dialog business-dialog ${editing?'with-editor':''}`} role="dialog" aria-modal="true" onMouseDown={event=>event.stopPropagation()}>
       <div className="business-main">
-        <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={()=>share('whatsapp')}><MessageCircle/>WhatsApp</button><button onClick={()=>share('email')}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
+        <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
         <div className="invoice-scroll"><article className="invoice-paper" id="business-document-print">
           <div className="invoice-brand-bar"><div className="invoice-logo-mark"><i/><i/></div><button className={`invoice-brand-details document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><strong>{invoiceInfo.companyName}</strong><small>{invoiceInfo.tagline}</small></button><button className={`invoice-brand-contact document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>{invoiceInfo.phone}<br/>{invoiceInfo.address}</button></div>
           <div className="invoice-title-row"><button className="document-editable" onClick={()=>openEdit('general')}><small>{title}</small><h2>{title}</h2></button><button className="document-editable align-right" onClick={()=>openEdit('general')}><strong>{doc.reference}</strong><span>Émis le {longDate(doc.createdAt)}</span></button></div>
@@ -85,6 +104,18 @@ export default function InvoiceWorkspace(props:Props){
         </article></div>
         {props.isAdmin&&<footer className="invoice-manager-actions"><span>Cliquez sur le client, le règlement, les montants ou une ligne pour les modifier.</span><div>{props.onConvert&&<button className="primary" onClick={props.onConvert} disabled={Boolean(doc.convertedSaleId)}><FileCheck2/>{doc.convertedSaleId?'Déjà converti':'Créer la facture'}</button>}{props.onGenerateDelivery&&<button className="primary" onClick={props.onGenerateDelivery} disabled={Boolean(doc.deliveryNote)}><Truck/>{doc.deliveryNote?'Bon déjà généré':'Générer le bon'}</button>}<button onClick={()=>openEdit('general')}><Pencil/>Modifier</button><button className="invoice-delete" onClick={props.onDelete}>Supprimer</button></div></footer>}
       </div>
+      {sendOpen&&<div className="send-document" role="dialog" aria-label="Envoyer le document">
+        <header><strong>Envoyer {pieceLabel} {String(doc.reference)}</strong><button className="icon" onClick={()=>setSendOpen(false)} aria-label="Fermer"><X/></button></header>
+        <div className="send-fields">
+          <label>Canal<select value={sendChannel} onChange={event=>setSendChannel(event.target.value)}><option value="whatsapp">WhatsApp (PDF joint)</option><option value="sms">SMS (lien)</option></select></label>
+          <label>Numéro<input value={sendTo} onChange={event=>setSendTo(event.target.value)} placeholder="77 123 45 67"/></label>
+          <label className="field-wide">Message <small>(vide = texte par défaut)</small><textarea rows={3} value={sendBody} onChange={event=>setSendBody(event.target.value)} placeholder="Bonjour {{nom}}, voici votre document {{reference}}…"/></label>
+        </div>
+        {sendState.note&&<div className="success">{sendState.note}</div>}
+        {sendState.error&&<div className="error">{sendState.error}</div>}
+        <footer><span>{sendChannel==='sms'?'Le SMS transporte un lien signé : il n’accepte pas de pièce jointe.':'Le PDF est reconstruit à l’envoi, donc à jour des derniers règlements.'}</span>
+          <button className="primary" onClick={()=>void sendDocument()} disabled={sendState.busy||!sendTo.trim()}>{sendState.busy?'Envoi…':'Envoyer'}</button></footer>
+      </div>}
       {editing&&<EditDrawer title={editorTitle(editing,editLine)} editing={editing} kind={props.kind} form={form} setForm={setForm} customers={customers} variants={variants} usedVariantIds={items.map(item=>Number(item.variantId))} payments={payments} remaining={remaining} editLine={editLine} canDeleteLine={items.length>1&&!locked} onDeleteLine={deleteLine} clientSignatureUrl={String(doc.clientSignatureUrl??'')} companySignatureUrl={invoiceInfo.companySignatureUrl} saving={saving} error={error} onClose={()=>setEditing(null)} onSubmit={submit} onCancelPayment={cancelPayment} onCancelAll={cancelAll} onUploadSignature={uploadSignature}/>} 
     </section>
   </div>;

@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {CircleAlert,Megaphone,Play,Plus,RefreshCw,Save,Trash2,Users,X} from 'lucide-react';
 import {api} from './api';
+import Modal from './Modal';
 
 // Campagnes publicitaires WhatsApp et SMS.
 //
@@ -35,6 +36,9 @@ export default function Campaigns(){
   const[draft,setDraft]=useState<typeof blank&{id?:number}>(blank);
   const[preview,setPreview]=useState<Preview|null>(null);
   const[report,setReport]=useState<Report|null>(null);
+  // L'editeur ne s'affiche plus en permanence sous la liste : il s'ouvre sur
+  // la page, comme les creations du reste de l'application.
+  const[editing,setEditing]=useState(false);
   const[loading,setLoading]=useState(true);
   const[busy,setBusy]=useState('');
   const[message,setMessage]=useState('');
@@ -61,7 +65,7 @@ export default function Campaigns(){
         ?await api<Campaign>(`/api/campaigns/${draft.id}`,{method:'PUT',body:JSON.stringify(payload)})
         :await api<Campaign>('/api/campaigns',{method:'POST',body:JSON.stringify({...payload,status:'draft'})});
       setDraft({...blank,...saved,scheduledAt:saved.scheduledAt?saved.scheduledAt.slice(0,16):''});
-      setMessage('Campagne enregistrée.');await load();
+      setMessage('Campagne enregistrée.');setEditing(false);await load();
     }catch(reason){setError((reason as Error).message)}
     finally{setBusy('')}
   };
@@ -79,7 +83,7 @@ export default function Campaigns(){
     try{
       const result=await api<{queued:number;skipped:number}>(`/api/campaigns/${id}/send`,{method:'POST'});
       setMessage(`${result.queued} message(s) en file${result.skipped?`, ${result.skipped} écarté(s)`:''}.`);
-      await load();void openReport(id);
+      setEditing(false);await load();void openReport(id);
     }catch(reason){setError((reason as Error).message)}
     finally{setBusy('')}
   };
@@ -105,9 +109,11 @@ export default function Campaigns(){
 
   const edit=(row:Campaign)=>{
     setDraft({...blank,...row,scheduledAt:row.scheduledAt?row.scheduledAt.slice(0,16):''});
-    setPreview(null);void loadPreview(row.id);
+    setPreview(null);setError('');setEditing(true);void loadPreview(row.id);
     if(row.status!=='draft')void openReport(row.id);else setReport(null);
   };
+
+  const startNew=()=>{setDraft(blank);setPreview(null);setReport(null);setError('');setEditing(true)};
 
   // Le coût d'une diffusion SMS se joue sur le nombre de segments : un accent
   // fait passer de 160 à 70 caractères par segment, donc double la facture.
@@ -116,10 +122,13 @@ export default function Campaigns(){
     :'',[draft.channel,preview]);
 
   return <div className="campaigns-page">
+    {message&&<div className="panel success">{message}</div>}
+    {!editing&&error&&<div className="panel error">{error}</div>}
+
     <section className="panel campaign-list">
       <header><div><h3><Megaphone/>Campagnes</h3><p>Diffusions WhatsApp et SMS vers les clients consentants.</p></div>
         <div><button className="compact" onClick={()=>void load()}><RefreshCw/>Actualiser</button>
-        <button className="primary compact" onClick={()=>{setDraft(blank);setPreview(null);setReport(null)}}><Plus/>Nouvelle</button></div></header>
+        <button className="primary compact" onClick={startNew}><Plus/>Nouvelle</button></div></header>
       {loading?<div className="loading"><i/><span>Chargement…</span></div>
         :rows.length===0?<p className="empty">Aucune campagne pour l’instant.</p>
         :<table><thead><tr><th>Nom</th><th>Canal</th><th>État</th><th>Envoyés</th><th>Échecs</th><th/></tr></thead>
@@ -136,14 +145,18 @@ export default function Campaigns(){
           </tr>)}</tbody></table>}
     </section>
 
-    <section className="panel campaign-editor">
-      <header><div><h3>{draft.id?'Modifier la campagne':'Nouvelle campagne'}</h3><p>{locked?'Campagne lancée : le contenu n’est plus modifiable.':'Le message est personnalisé pour chaque destinataire.'}</p></div>
-        <div>{!locked&&<button className="compact" onClick={()=>void save()} disabled={busy==='save'||!draft.name.trim()}><Save/>Enregistrer</button>}
-        {draft.id&&<button className="compact" onClick={()=>void loadPreview(draft.id as number)} disabled={busy==='preview'}><Users/>Aperçu</button>}
-        {draft.id&&!locked&&<button className="primary compact" onClick={()=>void send(draft.id as number)} disabled={busy==='send'}><Play/>Lancer</button>}</div></header>
-      {message&&<div className="success">{message}</div>}
+    {editing&&<Modal wide eyebrow={draft.id?'CAMPAGNE':'NOUVELLE CAMPAGNE'}
+      title={draft.id?(draft.name||'Campagne'):'Nouvelle campagne'}
+      subtitle={locked?'Campagne lancée : le contenu n’est plus modifiable.':'Le message est personnalisé pour chaque destinataire.'}
+      onClose={()=>setEditing(false)}
+      footer={<>
+        <button type="button" onClick={()=>setEditing(false)}>Fermer</button>
+        {draft.id&&<button type="button" onClick={()=>void loadPreview(draft.id as number)} disabled={busy==='preview'}><Users/>Aperçu de l’audience</button>}
+        {!locked&&<button type="button" className="primary" onClick={()=>void save()} disabled={busy==='save'||!draft.name.trim()}><Save/>{busy==='save'?'Enregistrement…':'Enregistrer'}</button>}
+        {draft.id&&!locked&&<button type="button" className="primary" onClick={()=>void send(draft.id as number)} disabled={busy==='send'}><Play/>Lancer</button>}
+      </>}>
       {error&&<div className="error">{error}</div>}
-      <div className="settings-fields">
+      <div className="form-grid">
         <label>Nom interne<input value={draft.name} onChange={event=>setDraft({...draft,name:event.target.value})} disabled={locked} placeholder="Promo Tabaski"/></label>
         <label>Canal<select value={draft.channel} onChange={event=>setDraft({...draft,channel:event.target.value})} disabled={locked}><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select></label>
         <label>Audience<select value={draft.audience} onChange={event=>setDraft({...draft,audience:event.target.value})} disabled={locked}>{audiences.map(item=><option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
@@ -160,7 +173,7 @@ export default function Campaigns(){
         {preview.sample.length===0?<p className="empty">Aucun client ne correspond à ces critères.</p>
           :<ul>{preview.sample.map((item,index)=><li key={index}><b>{item.name}</b><small>{item.phone}</small><p>{item.preview}</p></li>)}</ul>}
       </div>}
-    </section>
+    </Modal>}
 
     {report&&<section className="panel campaign-report">
       <header><div><h3>Bilan — {report.campaign.name}</h3>

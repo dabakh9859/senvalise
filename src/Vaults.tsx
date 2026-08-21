@@ -1,15 +1,20 @@
 import {useCallback,useEffect,useState} from 'react';
-import {ArrowDownToLine,ArrowUpFromLine,Lock,LockOpen,Plus,RefreshCw,Search,Target,WalletCards} from 'lucide-react';
+import {ArrowDownToLine,ArrowUpFromLine,Info,Lock,LockOpen,Plus,RefreshCw,Search,Target,WalletCards} from 'lucide-react';
 import {api,money} from './api';
+import Modal from './Modal';
 
-// Coffres clients — l'épargne que le client constitue au comptoir ou depuis la
-// boutique, et avec laquelle il paie ensuite.
+// Coffres clients — l'épargne que le client constitue puis dépense en boutique.
 //
-// L'écran ne se contentait jusqu'ici d'une liste brute : un identifiant, un
-// solde, aucun moyen d'enregistrer le billet reçu au comptoir. Ici, versement
-// et retrait passent par le serveur dans une transaction verrouillée, et un
-// mouvement en espèces alimente la session de caisse ouverte — sinon l'écart
-// constaté à la clôture serait exactement celui du versement.
+// Le coffre appartient au client : il l'ouvre lui-même depuis la boutique, à
+// sa première visite sur la page « Mon coffre ». Cet écran est le poste de
+// contrôle du comptoir — voir les encours, enregistrer un versement reçu en
+// main propre, rembourser, fixer un objectif, clôturer. L'ouverture depuis
+// ici reste possible, mais c'est une exception : elle sert au client de
+// passage, qui n'a pas de compte sur le site.
+//
+// Versement et retrait passent par le serveur dans une transaction verrouillée,
+// et un mouvement en espèces alimente la session de caisse ouverte — sinon
+// l'écart constaté à la clôture serait exactement celui du versement.
 
 type Vault={
   id:number;customerId:number;name:string;phone:string;balance:number;goal:number;goalRef:string;
@@ -43,6 +48,9 @@ export default function Vaults(){
   const[busy,setBusy]=useState('');
   const[message,setMessage]=useState('');
   const[error,setError]=useState('');
+  // Erreur propre à la fenêtre ouverte : affichée dedans, elle resterait
+  // invisible derrière si on la posait sur la page.
+  const[modalError,setModalError]=useState('');
 
   const load=useCallback(async(term:string)=>{
     setLoading(true);
@@ -55,7 +63,7 @@ export default function Vaults(){
   useEffect(()=>{void load('')},[load]);
 
   const open=async(id:number)=>{
-    setError('');setMessage('');
+    setError('');setModalError('');setMessage('');
     try{
       const detail=await api<Detail>(`/api/vaults/${id}/detail`);
       setCurrent(detail);setMove({amount:'',method:'cash',note:''});
@@ -63,58 +71,58 @@ export default function Vaults(){
     }catch(reason){setError((reason as Error).message)}
   };
 
-  // Versement et retrait partagent le même formulaire : c'est le même geste
-  // au comptoir, seul le sens change.
+  // Versement et retrait partagent le même formulaire : c'est le même geste au
+  // comptoir, seul le sens change.
   const submitMove=async(direction:'deposit'|'withdraw')=>{
     if(!current)return;
     const amount=Number(move.amount);
-    if(!amount||amount<=0){setError('Saisissez un montant supérieur à zéro.');return}
-    setBusy(direction);setError('');setMessage('');
+    if(!amount||amount<=0){setModalError('Saisissez un montant supérieur à zéro.');return}
+    setBusy(direction);setModalError('');
     try{
       await api(`/api/vaults/${current.vault.id}/${direction}`,{method:'POST',
         body:JSON.stringify({amount,method:move.method,note:move.note})});
-      setMessage(direction==='deposit'?`Versement de ${money(amount)} enregistré.`:`Retrait de ${money(amount)} enregistré.`);
       setMove({amount:'',method:move.method,note:''});
       await open(current.vault.id);await load(search);
-    }catch(reason){setError((reason as Error).message)}
+      setMessage(direction==='deposit'?`Versement de ${money(amount)} enregistré.`:`Retrait de ${money(amount)} enregistré.`);
+    }catch(reason){setModalError((reason as Error).message)}
     finally{setBusy('')}
   };
 
   const saveGoal=async()=>{
     if(!current)return;
-    setBusy('goal');setError('');setMessage('');
+    setBusy('goal');setModalError('');
     try{
       await api(`/api/vaults/${current.vault.id}/goal`,{method:'POST',body:JSON.stringify({goal:Number(goal.goal)||0,goalRef:goal.goalRef})});
-      setMessage('Objectif enregistré.');await open(current.vault.id);await load(search);
-    }catch(reason){setError((reason as Error).message)}
+      await open(current.vault.id);await load(search);setMessage('Objectif enregistré.');
+    }catch(reason){setModalError((reason as Error).message)}
     finally{setBusy('')}
   };
 
   const setStatus=async(status:string)=>{
     if(!current)return;
-    if(status==='closed'&&!confirm('Clôturer ce coffre ? Le solde doit être à zéro.'))return;
-    setBusy('status');setError('');setMessage('');
+    setBusy('status');setModalError('');
     try{
       await api(`/api/vaults/${current.vault.id}/status`,{method:'POST',body:JSON.stringify({status})});
-      setMessage(`Coffre ${statusLabels[status]?.toLowerCase()}.`);await open(current.vault.id);await load(search);
-    }catch(reason){setError((reason as Error).message)}
+      await open(current.vault.id);await load(search);setMessage(`Coffre ${statusLabels[status]?.toLowerCase()}.`);
+    }catch(reason){setModalError((reason as Error).message)}
     finally{setBusy('')}
   };
 
   const startOpening=async()=>{
-    setOpening(true);setError('');setMessage('');
+    setOpening(true);setModalError('');setMessage('');
+    setNewVault({customerId:'',goal:'0',goalRef:''});
     try{setCandidates(await api<Candidate[]>('/api/vaults-candidates'))}
-    catch(reason){setError((reason as Error).message)}
+    catch(reason){setModalError((reason as Error).message)}
   };
 
   const createVault=async()=>{
-    setBusy('open');setError('');setMessage('');
+    setBusy('open');setModalError('');
     try{
       const created=await api<{id:number}>('/api/vaults/open',{method:'POST',
         body:JSON.stringify({customerId:Number(newVault.customerId),goal:Number(newVault.goal)||0,goalRef:newVault.goalRef})});
-      setMessage('Coffre ouvert.');setOpening(false);setNewVault({customerId:'',goal:'0',goalRef:''});
+      setOpening(false);setMessage('Coffre ouvert.');
       await load(search);await open(created.id);
-    }catch(reason){setError((reason as Error).message)}
+    }catch(reason){setModalError((reason as Error).message)}
     finally{setBusy('')}
   };
 
@@ -131,32 +139,19 @@ export default function Vaults(){
 
     <section className="panel vault-list">
       <header>
-        <div><h3><WalletCards/>Coffres clients</h3><p>L’encours est de l’argent qui appartient aux clients : il n’est pas un produit de la boutique.</p></div>
+        <div><h3><WalletCards/>Coffres clients</h3><p>Les clients ouvrent leur coffre depuis la boutique. L’encours est de l’argent qui leur appartient : ce n’est pas un produit de la boutique.</p></div>
         <div>
           <label className="vault-search"><Search/><input value={search} placeholder="Nom ou téléphone" onChange={event=>{setSearch(event.target.value);void load(event.target.value)}}/></label>
           <button className="compact" onClick={()=>void load(search)}><RefreshCw/>Actualiser</button>
           <button className="primary compact" onClick={()=>void startOpening()}><Plus/>Ouvrir un coffre</button>
         </div>
       </header>
-      {opening&&<div className="vault-open-form settings-fields">
-        <label>Client sans coffre<select value={newVault.customerId} onChange={event=>setNewVault({...newVault,customerId:event.target.value})}>
-          <option value="">— Choisir —</option>
-          {candidates.map(item=><option key={item.id} value={item.id}>{item.name}{item.phone?` — ${item.phone}`:''}</option>)}
-        </select></label>
-        <label>Objectif (F)<input type="number" min="0" step="1000" value={newVault.goal} onChange={event=>setNewVault({...newVault,goal:event.target.value})}/></label>
-        <label className="field-wide">Intitulé de l’objectif<input value={newVault.goalRef} onChange={event=>setNewVault({...newVault,goalRef:event.target.value})} placeholder="Valise Ndar 65 · départ décembre"/></label>
-        <div className="vault-open-actions">
-          <button className="primary compact" onClick={()=>void createVault()} disabled={!newVault.customerId||busy==='open'}>Ouvrir</button>
-          <button className="compact" onClick={()=>setOpening(false)}>Annuler</button>
-        </div>
-        {candidates.length===0&&<p className="hint">Tous les clients actifs ont déjà un coffre.</p>}
-      </div>}
       {loading&&rows.length===0?<div className="loading"><i/><span>Chargement des coffres…</span></div>
-        :rows.length===0?<p className="empty">Aucun coffre ouvert pour l’instant.</p>
+        :rows.length===0?<p className="empty">Aucun coffre pour l’instant. Un coffre naît à la première visite d’un client sur sa page « Mon coffre ».</p>
         :<table><thead><tr><th>Client</th><th>Téléphone</th><th className="align-right">Solde</th><th>Objectif</th><th>Mouvements</th><th>Dernier</th><th>État</th></tr></thead>
           <tbody>{rows.map(row=>{
             const progress=row.goal>0?Math.min(100,Math.round(row.balance*100/row.goal)):0;
-            return <tr key={row.id} className={current?.vault.id===row.id?'selected':''} onClick={()=>void open(row.id)}>
+            return <tr key={row.id} onClick={()=>void open(row.id)}>
               <td><strong>{row.name}</strong>{row.goalRef&&<span>{row.goalRef}</span>}</td>
               <td>{row.phone||<em>—</em>}</td>
               <td className="align-right"><strong>{money(row.balance)}</strong></td>
@@ -169,33 +164,54 @@ export default function Vaults(){
             </tr>})}</tbody></table>}
     </section>
 
-    {current&&<section className="panel vault-detail">
-      <header>
-        <div><h3>{current.customer.name}</h3><p>{current.customer.phone||'sans téléphone'} · solde <b>{money(current.vault.balance)}</b>{current.vault.goalRef?` · objectif : ${current.vault.goalRef}`:''}</p></div>
-        <div>
-          {current.vault.status!=='closed'
-            ?<button className="compact" onClick={()=>void setStatus('closed')} disabled={busy==='status'}><Lock/>Clôturer</button>
-            :<button className="compact" onClick={()=>void setStatus('open')} disabled={busy==='status'}><LockOpen/>Rouvrir</button>}
-        </div>
-      </header>
+    {opening&&<Modal eyebrow="EXCEPTION DE COMPTOIR" title="Ouvrir un coffre"
+      subtitle="Réservé au client de passage : un client inscrit sur la boutique ouvre son coffre lui-même."
+      onClose={()=>setOpening(false)}
+      footer={<>
+        <button type="button" onClick={()=>setOpening(false)}>Annuler</button>
+        <button type="button" className="primary" onClick={()=>void createVault()} disabled={!newVault.customerId||busy==='open'}>{busy==='open'?'Ouverture…':'Ouvrir le coffre'}</button>
+      </>}>
+      <div className="form-help"><Info/><span>Seuls les clients actifs sans coffre apparaissent ici.</span></div>
+      <div className="form-grid">
+        <label>Client<select value={newVault.customerId} onChange={event=>setNewVault({...newVault,customerId:event.target.value})}>
+          <option value="">— Choisir —</option>
+          {candidates.map(item=><option key={item.id} value={item.id}>{item.name}{item.phone?` — ${item.phone}`:''}</option>)}
+        </select></label>
+        <label>Objectif (F)<input type="number" min="0" step="1000" value={newVault.goal} onChange={event=>setNewVault({...newVault,goal:event.target.value})}/></label>
+        <label className="field-wide">Intitulé de l’objectif<input value={newVault.goalRef} onChange={event=>setNewVault({...newVault,goalRef:event.target.value})} placeholder="Valise Ndar 65 · départ décembre"/></label>
+      </div>
+      {candidates.length===0&&<p className="empty">Tous les clients actifs ont déjà un coffre.</p>}
+      {modalError&&<div className="error">{modalError}</div>}
+    </Modal>}
+
+    {current&&<Modal wide eyebrow="COFFRE CLIENT" title={current.customer.name}
+      subtitle={`${current.customer.phone||'sans téléphone'} · solde ${money(current.vault.balance)}${current.vault.goalRef?` · objectif : ${current.vault.goalRef}`:''}`}
+      onClose={()=>setCurrent(null)}
+      footer={<>
+        {current.vault.status!=='closed'
+          ?<button type="button" onClick={()=>void setStatus('closed')} disabled={busy==='status'}><Lock/>Clôturer</button>
+          :<button type="button" onClick={()=>void setStatus('open')} disabled={busy==='status'}><LockOpen/>Rouvrir</button>}
+        <button type="button" className="primary" onClick={()=>setCurrent(null)}>Fermer</button>
+      </>}>
+      {modalError&&<div className="error">{modalError}</div>}
 
       <div className="vault-actions">
-        <div className="settings-fields">
-          <label>Montant (F)<input type="number" min="0" step="500" value={move.amount} onChange={event=>setMove({...move,amount:event.target.value})}/></label>
+        <div className="form-grid">
+          <label>Montant (F)<input type="number" min="0" step="500" value={move.amount} onChange={event=>setMove({...move,amount:event.target.value})} autoFocus/></label>
           <label>Moyen<select value={move.method} onChange={event=>setMove({...move,method:event.target.value})}>{methods.map(item=><option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
           <label className="field-wide">Note<input value={move.note} onChange={event=>setMove({...move,note:event.target.value})} placeholder="Versement reçu au comptoir"/></label>
         </div>
         <div className="vault-buttons">
-          <button className="primary" onClick={()=>void submitMove('deposit')} disabled={busy!==''||current.vault.status==='closed'}><ArrowDownToLine/>Versement</button>
-          <button onClick={()=>void submitMove('withdraw')} disabled={busy!==''||current.vault.status==='closed'}><ArrowUpFromLine/>Retrait</button>
+          <button type="button" className="primary" onClick={()=>void submitMove('deposit')} disabled={busy!==''||current.vault.status==='closed'}><ArrowDownToLine/>Versement</button>
+          <button type="button" onClick={()=>void submitMove('withdraw')} disabled={busy!==''||current.vault.status==='closed'}><ArrowUpFromLine/>Retrait</button>
         </div>
-        <p className="hint">Un mouvement en espèces alimente la session de caisse ouverte : le tiroir et le coffre restent cohérents.</p>
+        <p className="hint"><Info/>Un mouvement en espèces alimente la session de caisse ouverte : le tiroir et le coffre restent cohérents.</p>
       </div>
 
-      <div className="settings-fields vault-goal">
+      <div className="form-grid vault-goal">
         <label>Objectif (F)<input type="number" min="0" step="1000" value={goal.goal} onChange={event=>setGoal({...goal,goal:event.target.value})}/></label>
         <label>Intitulé<input value={goal.goalRef} onChange={event=>setGoal({...goal,goalRef:event.target.value})}/></label>
-        <div className="vault-open-actions"><button className="compact" onClick={()=>void saveGoal()} disabled={busy==='goal'}><Target/>Enregistrer l’objectif</button></div>
+        <div className="vault-open-actions"><button type="button" className="compact" onClick={()=>void saveGoal()} disabled={busy==='goal'}><Target/>Enregistrer l’objectif</button></div>
       </div>
 
       <h4>Historique</h4>
@@ -217,6 +233,6 @@ export default function Vaults(){
             <td className="align-right">{money(row.total)}</td>
           </tr>)}</tbody></table>
       </>}
-    </section>}
+    </Modal>}
   </div>;
 }

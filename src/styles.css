@@ -814,3 +814,17 @@
 /* Logo dans la barre latérale et sur l'écran de connexion. */
 .rail-brand img{width:26px;height:26px;object-fit:contain;border-radius:6px}
 .login-brand img{width:38px;height:38px;object-fit:contain;border-radius:8px}
+
+/* ── Modales des écrans Coffres et Campagnes ───────────────────────────────
+   Le gabarit .modal fait 780 px : suffisant pour un formulaire, trop étroit
+   pour une fiche qui porte aussi un historique. */
+.wide-modal{max-width:940px}
+.modal-actions button{display:inline-flex;align-items:center;gap:6px}
+.modal-actions button svg{width:14px;height:14px}
+/* Les tableaux d'historique débordent sur les petits écrans : ils défilent
+   dans leur propre boîte plutôt que d'élargir la fenêtre. */
+.wide-modal table{display:block;overflow-x:auto;white-space:nowrap}
+.wide-modal .vault-actions,.wide-modal .vault-goal{margin-top:4px}
+.wide-modal h4{margin:20px 0 8px}
+.overlay .campaign-preview{margin-top:16px}
+.overlay .form-grid{max-height:none}

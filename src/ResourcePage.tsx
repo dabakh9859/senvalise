@@ -4,7 +4,7 @@ import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
 
-type Props={title:string;resource:string;user:User};
+type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>void};
 type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string}|null;
 
 const labels:Record<string,string>={
@@ -111,7 +111,7 @@ function choicesFor(field:string,resource:string):Choice[]|undefined{
   return undefined;
 }
 
-export default function ResourcePage({title,resource,user}:Props){
+export default function ResourcePage({title,resource,user,openId,onOpened}:Props){
   const[data,setData]=useState<Entity[]>([]);
   const[loading,setLoading]=useState(true);
   const[query,setQuery]=useState('');
@@ -139,6 +139,21 @@ export default function ResourcePage({title,resource,user}:Props){
   const loadMore=()=>{setLoadingMore(true);apiPage<Entity>(pageUrl(query,data.length)).then(page=>{setData(current=>[...current,...page.rows]);setTotal(page.total)}).catch(reason=>setError((reason as Error).message)).finally(()=>setLoadingMore(false))};
   // Une frappe ne doit pas déclencher une requête par caractère.
   useEffect(()=>{const timer=setTimeout(load,250);return()=>clearTimeout(timer)},[load]);
+
+  // Pièce désignée par un autre écran — la caisse, après un encaissement. On
+  // la charge directement plutôt que d'attendre qu'elle apparaisse dans la
+  // liste : elle vient d'être créée, et la liste peut être filtrée ou paginée
+  // ailleurs. onOpened remet le compteur à zéro, sans quoi revenir sur l'écran
+  // rouvrirait indéfiniment la même facture.
+  useEffect(()=>{
+    if(!openId)return;
+    let active=true;
+    api<Entity>(endpoint(resource,openId))
+      .then(row=>{if(active)setDialog({mode:'detail',row,resource})})
+      .catch(reason=>setError((reason as Error).message))
+      .finally(()=>{if(active)onOpened?.()});
+    return()=>{active=false};
+  },[openId,resource,onOpened]);
   const shown=data;
   const columns=useMemo(()=>{const preferred=['reference','name','sku','email','phone','type','reason','status','active','online','stock','quantity','price','total','paid','balance','role','createdAt'];const keys=new Set(data.flatMap(Object.keys));return preferred.filter(key=>keys.has(key)).slice(0,6)},[data]);
   const openDetail=async(row:Entity)=>{setError('');try{const full=await api<Entity>(endpoint(resource,row.id));setDialog({mode:'detail',row:full})}catch(reason){setError((reason as Error).message)}};

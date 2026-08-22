@@ -19,3 +19,37 @@ export async function apiFile(path:string):Promise<string>{const r=await fetch(b
 // fois l'onglet servi : sans révocation, chaque aperçu garderait le fichier en
 // mémoire jusqu'au rechargement de l'application.
 export async function openFile(path:string):Promise<void>{const url=await apiFile(path);window.open(url,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(url),60000)}
+
+// printFile ouvre la boîte d'impression du navigateur sur un PDF protégé.
+//
+// Un lien vers /api/... ne porterait pas le jeton, et window.print() imprime la
+// page affichée, pas un fichier. On récupère donc le PDF par fetch, on le pose
+// dans un cadre invisible, et on demande l'impression de ce cadre : le vendeur
+// obtient la boîte d'impression sans quitter la caisse.
+//
+// Le repli compte : certains navigateurs — Safari en tête — refusent
+// d'imprimer un PDF logé dans un cadre. Le fichier s'ouvre alors dans un
+// onglet, où la visionneuse offre son propre bouton d'impression. Mieux vaut
+// un clic de plus qu'un bouton qui ne fait rien.
+export async function printFile(path:string):Promise<void>{
+  const url=await apiFile(path);
+  const frame=document.createElement('iframe');
+  frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  let done=false;
+  const fallback=()=>{if(done)return;done=true;window.open(url,'_blank','noopener,noreferrer')};
+  frame.onload=()=>{
+    try{
+      const view=frame.contentWindow;
+      if(!view)throw new Error('cadre indisponible');
+      view.focus();view.print();
+      done=true;
+    }catch{fallback()}
+  };
+  frame.onerror=fallback;
+  document.body.appendChild(frame);
+  // Si le cadre n'a pas chargé en cinq secondes, on n'attend pas davantage.
+  setTimeout(fallback,5000);
+  // Le cadre et l'URL d'objet sont libérés une fois la boîte d'impression
+  // servie ; les retirer plus tôt annulerait l'impression en cours.
+  setTimeout(()=>{frame.remove();URL.revokeObjectURL(url)},120000);
+}

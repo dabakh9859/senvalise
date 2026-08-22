@@ -64,6 +64,7 @@ func newHarness(t *testing.T) *harness {
 		"order_items", "orders", "vault_deposits", "vaults",
 		"cash_movements", "cash_sessions", "stock_movements", "messages",
 		"campaigns", "activity_logs", "customer_addresses",
+		"arrival_items", "arrivals", "document_items", "documents", "expenses",
 	}
 	if err := db.Exec("TRUNCATE " + joinTables(tables) + " RESTART IDENTITY CASCADE").Error; err != nil {
 		t.Fatalf("nettoyage de la base de test : %v", err)
@@ -330,5 +331,85 @@ func TestReferencesStayUniqueUnderLoad(t *testing.T) {
 	}
 	if distinct != total {
 		t.Fatalf("%d références distinctes pour %d ventes", distinct, total)
+	}
+}
+
+// Supprimer une facture doit rendre la marchandise au stock. Elle ne le
+// faisait pas : la piece, ses lignes et ses reglements disparaissaient, mais
+// les articles restaient sortis — vendus a personne, et introuvables au
+// prochain inventaire.
+func TestDeletingASaleReturnsGoodsToStock(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(10, 25000)
+
+	status, sale := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 50000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 2, "unitPrice": 25000}},
+	})
+	if status >= 400 {
+		t.Fatalf("vente de référence : %v", sale)
+	}
+	if got := h.stockOf(variant.ID); got != 8 {
+		t.Fatalf("stock %d au lieu de 8 après la vente", got)
+	}
+	saleID := uint(sale["id"].(float64))
+
+	if status, body := h.call(http.MethodDelete, fmt.Sprintf("/api/sales/%d", saleID), nil); status >= 400 {
+		t.Fatalf("suppression refusée (%d) : %v", status, body)
+	}
+	if got := h.stockOf(variant.ID); got != 10 {
+		t.Fatalf("stock %d au lieu de 10 : la suppression n'a pas rendu la marchandise", got)
+	}
+
+	// La compensation s'ecrit dans le journal plutot que d'effacer la sortie :
+	// deux ecritures qui s'annulent racontent ce qui s'est passe.
+	var movements int64
+	h.db.Raw(`select count(*) from stock_movements where reason = 'sales_deleted'`).Scan(&movements)
+	if movements != 1 {
+		t.Fatalf("%d mouvement(s) de compensation enregistré(s), attendu 1", movements)
+	}
+	var net int64
+	h.db.Raw(`select coalesce(sum(quantity),0) from stock_movements where reference = ?`, sale["reference"]).Scan(&net)
+	if net != 0 {
+		t.Fatalf("le solde des mouvements de cette facture vaut %d au lieu de 0", net)
+	}
+}
+
+// Un arrivage supprime retire les unites recues. Si elles sont deja parties,
+// la suppression doit echouer plutot que de creuser un stock negatif.
+func TestDeletingAReceivedArrivalCannotCreateNegativeStock(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(0, 10000)
+
+	// Entree de stock rattachee a une reference d'arrivage fictive, puis
+	// sortie de la totalite par une vente.
+	h.db.Exec(`update product_variants set stock = 4 where id = ?`, variant.ID)
+	h.db.Exec(`insert into stock_movements (created_at, updated_at, variant_id, user_id, type, reason, quantity, stock_before, stock_after, reference)
+	           values (now(), now(), ?, 1, 'in', 'arrival', 4, 0, 4, 'ARR-TEST-001')`, variant.ID)
+	var arrivalID uint
+	h.db.Raw(`insert into arrivals (created_at, updated_at, reference, status) values (now(), now(), 'ARR-TEST-001', 'received') returning id`).Scan(&arrivalID)
+
+	if status, body := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 30000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 3, "unitPrice": 10000}},
+	}); status >= 400 {
+		t.Fatalf("vente de référence : %v", body)
+	}
+	if got := h.stockOf(variant.ID); got != 1 {
+		t.Fatalf("stock %d au lieu de 1", got)
+	}
+
+	// Retirer les 4 unites de l'arrivage ferait tomber le stock a -3.
+	status, body := h.call(http.MethodDelete, fmt.Sprintf("/api/arrivals/%d", arrivalID), nil)
+	if status < 400 {
+		t.Fatalf("suppression acceptée (%d) alors qu'elle creuserait le stock : %v", status, body)
+	}
+	if got := h.stockOf(variant.ID); got != 1 {
+		t.Fatalf("stock %d au lieu de 1 : le refus a quand même touché au stock", got)
+	}
+	var remaining int64
+	h.db.Model(&models.Arrival{}).Where("id = ?", arrivalID).Count(&remaining)
+	if remaining != 1 {
+		t.Fatal("l'arrivage a été supprimé malgré le refus")
 	}
 }

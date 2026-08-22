@@ -475,7 +475,8 @@ func (s *Server) remove(c *fiber.Ctx, name string) error {
 	if modelFor(name) == nil {
 		return fiber.ErrNotFound
 	}
-	if e := s.deleteWithChildren(name, c.Params("id")); e != nil {
+	userID, _ := c.Locals("userID").(uint)
+	if e := s.deleteWithChildren(name, c.Params("id"), userID); e != nil {
 		return e
 	}
 	removed, _ := strconv.ParseUint(c.Params("id"), 10, 64)

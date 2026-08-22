@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -226,7 +227,64 @@ func countRelated(db *gorm.DB, rel relation, id string) (int64, error) {
 // deleteWithChildren applique les règles ci-dessus dans une transaction :
 // refus motivé si l'enregistrement porte de l'histoire, sinon suppression des
 // lignes filles puis du parent.
-func (s *Server) deleteWithChildren(name, id string) error {
+// stockDocuments liste les pieces dont la suppression doit rendre le stock.
+//
+// Supprimer une facture retirait la piece, ses lignes et ses reglements, mais
+// laissait la marchandise sortie : les articles disparaissaient du stock sans
+// avoir ete vendus ni etre revenus. Le meme trou existait pour les trois
+// autres pieces qui deplacent du stock — un arrivage supprime laissait des
+// unites jamais recues, un retour supprime laissait des unites jamais rendues,
+// une commande web supprimee laissait de la marchandise partie.
+var stockDocuments = map[string]bool{"sales": true, "returns": true, "arrivals": true, "orders": true}
+
+// reverseStock annule l'effet d'une piece sur le stock avant sa suppression.
+//
+// La compensation se calcule sur le journal des mouvements, et non sur les
+// lignes de la piece : c'est le journal qui dit ce qui a reellement bouge. Une
+// facture modifiee apres coup porte des mouvements « sale_edit » que ses lignes
+// actuelles ne refletent plus, et une commande web jamais convertie n'a rien
+// sorti du tout — repartir des lignes rendrait du stock fantome dans un cas et
+// pas assez dans l'autre.
+//
+// Le mouvement inverse est enregistre plutot que l'original efface : deux
+// ecritures qui s'annulent racontent ce qui s'est passe, une ligne effacee ne
+// raconte rien.
+func (s *Server) reverseStock(tx *gorm.DB, name, id string, userID uint) error {
+	if !stockDocuments[name] {
+		return nil
+	}
+	var reference string
+	if e := tx.Model(modelFor(name)).Where("id = ?", id).Pluck("reference", &reference).Error; e != nil {
+		return dbError(e, "lecture de la référence")
+	}
+	if strings.TrimSpace(reference) == "" {
+		return nil
+	}
+	type move struct {
+		VariantID uint
+		Qty       int64
+	}
+	var moves []move
+	// Par identifiant croissant, comme partout ailleurs : deux suppressions
+	// simultanees qui toucheraient les memes declinaisons s'interbloqueraient
+	// si elles les verrouillaient dans un ordre different.
+	if e := tx.Raw(`select variant_id, sum(quantity) qty from stock_movements
+		where reference = ? group by variant_id having sum(quantity) <> 0
+		order by variant_id asc`, reference).Scan(&moves).Error; e != nil {
+		return dbError(e, "lecture des mouvements de stock")
+	}
+	for _, m := range moves {
+		// Un stock qui passerait sous zero fait echouer toute la suppression :
+		// supprimer un arrivage dont la marchandise est deja vendue reviendrait
+		// a retirer des unites qui ne sont plus la.
+		if e := s.adjust(tx, m.VariantID, -m.Qty, userID, name+"_deleted", reference); e != nil {
+			return fiber.NewError(409, e.Error())
+		}
+	}
+	return nil
+}
+
+func (s *Server) deleteWithChildren(name, id string, userID uint) error {
 	for _, b := range deleteBlockers[name] {
 		n, e := countRelated(s.DB, b.rel, id)
 		if e != nil {
@@ -238,6 +296,11 @@ func (s *Server) deleteWithChildren(name, id string) error {
 	}
 	out := modelFor(name)
 	return s.DB.Transaction(func(tx *gorm.DB) error {
+		// Le stock est rendu avant que les lignes ne disparaissent : c'est la
+		// meme transaction, donc un echec ici laisse la piece intacte.
+		if e := s.reverseStock(tx, name, id, userID); e != nil {
+			return e
+		}
 		for _, child := range deleteChildren[name] {
 			if e := tx.Exec("DELETE FROM "+child.table+" WHERE "+child.column+" = ?", id).Error; e != nil {
 				return dbError(e, "suppression des lignes rattachées")

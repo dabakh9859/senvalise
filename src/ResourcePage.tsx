@@ -157,7 +157,13 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   const shown=data;
   const columns=useMemo(()=>{const preferred=['reference','name','sku','email','phone','type','reason','status','active','online','stock','quantity','price','total','paid','balance','role','createdAt'];const keys=new Set(data.flatMap(Object.keys));return preferred.filter(key=>keys.has(key)).slice(0,6)},[data]);
   const openDetail=async(row:Entity)=>{setError('');try{const full=await api<Entity>(endpoint(resource,row.id));setDialog({mode:'detail',row:full})}catch(reason){setError((reason as Error).message)}};
-  const remove=async(row:Entity,resourceName=resource)=>{if(!confirm(`Supprimer définitivement « ${recordTitle(row)} » ?`))return;try{await api(endpoint(resourceName,row.id),{method:'DELETE'});if(dialog?.row?.id===row.id)setDialog(null);load()}catch(reason){setError((reason as Error).message)}};
+  const stockWarning:Record<string,string>={
+    sales:'La marchandise vendue sera remise en stock.',
+    returns:'Les articles remis en stock lors de ce retour en seront retirés.',
+    arrivals:'Les unités reçues lors de cet arrivage seront retirées du stock.',
+    orders:'La marchandise sortie pour cette commande sera remise en stock.',
+  };
+  const remove=async(row:Entity,resourceName=resource)=>{const note=stockWarning[resourceName];if(!confirm(`Supprimer définitivement « ${recordTitle(row)} » ?${note?`\n\n${note}`:''}`))return;try{await api(endpoint(resourceName,row.id),{method:'DELETE'});if(dialog?.row?.id===row.id)setDialog(null);load()}catch(reason){setError((reason as Error).message)}};
   return <>
     <div className="toolbar"><div className="search"><Search/><input placeholder={resource==='sales'?'Rechercher une facture, un client…':resource==='quotes'?'Rechercher un devis, un client…':resource==='delivery-notes'?'Rechercher un bon de livraison…':`Rechercher dans ${title.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/></div>{isAdmin&&!['sales','delivery-notes'].includes(resource)&&<button className="primary compact" onClick={()=>setDialog({mode:'create'})}><Plus/>Nouveau</button>}</div>
     <Legend resource={resource}/>

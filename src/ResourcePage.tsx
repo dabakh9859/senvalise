@@ -1,5 +1,5 @@
 import {FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
-import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
+import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,ChevronDown,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
 import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
@@ -17,7 +17,7 @@ const configuredFields:Record<string,string[]>={
   suppliers:['name','phone','email','address'],
   categories:['name','slug','description'],
   brands:['name','slug'],
-  products:['name','slug','description','blurb','tag','flag','categoryId','brandId','cabin','volume','weight','position','active','online','featured'],
+  products:['name','categoryId','brandId','description','blurb','tag','active','online'],
   variants:['productId','sku','barcode','color','size','cost','price','stock','alertAt','active'],
   'stock/movements':['variantId','userId','type','reason','quantity','stockBefore','stockAfter','reference','note'],
   arrivals:['reference','supplierId','status','currency','exchangeRate','shipping','customs','otherFees','receivedAt'],
@@ -39,6 +39,13 @@ const configuredFields:Record<string,string[]>={
 };
 
 const PAGE_SIZE=100;
+// Champs qui ne servent qu'occasionnellement. Les laisser au premier plan
+// noyait les trois ou quatre valeurs qu'on vient reellement changer — le nom,
+// le prix, la mise en ligne. Ils restent accessibles, repliés.
+const advancedFields:Record<string,string[]>={
+  products:['slug','flag','cabin','volume','weight','position','featured'],
+};
+
 const readonly=new Set(['id','createdAt','updatedAt','items','variants','images','deposits','movements']);
 const moneyFields=new Set(['total','subtotal','discount','tax','paid','price','cost','unitPrice','unitCost','landedCost','balance','goal','fee','amount','shipping','customs','otherFees','deliveryFee','openingAmount','expectedAmount','closingAmount']);
 const numericFields=new Set([...moneyFields,'productId','variantId','categoryId','brandId','customerId','supplierId','userId','saleId','parentId','cashSessionId','arrivalId','orderId','documentId','vaultId','saleReturnId','stock','stockBefore','stockAfter','quantity','alertAt','position','exchangeRate','volume','weight','lat','lon']);
@@ -413,7 +420,8 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
     .map(field=>({field,info:semanticInfo(field,row[field],row)}))
     .filter((entry):entry is{field:string;info:StateInfo}=>Boolean(entry.info)).slice(0,5);
   const hidden=new Set<string>([...metricFields,...badges.map(entry=>entry.field),...contacts.map(contact=>contact.field)]);
-  const scalars=Object.entries(row).filter(([key,value])=>!hidden.has(key)&&!Array.isArray(value)&&(value===null||typeof value!=='object'));
+  const scalars=Object.entries(row).filter(([key,value])=>!hidden.has(key)&&!Array.isArray(value)&&(value===null||typeof value!=='object'))
+    .filter(([,value])=>resource!=='products'||(value!==null&&value!==''&&value!==false));
   const sections=detailGroups.map(group=>({...group,fields:scalars.filter(([key,value])=>groupFor(key,value)===group.id)})).filter(group=>group.fields.length);
   const gallery=(row.images??[]) as ProductImageView[];
   const isProduct=resource==='products'&&Boolean(onAdjustStock);
@@ -445,7 +453,9 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
       <div className="detail-body">
         {metrics.length>0&&<div className="detail-metrics">{metrics.map(metric=>
           <div className={`detail-metric tone-${metric.tone??'neutral'}`} key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></div>)}</div>}
-        {sections.map(group=><section className={`detail-section group-${group.id}`} key={group.id}>
+        {isProduct&&<ProductVariants rows={(row.variants??[]) as Entity[]} isAdmin={isAdmin}
+          onAdjust={variant=>onAdjustStock?.(variant)} onEdit={variant=>onEditVariant?.(variant)} onAdd={()=>onAddVariant?.()}/>}
+        {sections.map(group=><section className={`detail-section group-${group.id} ${isProduct?'compact-section':''}`} key={group.id}>
           <header><h3>{group.label}</h3><i/></header>
           <div className="detail-fields">{group.fields.map(([key,value])=><div key={key}>
             <span>{labels[key]??key}{copyFields.has(key)&&value?<CopyButton value={String(value)}/>:null}</span>
@@ -460,8 +470,6 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
           <header><h3>Éléments liés</h3><span>{linked.length}</span><i/></header>
           <div className="detail-linked-list">{linked.map(([key,record])=><DetailLinked key={key} name={key} record={record} relation={relation}/>)}</div>
         </section>}
-        {isProduct&&<ProductVariants rows={(row.variants??[]) as Entity[]} isAdmin={isAdmin}
-          onAdjust={variant=>onAdjustStock?.(variant)} onEdit={variant=>onEditVariant?.(variant)} onAdd={()=>onAddVariant?.()}/>}
         {collections.map(([key,rows])=><DetailCollection key={key} name={key} rows={rows} parent={row} relation={relation}/>)}
       </div>
       <footer className="detail-actions">
@@ -476,6 +484,9 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
 function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resource:string;row?:Entity;mode:'create'|'edit';onClose:()=>void;onDone:()=>void}){
   const formFields=useMemo(()=>{const configured=configuredFields[resource]??[];if(mode==='create')return configured.length?configured:['name','status'];const actual=Object.keys(row??{}).filter(key=>!readonly.has(key)&&typeof row?.[key]!=='object');return [...new Set([...configured,...actual])]},[mode,resource,row]);
   const initial=useMemo(()=>Object.fromEntries(formFields.map(field=>[field,toInputValue(field,row?.[field])])),[formFields,row]);
+  const hiddenFields=useMemo(()=>advancedFields[resource]??[],[resource]);
+  const mainFields=useMemo(()=>formFields.filter(field=>!hiddenFields.includes(field)),[formFields,hiddenFields]);
+  const extraFields=useMemo(()=>formFields.filter(field=>hiddenFields.includes(field)),[formFields,hiddenFields]);
   const[form,setForm]=useState<Record<string,string|boolean>>(initial);
   const[relationOptions,setRelationOptions]=useState<Record<string,Choice[]>>({});
   const[error,setError]=useState('');const[saving,setSaving]=useState(false);
@@ -483,6 +494,21 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
   // identifiant de produit : elles attendent donc que la fiche existe.
   const acceptsPhotos=resource==='products';
   const[photos,setPhotos]=useState<File[]>([]);
+  const[advanced,setAdvanced]=useState(false);
+  // Stock des déclinaisons du produit. Le stock ne vit pas sur la fiche
+  // produit mais sur ses déclinaisons : on le corrige ici parce que c'est là
+  // qu'on l'attend, et la correction part en mouvement pour rester traçable.
+  const[stockRows,setStockRows]=useState<{id:number;sku:string;color:string;size:string;stock:number}[]>([]);
+  const[stockEdits,setStockEdits]=useState<Record<number,string>>({});
+  const editsStock=resource==='products'&&mode==='edit'&&Boolean(row?.id);
+  useEffect(()=>{
+    if(!editsStock){setStockRows([]);return}
+    const rows=((row?.variants??[]) as Entity[]).map(item=>({
+      id:Number(item.id),sku:String(item.sku??''),color:String(item.color??''),
+      size:String(item.size??''),stock:Number(item.stock??0),
+    })).filter(item=>item.id>0);
+    setStockRows(rows);
+  },[editsStock,row]);
   const previews=useMemo(()=>photos.map(file=>({name:file.name,url:URL.createObjectURL(file)})),[photos]);
   useEffect(()=>()=>{previews.forEach(item=>URL.revokeObjectURL(item.url))},[previews]);
   // La FileList est un objet vivant : on la copie avant de rendre la main,
@@ -507,11 +533,44 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
           await apiForm(`/api/products/${target}/images`,payload);
         }
       }
+      // Les corrections de stock partent après l'enregistrement de la fiche :
+      // une seule d'entre elles qui échoue ne doit pas perdre les autres
+      // modifications, déjà saisies.
+      for(const line of stockRows){
+        const typed=stockEdits[line.id];
+        if(typed===undefined||typed==='')continue;
+        const delta=Number(typed)-Number(line.stock);
+        if(!delta)continue;
+        await api('/api/stock/adjust',{method:'POST',body:JSON.stringify({variantId:line.id,quantity:delta,reason:'correction',note:`Corrigé depuis la fiche ${String(form.name??title)}`})});
+      }
       onDone();
     }catch(reason){setError((reason as Error).message)}
     finally{setSaving(false)}
   };
-  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div><div className="form-help"><CircleAlert/><span>{resource==='sales'?'Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.':'Les couleurs et les libellés vous indiquent immédiatement l’état de chaque élément.'}</span></div><div className="form-grid">{formFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>{acceptsPhotos&&<div className="photo-picker">
+  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div>{resource==='sales'&&<div className="form-help"><CircleAlert/><span>Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.</span></div>}<div className="form-grid">{mainFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>
+    {editsStock&&stockRows.length>0&&<div className="form-stock">
+      <h3>Stock</h3>
+      <p>Saisissez la quantité réelle : l’écart part au journal des mouvements avec son motif.</p>
+      {stockRows.map(line=>{
+        const label=[line.color,line.size].filter(Boolean).join(' · ');
+        const typed=stockEdits[line.id];
+        const delta=typed===undefined||typed===''?0:Number(typed)-Number(line.stock);
+        return <div className="form-stock-line" key={line.id}>
+          <div><strong>{line.sku}</strong>{label&&<span>{label}</span>}</div>
+          <em>{line.stock} u. en stock</em>
+          <input type="number" min="0" placeholder={String(line.stock)} value={typed??''}
+            onChange={event=>setStockEdits(current=>({...current,[line.id]:event.target.value}))}
+            aria-label={`Nouveau stock pour ${line.sku}`}/>
+          <b className={delta>0?'up':delta<0?'down':''}>{delta?`${delta>0?'+':''}${delta}`:'—'}</b>
+        </div>;
+      })}
+    </div>}
+    {extraFields.length>0&&<div className="form-advanced">
+      <button type="button" onClick={()=>setAdvanced(value=>!value)} aria-expanded={advanced}>
+        <ChevronDown className={advanced?'open':''}/>{advanced?'Masquer les options avancées':'Options avancées'}
+      </button>
+      {advanced&&<div className="form-grid">{extraFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>}
+    </div>}{acceptsPhotos&&<div className="photo-picker">
       <div className="photo-picker-head"><span>Photos</span><label className="photo-add"><ImagePlus/><span>Ajouter des photos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event=>{addPhotos(event.target.files);event.target.value=''}}/></label></div>
       {previews.length===0
         ?<p className="photo-empty">Aucune photo en attente. La première ajoutée deviendra la photo principale.</p>
@@ -521,7 +580,7 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
 }
 
 function Field({name,value,options,onChange}:{name:string;value:string|boolean;options?:Choice[];onChange:(value:string|boolean)=>void}){
-  if(booleanFields.has(name)||typeof value==='boolean')return <label className="checkbox-field"><input type="checkbox" checked={Boolean(value)} onChange={event=>onChange(event.target.checked)}/><span><b>{labels[name]??name}</b><small>Activer ou désactiver cette option</small></span></label>;
+  if(booleanFields.has(name)||typeof value==='boolean')return <label className="checkbox-field"><input type="checkbox" checked={Boolean(value)} onChange={event=>onChange(event.target.checked)}/><span><b>{labels[name]??name}</b></span></label>;
   if(options)return <label>{labels[name]??name}<select value={String(value??'')} onChange={event=>onChange(event.target.value)}><option value="">Sélectionner…</option>{options.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
   const inputType=name==='password'?'password':dateFields.has(name)?'datetime-local':numericFields.has(name)?'number':name==='email'?'email':'text';
   if(longFields.has(name))return <label className="field-wide">{labels[name]??name}<textarea rows={4} value={String(value??'')} onChange={event=>onChange(event.target.value)}/></label>;

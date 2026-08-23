@@ -484,7 +484,16 @@ func (s *Server) remove(c *fiber.Ctx, name string) error {
 	return c.SendStatus(204)
 }
 
+// adjust deplace le stock d'une declinaison et inscrit le mouvement. La note
+// reste vide : la plupart des mouvements naissent d'une vente ou d'un arrivage,
+// dont la reference dit deja tout.
 func (s *Server) adjust(tx *gorm.DB, variantID uint, qty int64, userID uint, reason, reference string) error {
+	return s.adjustWithNote(tx, variantID, qty, userID, reason, reference, "")
+}
+
+// adjustWithNote sert les corrections saisies a la main, ou le motif ne suffit
+// pas : « correction » ne dit pas ce qui a ete corrige, la note si.
+func (s *Server) adjustWithNote(tx *gorm.DB, variantID uint, qty int64, userID uint, reason, reference, note string) error {
 	var v models.ProductVariant
 	if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&v, variantID).Error; e != nil {
 		return e
@@ -497,7 +506,7 @@ func (s *Server) adjust(tx *gorm.DB, variantID uint, qty int64, userID uint, rea
 	if e := tx.Model(&v).Update("stock", after).Error; e != nil {
 		return e
 	}
-	return tx.Create(&models.StockMovement{VariantID: v.ID, UserID: userID, Type: map[bool]string{true: "in", false: "out"}[qty > 0], Reason: reason, Quantity: qty, StockBefore: before, StockAfter: after, Reference: reference}).Error
+	return tx.Create(&models.StockMovement{VariantID: v.ID, UserID: userID, Type: map[bool]string{true: "in", false: "out"}[qty > 0], Reason: reason, Quantity: qty, StockBefore: before, StockAfter: after, Reference: reference, Note: note}).Error
 }
 func (s *Server) adjustStock(c *fiber.Ctx) error {
 	var in struct {
@@ -513,7 +522,7 @@ func (s *Server) adjustStock(c *fiber.Ctx) error {
 		if _, e := lockVariants(tx, []uint{in.VariantID}); e != nil {
 			return e
 		}
-		return s.adjust(tx, in.VariantID, in.Quantity, c.Locals("userID").(uint), in.Reason, s.ref("STK"))
+		return s.adjustWithNote(tx, in.VariantID, in.Quantity, c.Locals("userID").(uint), in.Reason, s.ref("STK"), strings.TrimSpace(in.Note))
 	})
 	if e != nil {
 		return fiber.NewError(422, e.Error())

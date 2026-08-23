@@ -96,6 +96,13 @@ type pdfDocument struct {
 	// couleur tient alors lieu de marque.
 	LogoFormat string
 	Logo       []byte
+	// Signature de l'entreprise, quand la piece a ete signee. L'ecran la montrait
+	// deja a l'impression du navigateur, mais le PDF du serveur — celui qui part
+	// par WhatsApp — dessinait un cadre vide : le client recevait une facture non
+	// signee alors que la gestion l'affichait signee.
+	SignatureURL    string
+	SignatureFormat string
+	Signature       []byte
 }
 
 var documentTitles = map[string]string{"invoice": "Facture", "quote": "Devis", "delivery": "Bon de livraison"}
@@ -159,6 +166,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 				Quantity: item.Quantity, UnitPrice: item.UnitPrice, Discount: item.Discount, Total: item.Total,
 			})
 		}
+		doc.SignatureURL = sale.CompanySignatureURL
 		if sale.User != nil {
 			doc.Seller = sale.User.Name
 		}
@@ -182,6 +190,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 				Quantity: item.Quantity, UnitPrice: item.UnitPrice, Discount: item.Discount, Total: item.Total,
 			})
 		}
+		doc.SignatureURL = quote.CompanySignatureURL
 		if quote.User != nil {
 			doc.Seller = quote.User.Name
 		}
@@ -204,6 +213,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 				Quantity: item.Quantity,
 			})
 		}
+		doc.SignatureURL = note.CompanySignatureURL
 		if note.User != nil {
 			doc.Seller = note.User.Name
 		}
@@ -598,11 +608,28 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf.SetDrawColor(200, 202, 210)
 	for index, label := range []string{"Signature client", "Pour " + doc.Company.CompanyName} {
 		x := left + float64(index)*(width/2)
+		boxWidth := width/2 - 8
 		pdf.SetXY(x, signatureTop)
 		pdf.SetFont(pdfFont, "", 8)
 		pdf.SetTextColor(110, 110, 110)
-		pdf.CellFormat(width/2-8, 5, tr(label), "", 2, "L", false, 0, "")
-		pdf.Rect(x, signatureTop+6, width/2-8, 18, "D")
+		pdf.CellFormat(boxWidth, 5, tr(label), "", 2, "L", false, 0, "")
+		pdf.Rect(x, signatureTop+6, boxWidth, 18, "D")
+		// La signature de l'entreprise s'incruste dans son cadre, a l'echelle,
+		// sans jamais le deborder : une image trop haute recouvrirait le pied de
+		// page, une image trop large mordrait sur le cadre du client.
+		if index == 1 && doc.SignatureFormat != "" && len(doc.Signature) > 0 {
+			pdf.RegisterImageOptionsReader("signature", fpdf.ImageOptions{ImageType: doc.SignatureFormat}, bytes.NewReader(doc.Signature))
+			if info := pdf.GetImageInfo("signature"); info != nil && info.Height() > 0 {
+				height := 15.0
+				imageWidth := height * info.Width() / info.Height()
+				if imageWidth > boxWidth-6 {
+					imageWidth = boxWidth - 6
+					height = imageWidth * info.Height() / info.Width()
+				}
+				pdf.ImageOptions("signature", x+3, signatureTop+6+(18-height)/2, imageWidth, height, false,
+					fpdf.ImageOptions{ImageType: doc.SignatureFormat}, 0, "")
+			}
+		}
 	}
 	pdf.SetXY(left, signatureTop+27)
 	pdf.SetFont(pdfFont, "", 7.5)
@@ -635,6 +662,7 @@ func (s *Server) documentPDF(kind string, id uint) ([]byte, string, pdfDocument,
 		return nil, "", doc, err
 	}
 	doc.LogoFormat, doc.Logo = s.brandingLogoFile()
+	doc.SignatureFormat, doc.Signature = uploadedImage(doc.SignatureURL)
 	raw, err := renderPDF(doc)
 	if err != nil {
 		return nil, "", doc, err

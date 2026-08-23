@@ -987,3 +987,26 @@
 .form-advanced>button svg{width:14px;height:14px;transition:transform .15s}
 .form-advanced>button svg.open{transform:rotate(180deg)}
 .form-advanced .form-grid{margin-top:12px}
+
+/* ── Signature de l'entreprise ─────────────────────────────────────────────
+   Une seule image, enregistrée avec les mentions de facture et réutilisée sur
+   toutes les pièces. Chaque document porte un interrupteur : signé ou non. */
+.signature-uploader small{display:block;font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5}
+.signature-empty{font-size:11px;color:var(--muted);line-height:1.6;margin:10px 0;padding:14px;
+  border:1px dashed var(--line);border-radius:8px;text-align:center}
+.signature-replace{display:inline-flex;align-items:center;gap:7px;margin-top:10px;cursor:pointer;
+  border:1px solid var(--line);border-radius:8px;padding:9px 13px;font-size:11.5px;font-weight:650;color:var(--ink)}
+.signature-replace:hover{border-color:var(--accent);color:var(--accent)}
+.signature-replace.is-busy{opacity:.5;cursor:wait}
+.signature-replace svg{width:14px;height:14px}
+.signature-replace input{display:none}
+.signature-toggle{display:flex;align-items:flex-start;gap:11px;margin-top:16px;padding:14px;
+  border:1px solid var(--line);border-radius:9px;background:var(--soft);cursor:pointer}
+.signature-toggle input{margin-top:2px;width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.signature-toggle b{display:block;font-size:12px}
+.signature-toggle small{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.signature-toggle.is-disabled{opacity:.6;cursor:not-allowed}
+/* Emplacement de la signature client sur la pièce : une ligne à signer au
+   stylo, plus un bouton — on ne téléverse plus la signature du client. */
+.invoice-signatures .signature-slot{display:flex;flex-direction:column;gap:6px}
+.invoice-signatures .signature-slot span{font-size:10px;color:var(--muted)}

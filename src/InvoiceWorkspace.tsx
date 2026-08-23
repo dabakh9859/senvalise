@@ -1,7 +1,7 @@
 import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
 import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
-import {api,Entity,money,openFile} from './api';
+import {api,apiForm,Entity,money,openFile} from './api';
 
 type Kind='invoice'|'quote'|'delivery';
 type Payment=Entity&{method?:string;amount?:number;status?:string;reference?:string};
@@ -9,7 +9,7 @@ type Line=Entity&{quantity?:number;unitPrice?:number;discount?:number;total?:num
 type Doc=Entity&{reference?:string;status?:string;customerId?:number;subtotal?:number;discount?:number;taxRate?:number;tax?:number;total?:number;paid?:number;notes?:string;validUntil?:string;items?:Line[];payments?:Payment[];customer?:Entity;user?:Entity;quote?:Entity;deliveryNote?:Entity;convertedSale?:Entity;sale?:Entity;saleId?:number;convertedSaleId?:number;invoiceCompanyName?:string;invoiceTagline?:string;invoicePhone?:string;invoiceAddress?:string;invoiceThankYouTitle?:string;invoiceFooterNote?:string;clientSignatureUrl?:string;companySignatureUrl?:string};
 type Variant=Entity&{sku?:string;color?:string;size?:string;price?:number;stock?:number;active?:boolean;product?:Entity};
 type InvoiceDefaults={companyName:string;tagline:string;phone:string;address:string;thankYouTitle:string;footerNote:string;companySignatureUrl:string};
-type Props={document:Entity;kind:Kind;isAdmin:boolean;onClose:()=>void;onDelete:()=>void;onUpdate:(values:Record<string,unknown>)=>Promise<void>;onUpdateLine:(line:Entity,values:Record<string,unknown>)=>Promise<void>;onAddLine:(values:Record<string,unknown>)=>Promise<void>;onDeleteLine:(line:Entity)=>Promise<void>;onUploadSignature:(kind:'client'|'company',file:File)=>Promise<void>;onAddPayment:(method:string,amount:number)=>Promise<void>;onCancelPayment:(payment:Entity)=>Promise<void>;onCancelAllPayments:()=>Promise<void>;onConvert?:()=>void;onGenerateDelivery?:()=>void;onOpenInvoice?:(row:Entity)=>void;onOpenQuote?:(row:Entity)=>void;onOpenDelivery?:(row:Entity)=>void};
+type Props={document:Entity;kind:Kind;isAdmin:boolean;onClose:()=>void;onDelete:()=>void;onUpdate:(values:Record<string,unknown>)=>Promise<void>;onUpdateLine:(line:Entity,values:Record<string,unknown>)=>Promise<void>;onAddLine:(values:Record<string,unknown>)=>Promise<void>;onDeleteLine:(line:Entity)=>Promise<void>;onAddPayment:(method:string,amount:number)=>Promise<void>;onCancelPayment:(payment:Entity)=>Promise<void>;onCancelAllPayments:()=>Promise<void>;onConvert?:()=>void;onGenerateDelivery?:()=>void;onOpenInvoice?:(row:Entity)=>void;onOpenQuote?:(row:Entity)=>void;onOpenDelivery?:(row:Entity)=>void};
 
 const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
 
@@ -42,7 +42,7 @@ export default function InvoiceWorkspace(props:Props){
   // Memoise pour que l'effet de remise a zero du formulaire puisse declarer
   // ses dependances honnetement : invoiceInfo ne change que si le document ou
   // les reglages changent, ce qui etait deja la condition de declenchement.
-  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:doc.companySignatureUrl||defaults.companySignatureUrl}),[doc,defaults]);
+  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:String(doc.companySignatureUrl??'')}),[doc,defaults]);
   const editLine=editing?.startsWith('item:')?items.find(row=>String(row.id)===editing.slice(5)):undefined;
   useEffect(()=>{Promise.all([api<Entity[]>('/api/customers?limit=500'),api<Variant[]>('/api/variants?limit=500'),api<{invoiceDefaults:InvoiceDefaults}>('/api/checkout-settings')]).then(([customerRows,variantRows,settings])=>{setCustomers(customerRows);setVariants(variantRows.filter(row=>row.active!==false));setDefaults({...baseInvoiceDefaults,...settings.invoiceDefaults})}).catch(()=>{})},[]);
   useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[doc,defaults,invoiceInfo,remaining]);
@@ -69,7 +69,24 @@ export default function InvoiceWorkspace(props:Props){
   const cancelPayment=async(payment:Payment)=>{if(!confirm(`Annuler le règlement ${payment.reference??'#'+payment.id} de ${money(payment.amount)} ?`))return;setSaving(true);try{await props.onCancelPayment(payment)}catch(reason){refreshError(reason)}finally{setSaving(false)}};
   const cancelAll=async()=>{if(!confirm('Annuler tous les règlements actifs de cette facture ?'))return;setSaving(true);try{await props.onCancelAllPayments()}catch(reason){refreshError(reason)}finally{setSaving(false)}};
   const deleteLine=async(line:Line)=>{if(!confirm(`Retirer « ${lineName(line)} » de ${pieceLabel} ?`))return;setSaving(true);setError('');try{await props.onDeleteLine(line);setEditing(null)}catch(reason){refreshError(reason)}finally{setSaving(false)}};
-  const uploadSignature=async(kind:'client'|'company',file:File)=>{setSaving(true);setError('');try{await props.onUploadSignature(kind,file)}catch(reason){refreshError(reason)}finally{setSaving(false)}};
+  // L'image vit dans les mentions de facture, partagée par toutes les pièces ;
+  // la case, elle, n'engage que celle-ci.
+  const storedSignature=defaults.companySignatureUrl;
+  const signed=Boolean(doc.companySignatureUrl);
+  const toggleSignature=async(value:boolean)=>{setSaving(true);setError('');
+    try{await props.onUpdate({companySignatureUrl:value?storedSignature:''})}
+    catch(reason){refreshError(reason)}finally{setSaving(false)}};
+  const replaceSignature=async(file:File)=>{setSaving(true);setError('');
+    try{
+      const body=new FormData();body.append('image',file);
+      const asset=await apiForm<{url:string}>('/api/invoice-assets',body);
+      const settings=await api<{invoiceDefaults:InvoiceDefaults}>('/api/checkout-settings');
+      await api('/api/checkout-settings',{method:'PUT',body:JSON.stringify({...settings,invoiceDefaults:{...settings.invoiceDefaults,companySignatureUrl:asset.url}})});
+      setDefaults(current=>({...current,companySignatureUrl:asset.url}));
+      // Une pièce déjà signée suit la nouvelle image : garder l'ancienne
+      // reviendrait à signer d'une main qui n'est plus la bonne.
+      if(signed)await props.onUpdate({companySignatureUrl:asset.url});
+    }catch(reason){refreshError(reason)}finally{setSaving(false)}};
   const paperTitle=`${({invoice:'Facture',quote:'Devis',delivery:'Bon-livraison'} as const)[props.kind]}-${String(doc.reference)}`;
   const paperFooter=`${title} ${String(doc.reference)} · ${invoiceInfo.companyName} · ${invoiceInfo.address} · ${invoiceInfo.phone}`;
   const print=()=>{void printDocument('business-document-print',paperTitle,paperFooter)};
@@ -100,7 +117,7 @@ export default function InvoiceWorkspace(props:Props){
           <table className="invoice-table"><thead><tr><th>Description</th><th>Qté</th>{props.kind!=='delivery'&&<><th>Prix unitaire</th><th>Remise</th><th>Montant</th></>}</tr></thead><tbody>{items.map(item=><tr key={item.id} className={props.isAdmin?'document-line-clickable':''} onClick={()=>openEdit(`item:${item.id}`)}><td><strong>{lineName(item)}</strong><span>{String(item.variant?.sku??'')}</span></td><td>{item.quantity}</td>{props.kind!=='delivery'&&<><td>{money(item.unitPrice)}</td><td>{Number(item.discount)>0?`− ${money(item.discount)}`:'—'}</td><td><strong>{money(item.total)}</strong></td></>}</tr>)}</tbody></table>
           {props.isAdmin&&!locked&&<button className="invoice-add-product" onClick={()=>openEdit('add-item')}><PackagePlus/>Ajouter un produit à {pieceLabel}</button>}
           {props.kind!=='delivery'&&<div className="invoice-bottom"><button className="invoice-note document-editable" onClick={()=>openEdit(props.kind==='invoice'?'content':'details')}><strong>{invoiceInfo.thankYouTitle}</strong><p>{invoiceInfo.footerNote}</p></button><button className="document-totals document-editable" onClick={()=>openEdit('amounts')}><span>Sous-total <b>{money(doc.subtotal)}</b></span>{Number(doc.discount)>0&&<span>Remise <b>− {money(doc.discount)}</b></span>}{Number(doc.tax)>0&&<span>TVA <b>{money(doc.tax)}</b></span>}<strong>Total TTC <b>{money(doc.total)}</b></strong>{props.kind==='invoice'&&<><span>Montant payé <b>{money(doc.paid)}</b></span><span>Reste à payer <b>{money(remaining)}</b></span></>}</button></div>}
-          <footer className="invoice-signatures"><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Signature client</span>{doc.clientSignatureUrl?<img src={doc.clientSignatureUrl} alt="Signature client"/>:<i/>}</button><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Pour {invoiceInfo.companyName}</span>{invoiceInfo.companySignatureUrl?<img src={invoiceInfo.companySignatureUrl} alt="Signature entreprise"/>:<i/>}</button><small>Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small></footer>
+          <footer className="invoice-signatures"><div className="signature-slot"><span>Signature client</span><i/></div><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Pour {invoiceInfo.companyName}</span>{invoiceInfo.companySignatureUrl?<img src={invoiceInfo.companySignatureUrl} alt="Signature entreprise"/>:<i/>}</button><small>Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small></footer>
         </article></div>
         {props.isAdmin&&<footer className="invoice-manager-actions"><span>Cliquez sur le client, le règlement, les montants ou une ligne pour les modifier.</span><div>{props.onConvert&&<button className="primary" onClick={props.onConvert} disabled={Boolean(doc.convertedSaleId)}><FileCheck2/>{doc.convertedSaleId?'Déjà converti':'Créer la facture'}</button>}{props.onGenerateDelivery&&<button className="primary" onClick={props.onGenerateDelivery} disabled={Boolean(doc.deliveryNote)}><Truck/>{doc.deliveryNote?'Bon déjà généré':'Générer le bon'}</button>}<button onClick={()=>openEdit('general')}><Pencil/>Modifier</button><button className="invoice-delete" onClick={props.onDelete}>Supprimer</button></div></footer>}
       </div>
@@ -116,7 +133,7 @@ export default function InvoiceWorkspace(props:Props){
         <footer><span>{sendChannel==='sms'?'Le SMS transporte un lien signé : il n’accepte pas de pièce jointe.':'Le PDF est reconstruit à l’envoi, donc à jour des derniers règlements.'}</span>
           <button className="primary" onClick={()=>void sendDocument()} disabled={sendState.busy||!sendTo.trim()}>{sendState.busy?'Envoi…':'Envoyer'}</button></footer>
       </div>}
-      {editing&&<EditDrawer title={editorTitle(editing,editLine)} editing={editing} kind={props.kind} form={form} setForm={setForm} customers={customers} variants={variants} usedVariantIds={items.map(item=>Number(item.variantId))} payments={payments} remaining={remaining} editLine={editLine} canDeleteLine={items.length>1&&!locked} onDeleteLine={deleteLine} clientSignatureUrl={String(doc.clientSignatureUrl??'')} companySignatureUrl={invoiceInfo.companySignatureUrl} saving={saving} error={error} onClose={()=>setEditing(null)} onSubmit={submit} onCancelPayment={cancelPayment} onCancelAll={cancelAll} onUploadSignature={uploadSignature}/>} 
+      {editing&&<EditDrawer title={editorTitle(editing,editLine)} editing={editing} kind={props.kind} form={form} setForm={setForm} customers={customers} variants={variants} usedVariantIds={items.map(item=>Number(item.variantId))} payments={payments} remaining={remaining} editLine={editLine} canDeleteLine={items.length>1&&!locked} onDeleteLine={deleteLine} storedSignature={storedSignature} signed={signed} isAdmin={props.isAdmin} saving={saving} error={error} onClose={()=>setEditing(null)} onSubmit={submit} onCancelPayment={cancelPayment} onCancelAll={cancelAll} onToggleSignature={toggleSignature} onReplaceSignature={replaceSignature}/>} 
     </section>
   </div>;
 }
@@ -127,7 +144,7 @@ function DocumentLinks({doc,kind,linkedInvoice,onOpenInvoice,onOpenQuote,onOpenD
 
 function editorTitle(editing:string,line?:Line){if(line)return'Ligne de produit';return{general:'Informations de la pièce',client:'Client',payment:'Règlements',amounts:'Montants et TVA',details:'Informations complémentaires',branding:'Coordonnées de la facture',content:'Message de la facture',signatures:'Signatures', 'add-item':'Ajouter un produit'}[editing]??'Modification'}
 
-function EditDrawer({title,editing,kind,form,setForm,customers,variants,usedVariantIds,payments,remaining,editLine,canDeleteLine,onDeleteLine,clientSignatureUrl,companySignatureUrl,saving,error,onClose,onSubmit,onCancelPayment,onCancelAll,onUploadSignature}:{title:string;editing:string;kind:Kind;form:Record<string,string>;setForm:(form:Record<string,string>)=>void;customers:Entity[];variants:Variant[];usedVariantIds:number[];payments:Payment[];remaining:number;editLine?:Line;canDeleteLine:boolean;onDeleteLine:(line:Line)=>void;clientSignatureUrl:string;companySignatureUrl:string;saving:boolean;error:string;onClose:()=>void;onSubmit:(event:FormEvent)=>void;onCancelPayment:(payment:Payment)=>void;onCancelAll:()=>void;onUploadSignature:(kind:'client'|'company',file:File)=>Promise<void>}){
+function EditDrawer({title,editing,kind,form,setForm,customers,variants,usedVariantIds,payments,remaining,editLine,canDeleteLine,onDeleteLine,storedSignature,signed,isAdmin,saving,error,onClose,onSubmit,onCancelPayment,onCancelAll,onToggleSignature,onReplaceSignature}:{title:string;editing:string;kind:Kind;form:Record<string,string>;setForm:(form:Record<string,string>)=>void;customers:Entity[];variants:Variant[];usedVariantIds:number[];payments:Payment[];remaining:number;editLine?:Line;canDeleteLine:boolean;onDeleteLine:(line:Line)=>void;storedSignature:string;signed:boolean;isAdmin:boolean;saving:boolean;error:string;onClose:()=>void;onSubmit:(event:FormEvent)=>void;onCancelPayment:(payment:Payment)=>void;onCancelAll:()=>void;onToggleSignature:(value:boolean)=>Promise<void>;onReplaceSignature:(file:File)=>Promise<void>}){
   const field=(name:string,value:string)=>setForm({...form,[name]:value});
   return <aside className="invoice-edit-drawer"><header><div><small>MODIFICATION</small><h2>{title}</h2><p>La pièce reste visible pendant la modification.</p></div><button className="icon" onClick={onClose}><X/></button></header>{error&&<div className="error">{error}</div>}<form onSubmit={onSubmit}>
     {editing==='general'&&<><label>Référence<input value={form.reference} onChange={event=>field('reference',event.target.value)}/></label>{kind!=='invoice'&&<label>Statut<select value={form.status} onChange={event=>field('status',event.target.value)}><option value="draft">Brouillon</option><option value="sent">Envoyé</option><option value="accepted">Accepté</option><option value="ready">Prêt à livrer</option><option value="delivered">Livré</option><option value="cancelled">Annulé</option></select></label>}</>}
@@ -138,7 +155,7 @@ function EditDrawer({title,editing,kind,form,setForm,customers,variants,usedVari
     {editing==='details'&&<><label>Note<textarea value={form.notes} onChange={event=>field('notes',event.target.value)}/></label>{kind==='quote'&&<label>Valable jusqu’au<input type="datetime-local" value={form.validUntil} onChange={event=>field('validUntil',event.target.value)}/></label>}</>}
     {editLine&&<><div className="line-editor-product"><strong>{lineName(editLine)}</strong><span>{String(editLine.variant?.sku??'')}</span></div><NumberField label="Quantité" value={form.lineQuantity} onChange={value=>field('lineQuantity',value)} min={1}/>{kind!=='delivery'&&<><NumberField label="Prix unitaire" value={form.lineUnitPrice} onChange={value=>field('lineUnitPrice',value)}/><NumberField label="Remise sur la ligne" value={form.lineDiscount} onChange={value=>field('lineDiscount',value)}/></>}</>}
     {editing==='add-item'&&<AddProductPanel kind={kind} variants={variants.filter(row=>!usedVariantIds.includes(row.id)&&(kind==='quote'||Number(row.stock)>0))} form={form} field={field}/>} 
-    {editing==='signatures'&&<SignaturePanel clientUrl={clientSignatureUrl} companyUrl={companySignatureUrl} saving={saving} onUpload={onUploadSignature}/>} 
+    {editing==='signatures'&&<SignaturePanel stored={storedSignature} applied={signed} saving={saving} isAdmin={isAdmin} onToggle={onToggleSignature} onReplace={onReplaceSignature}/>} 
     {editing==='payment'&&<PaymentPanel payments={payments} remaining={remaining} form={form} field={field} saving={saving} onCancel={onCancelPayment} onCancelAll={onCancelAll}/>} 
     <div className="drawer-actions"><button type="button" onClick={onClose}>Fermer</button>{editLine&&canDeleteLine&&<button type="button" className="danger" disabled={saving} onClick={()=>onDeleteLine(editLine)}><Trash2/>Retirer la ligne</button>}{editing!=='signatures'&&(editing!=='payment'||remaining>0)&&<button className="primary" disabled={saving||editing==='add-item'&&!form.addVariantId}>{saving?'Enregistrement…':editing==='payment'?'Ajouter le règlement':editing==='add-item'?`Ajouter à ${kind==='invoice'?'la facture':kind==='quote'?'le devis':'le bon de livraison'}`:'Enregistrer'}</button>}</div>
   </form></aside>;
@@ -186,9 +203,38 @@ function AddProductPanel({kind,variants,form,field}:{kind:Kind;variants:Variant[
   return <div className="invoice-product-picker"><label>Rechercher un produit<div className="product-picker-search"><Search/><input placeholder="Nom, SKU, code-barres, couleur…" value={query} onChange={event=>setQuery(event.target.value)}/></div></label>{selected&&<div className="selected-invoice-product"><strong>{lineName({variant:selected})}</strong><span>{selected.sku} · Stock disponible : {selected.stock}</span><button type="button" onClick={()=>field('addVariantId','')}>Changer</button></div>}{!selected&&<div className="invoice-product-options">{filtered.map(variant=><button type="button" key={variant.id} onClick={()=>choose(variant)}><span><strong>{lineName({variant})}</strong><small>{variant.sku} · {[variant.color,variant.size].filter(Boolean).join(' · ')}</small></span><span><b>{money(variant.price)}</b><small>{variant.stock} disponible{Number(variant.stock)>1?'s':''}</small></span></button>)}{filtered.length===0&&<p>Aucun produit disponible.</p>}</div>}{selected&&<><NumberField label="Quantité" value={form.addQuantity} onChange={value=>field('addQuantity',value)} min={1} max={kind==='quote'?undefined:Number(selected.stock)}/>{kind!=='delivery'&&<><NumberField label="Prix unitaire" value={form.addUnitPrice} onChange={value=>field('addUnitPrice',value)}/><NumberField label="Remise sur la ligne" value={form.addDiscount} onChange={value=>field('addDiscount',value)}/></>}</>}</div>;
 }
 
-function SignaturePanel({clientUrl,companyUrl,saving,onUpload}:{clientUrl:string;companyUrl:string;saving:boolean;onUpload:(kind:'client'|'company',file:File)=>Promise<void>}){
-  const uploader=(kind:'client'|'company',label:string,url:string)=><section className="signature-uploader"><div><strong>{label}</strong><small>PNG ou JPG, 5 Mo maximum</small></div>{url?<img src={url} alt={label}/>:<div className="signature-placeholder">Aucune signature</div>}<label className={saving?'disabled':''}><ImagePlus/>{url?'Remplacer l’image':'Importer une signature'}<input type="file" accept="image/png,image/jpeg" disabled={saving} onChange={event=>{const file=event.target.files?.[0];if(file)void onUpload(kind,file);event.target.value=''}}/></label></section>;
-  return <div className="signature-editor">{uploader('client','Signature du client',clientUrl)}{uploader('company','Signature de l’entreprise',companyUrl)}</div>;
+// Signature de l'entreprise.
+//
+// Le panneau demandait deux images — client et entreprise — a televerser sur
+// chaque piece. C'etait deux fois trop : la signature du client se pose au
+// stylo sur le papier, et celle de l'entreprise ne change pas d'une facture a
+// l'autre.
+//
+// L'image est donc enregistree une fois, avec les mentions de facture, et
+// reste en base jusqu'a ce qu'on la remplace. Chaque piece porte simplement un
+// interrupteur : signee ou non.
+function SignaturePanel({stored,applied,saving,isAdmin,onToggle,onReplace}:{
+  stored:string;applied:boolean;saving:boolean;isAdmin:boolean;
+  onToggle:(value:boolean)=>void;onReplace:(file:File)=>Promise<void>;
+}){
+  return <div className="signature-editor">
+    <section className="signature-uploader">
+      <div><strong>Signature de l’entreprise</strong><small>Enregistrée une fois, réutilisée sur toutes les pièces</small></div>
+      {stored
+        ?<img src={stored} alt="Signature enregistrée"/>
+        :<p className="signature-empty">Aucune signature enregistrée. Importez une image pour pouvoir signer vos documents.</p>}
+      {isAdmin&&<label className={`signature-replace${saving?' is-busy':''}`}>
+        <ImagePlus/>{stored?'Remplacer l’image':'Importer une signature'}
+        <input type="file" accept="image/png,image/jpeg" disabled={saving}
+          onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void onReplace(file)}}/>
+      </label>}
+    </section>
+    <label className={`signature-toggle${stored?'':' is-disabled'}`}>
+      <input type="checkbox" checked={applied} disabled={!stored||saving} onChange={event=>onToggle(event.target.checked)}/>
+      <span><b>Apposer la signature sur ce document</b>
+        <small>{stored?'Elle apparaîtra à l’impression, sur le PDF et sur l’envoi au client.':'Importez d’abord une image.'}</small></span>
+    </label>
+  </div>;
 }
 
 function NumberField({label,value,onChange,min=0,max}:{label:string;value:string;onChange:(value:string)=>void;min?:number;max?:number}){return <label>{label}<input type="number" min={min} max={max} value={value??''} onChange={event=>onChange(event.target.value)}/></label>}

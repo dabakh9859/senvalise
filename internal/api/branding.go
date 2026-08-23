@@ -258,6 +258,28 @@ func (s *Server) brandingAsset(c *fiber.Ctx) error {
 	return c.Send(raw)
 }
 
+// uploadedImage lit une image televersee, pour l'incruster dans un PDF. fpdf
+// ne dessine ni SVG ni WebP : une signature dans l'un de ces formats laisse le
+// cadre vide plutot que de faire echouer le document.
+func uploadedImage(url string) (string, []byte) {
+	if strings.TrimSpace(url) == "" {
+		return "", nil
+	}
+	name := filepath.Base(url)
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+		return "", nil
+	}
+	raw, err := os.ReadFile(filepath.Join("uploads", name))
+	if err != nil {
+		return "", nil
+	}
+	if ext == ".png" {
+		return "PNG", raw
+	}
+	return "JPG", raw
+}
+
 // brandingLogoFile rend le logo tel qu'il est sur le disque, pour le rendu des
 // PDF. Le PDF est compose dans le processus : il lit le fichier, pas l'URL.
 func (s *Server) brandingLogoFile() (string, []byte) {

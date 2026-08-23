@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
-import {ArrowRight,Boxes,RefreshCw,ShoppingCart,TriangleAlert,Users,WalletCards} from 'lucide-react';
+import {ArrowRight,Boxes,DoorClosed,DoorOpen,RefreshCw,ShoppingCart,TriangleAlert,Users,WalletCards} from 'lucide-react';
 import {api,money} from './api';
 
 // Vue d'ensemble de la boutique en ligne : ce qui attend une action, et l'état
@@ -16,6 +16,58 @@ type Overview={
   customers:{accounts:number;new:number;vaults:number;vaultBalance:number};
   messages:number;top:Named[];zones:Named[];recent:OrderLine[];
 };
+
+// Ouverture et fermeture de la boutique.
+//
+// Fermer la vitrine demandait d'aller couper nginx a la main. Ici, un
+// interrupteur : la boutique repond aux clients par une page de fermeture, et
+// l'API refuse les commandes qu'un navigateur encore ouvert tenterait
+// d'envoyer.
+function ShopSwitch(){
+  const[state,setState]=useState<{enabled:boolean;message:string;flagPresent:boolean}|null>(null);
+  const[message,setMessage]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[error,setError]=useState('');
+  const[editing,setEditing]=useState(false);
+  useEffect(()=>{api<{enabled:boolean;message:string;flagPresent:boolean}>('/api/boutique/maintenance')
+    .then(row=>{setState(row);setMessage(row.message)}).catch(()=>{})},[]);
+  const apply=async(enabled:boolean,text?:string)=>{
+    setBusy(true);setError('');
+    try{
+      const saved=await api<{enabled:boolean;message:string;flagPresent:boolean}>('/api/boutique/maintenance',
+        {method:'PUT',body:JSON.stringify({enabled,message:text??message})});
+      setState(saved);setMessage(saved.message);setEditing(false);
+    }catch(reason){setError((reason as Error).message)}
+    finally{setBusy(false)}
+  };
+  if(!state)return null;
+  const closed=state.enabled;
+  return <section className={`panel shop-switch ${closed?'is-closed':'is-open'}`}>
+    <div className="shop-switch-state">
+      <span className="shop-switch-icon">{closed?<DoorClosed/>:<DoorOpen/>}</span>
+      <div>
+        <strong>{closed?'Boutique fermée':'Boutique ouverte'}</strong>
+        <p>{closed
+          ?'Les visiteurs voient une page de fermeture. Aucune commande ne peut être passée.'
+          :'Le site est accessible et prend les commandes.'}</p>
+      </div>
+    </div>
+    <div className="shop-switch-actions">
+      {closed&&<button type="button" onClick={()=>setEditing(value=>!value)} disabled={busy}>Modifier le message</button>}
+      <button type="button" className={closed?'primary':'danger'} onClick={()=>void apply(!closed)} disabled={busy}>
+        {busy?'…':closed?'Rouvrir la boutique':'Fermer la boutique'}
+      </button>
+    </div>
+    {editing&&<div className="shop-switch-message">
+      <label>Message affiché aux visiteurs
+        <textarea rows={3} value={message} onChange={event=>setMessage(event.target.value)}/></label>
+      <button type="button" className="primary" onClick={()=>void apply(true,message)} disabled={busy}>Enregistrer le message</button>
+    </div>}
+    {closed&&!state.flagPresent&&<p className="shop-switch-warn">
+      Le réglage est enregistré, mais la vitrine répond encore : prévenez-moi, le fichier d’état n’a pas été posé.</p>}
+    {error&&<div className="error">{error}</div>}
+  </section>;
+}
 
 export const orderStates:Record<string,{label:string;tone:string}>={
   pending:{label:'En attente',tone:'pending'},
@@ -49,6 +101,8 @@ export default function ShopOverview({onPage}:{onPage:(id:string)=>void}){
         <button onClick={()=>void load()} disabled={loading}><RefreshCw className={loading?'spin':''}/><span>Actualiser</span></button>
       </div>
     </div>
+
+    <ShopSwitch/>
 
     <section className="report-facts">
       <Action label="Commandes à traiter" value={String(data.orders.toProcess)} note="en attente ou en préparation" tone={data.orders.toProcess?'warn':undefined} onClick={()=>onPage('shop-orders')}/>

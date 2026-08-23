@@ -91,9 +91,13 @@ func (s *Server) Register(app *fiber.App) {
 	// navigateur ont besoin du logo avant toute authentification.
 	app.Get("/api/public/branding", s.publicBranding)
 	app.Get("/api/public/branding/:kind", s.brandingAsset)
+	app.Get("/api/public/shop-status", s.publicShopStatus)
 	// Referencement : fiches produit a leur adresse propre, plan du site et
 	// robots.txt. Hors du prefixe « /api », ce sont des pages de la vitrine.
 	s.registerSEO(app)
+	// Pendant une maintenance, la vitrine ne doit plus rien enregistrer : le
+	// garde precede toutes les routes de la boutique.
+	app.Use("/api/shop", s.blockDuringMaintenance)
 	s.RegisterShop(app)
 	a := app.Group("/api", auth.Required)
 	a.Get("/me", s.me)
@@ -172,10 +176,13 @@ func (s *Server) Register(app *fiber.App) {
 	// Préfixe volontairement distinct de /api/shop : le groupe de la vitrine y
 	// pose auth.Customer sans préfixe, et Fiber applique ce middleware à tout
 	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.
-	s.registerShopAdmin(a.Group("/boutique", auth.Manager))
+	boutique := a.Group("/boutique", auth.Manager)
+	s.registerShopAdmin(boutique)
+	s.registerMaintenance(boutique)
 	s.registerMessaging(a)
 	s.registerVaults(a)
 	s.registerBranding(a)
+
 }
 
 func (s *Server) login(c *fiber.Ctx) error {

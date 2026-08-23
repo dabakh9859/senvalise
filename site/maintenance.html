@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/api/public/branding/favicon">
+<title>Boutique momentanément fermée | Sen Valise</title>
+<meta name="description" content="La boutique Sen Valise est momentanément fermée pour mise à jour. Nous rouvrons très vite.">
+<!-- Une fermeture temporaire ne doit pas se retrouver indexée : la page part
+     avec un code 503, et cette balise évite qu'elle soit conservée si un robot
+     l'atteint quand même. -->
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/assets/css/fonts.css">
+<style>
+  :root{
+    --ink:#15181c; --muted:#6c7179; --line:#e6e8ec;
+    --page:#f7f8fa; --panel:#fff; --accent:#1529d6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--ink:#eef0f3;--muted:#9aa0a8;--line:#2a2e35;--page:#0b0d12;--panel:#14171d}
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center; padding:28px;
+    background:var(--page); color:var(--ink);
+    font:400 16px/1.6 "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main{
+    max-width:520px; width:100%; text-align:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:40px 32px;
+  }
+  .logo{height:52px; width:auto; max-width:190px; object-fit:contain; margin-bottom:26px}
+  h1{font-size:24px; line-height:1.25; margin:0 0 14px; letter-spacing:-.01em}
+  p{margin:0 0 22px; color:var(--muted); font-size:15px}
+  .actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  a{
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+    border:1px solid var(--line); border-radius:10px; padding:12px 20px;
+    color:var(--ink); font-size:14px; font-weight:600;
+  }
+  a.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  footer{margin-top:26px; font-size:12px; color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <!-- Le logo vient du même réglage que le reste du site : la page de
+       fermeture doit rester reconnaissable, pas générique. -->
+  <img class="logo" src="/api/public/branding/logo" alt="" onerror="this.remove()">
+  <h1>La boutique est momentanément fermée</h1>
+  <p data-message>Nous mettons le catalogue à jour. Merci de repasser dans un moment — nous rouvrons très vite.</p>
+  <div class="actions">
+    <a class="primary" href="https://wa.me/221771482036">Nous écrire sur WhatsApp</a>
+    <a href="tel:+221771482036">Appeler la boutique</a>
+  </div>
+  <footer>Sen Valise · Dakar, Sénégal</footer>
+</main>
+<script>
+  // Le message est celui saisi dans la gestion. S'il n'arrive pas — c'est une
+  // page de panne, l'API peut être en cause — le texte par défaut reste.
+  fetch("/api/public/shop-status")
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d && d.message) document.querySelector("[data-message]").textContent = d.message;
+      if (d && d.siteName) document.title = "Boutique momentanément fermée | " + d.siteName;
+    })
+    .catch(function () { /* le texte par défaut fait l'affaire */ });
+</script>
+</body>
+</html>

@@ -47,6 +47,9 @@ func main() {
 	// Le facteur de la messagerie tourne avec le serveur : les messages mis en
 	// file par les ecrans partent sans qu'aucune requete ne reste ouverte.
 	server.StartOutbox()
+	// La vitrine retrouve l'etat enregistre : un fichier temoin perdu ne doit
+	// pas rouvrir une boutique que le gerant avait fermee.
+	server.RestoreMaintenance()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

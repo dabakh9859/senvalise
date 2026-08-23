@@ -1071,3 +1071,32 @@
   .journal-event{grid-template-columns:44px 26px 1fr auto;gap:9px}
   .journal-who{display:none}
 }
+
+/* ── Ouverture et fermeture de la boutique ─────────────────────────────────
+   L'état de la vitrine est la première chose à savoir en arrivant sur cet
+   écran : il tient en une phrase et un bouton, en tête de page. */
+.shop-switch{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  border-left:3px solid var(--ok)}
+.shop-switch.is-closed{border-left-color:var(--bad);background:var(--bad-surface)}
+.shop-switch-state{display:flex;align-items:center;gap:14px}
+.shop-switch-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+  background:var(--ok-surface);color:var(--ok);flex:0 0 auto}
+.is-closed .shop-switch-icon{background:var(--panel);color:var(--bad)}
+.shop-switch-icon svg{width:21px;height:21px}
+.shop-switch-state strong{display:block;font-size:15px}
+.shop-switch-state p{margin:3px 0 0;font-size:12px;color:var(--muted);max-width:52ch;line-height:1.55}
+.shop-switch-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.shop-switch-actions button{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:8px;padding:11px 18px;font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap}
+.shop-switch-actions button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.shop-switch-actions button.danger{border-color:var(--bad);color:var(--bad)}
+.shop-switch-actions button:disabled{opacity:.5;cursor:not-allowed}
+.shop-switch-message{flex:1 0 100%;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+  margin-top:6px;padding-top:14px;border-top:1px solid var(--line)}
+.shop-switch-message label{flex:1;min-width:260px;display:flex;flex-direction:column;gap:6px;
+  font-size:10px;font-weight:650;color:var(--muted)}
+.shop-switch-message textarea{border:1px solid var(--line);border-radius:8px;padding:10px;
+  background:var(--panel);color:var(--ink);font:inherit;font-size:12.5px;outline:0;resize:vertical}
+.shop-switch-message button{border:1px solid var(--accent);background:var(--accent);color:#fff;
+  border-radius:8px;padding:11px 18px;font-size:12.5px;font-weight:650;cursor:pointer}
+.shop-switch-warn{flex:1 0 100%;margin:10px 0 0;font-size:11.5px;color:var(--bad);line-height:1.55}

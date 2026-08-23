@@ -1010,3 +1010,64 @@
    stylo, plus un bouton — on ne téléverse plus la signature du client. */
 .invoice-signatures .signature-slot{display:flex;flex-direction:column;gap:6px}
 .invoice-signatures .signature-slot span{font-size:10px;color:var(--muted)}
+
+/* ── Journal de l'activité ─────────────────────────────────────────────────
+   Écrit pour être lu sans formation : pas de tableau à colonnes, pas de filtre
+   à combiner. Trois périodes, quatre chiffres, un fil de phrases groupées par
+   jour. Ce qui demande une action passe devant le reste. */
+.journal-page{display:flex;flex-direction:column;gap:14px}
+.journal-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.journal-head h2{font-size:19px;margin:0}
+.journal-head p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.journal-periods{display:flex;gap:7px;align-items:center}
+.journal-periods button{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:8px;padding:9px 14px;font-size:12px;font-weight:650;cursor:pointer}
+.journal-periods button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.journal-refresh{width:38px;padding:0!important;display:grid;place-items:center}
+.journal-refresh svg{width:15px;height:15px}
+
+/* Les alertes n'apparaissent que lorsqu'elles existent : un bandeau toujours
+   présent finit par ne plus être lu. */
+.journal-alerts{border-left:3px solid var(--warn)}
+.journal-alerts h3{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 12px}
+.journal-alerts h3 svg{width:16px;height:16px;color:var(--warn)}
+.journal-alerts ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.journal-alerts li{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.journal-alerts li span{font-size:13px}
+.journal-alerts li button{border:1px solid var(--line);background:var(--panel);color:var(--accent);
+  border-radius:7px;padding:7px 12px;font-size:11.5px;font-weight:650;cursor:pointer;white-space:nowrap}
+.journal-alerts li button:hover{border-color:var(--accent)}
+
+.journal-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.journal-figures .figure{display:flex;flex-direction:column;gap:3px}
+.journal-figures .figure small{font-size:9px;letter-spacing:.07em;color:var(--muted)}
+.journal-figures .figure strong{font-size:24px;letter-spacing:-.02em}
+.journal-figures .figure span{font-size:11px;color:var(--muted)}
+
+.journal-day+.journal-day{margin-top:22px}
+.journal-day h3{font-size:12px;letter-spacing:.04em;color:var(--muted);margin:0 0 10px;
+  text-transform:capitalize;position:sticky;top:0;background:var(--panel);padding:6px 0;z-index:1}
+.journal-day ul{list-style:none;margin:0;padding:0}
+.journal-event{display:grid;grid-template-columns:52px 30px 1fr auto auto;gap:12px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--line)}
+.journal-event:last-child{border-bottom:0}
+.journal-time{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.journal-icon{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--sunken)}
+.journal-icon svg{width:15px;height:15px;color:var(--muted)}
+.tone-ok .journal-icon{background:var(--ok-surface)}
+.tone-ok .journal-icon svg{color:var(--ok)}
+.tone-warn .journal-icon{background:var(--warn-surface)}
+.tone-warn .journal-icon svg{color:var(--warn)}
+.tone-bad .journal-icon{background:var(--bad-surface)}
+.tone-bad .journal-icon svg{color:var(--bad)}
+.tone-info .journal-icon{background:var(--accent-surface)}
+.tone-info .journal-icon svg{color:var(--accent)}
+.journal-text strong{display:block;font-size:13px;font-weight:600}
+.journal-text small{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+.journal-amount{font-size:13.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.journal-who{font-size:11px;color:var(--muted);white-space:nowrap;min-width:0}
+.journal-feed .empty{font-size:12.5px;color:var(--muted);text-align:center;padding:26px 0}
+@media (max-width:820px){
+  .journal-event{grid-template-columns:44px 26px 1fr auto;gap:9px}
+  .journal-who{display:none}
+}

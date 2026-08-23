@@ -168,6 +168,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)
 	a.Post("/sales/:id/delivery-note", auth.Manager, s.createDeliveryNote)
 	a.Get("/reports", auth.Manager, s.reports)
+	a.Get("/journal", auth.Manager, s.journal)
 	// Préfixe volontairement distinct de /api/shop : le groupe de la vitrine y
 	// pose auth.Customer sans préfixe, et Fiber applique ce middleware à tout
 	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.

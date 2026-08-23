@@ -1,5 +1,5 @@
 import {
-  BarChart3, BellRing, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
+  BarChart3, BellRing, History, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
   Megaphone, MessageSquare, Package, Palette, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
   Truck, Users, WalletCards, Wrench,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ export type NavItem={id:string;label:string;resource?:string;icon:typeof Package
 export type NavGroup={id:string;label:string;icon:typeof Package;items:NavItem[]};
 
 export const dashboardItem:NavItem={id:'dashboard',label:'Tableau de bord',icon:LayoutDashboard,manager:true};
+export const journalItem:NavItem={id:'journal',label:'Ce qui s’est passé',icon:History,manager:true};
 export const groups:NavGroup[]=[
   {id:'stock',label:'Stock',icon:Boxes,items:[
     {id:'products',label:'Produits',resource:'products',icon:Package},
@@ -57,7 +58,7 @@ export const groups:NavGroup[]=[
   ]},
 ];
 
-export const allNav=[dashboardItem,...groups.flatMap(group=>group.items)];
+export const allNav=[dashboardItem,journalItem,...groups.flatMap(group=>group.items)];
 
 type Props={user:User;onPage:(id:string)=>void;onLogout:()=>void;brand?:Brand};
 

@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {ChevronDown,Menu,ShoppingBag,X} from 'lucide-react';
-import {allNav,dashboardItem,groups,NavGroup,NavItem,User} from './Sidebar';
+import {allNav,dashboardItem,groups,journalItem,NavGroup,NavItem,User} from './Sidebar';
 
 type Props={user:User;page:string;onPage:(id:string)=>void};
 
@@ -31,6 +31,7 @@ export default function TopNavigation({user,page,onPage}:Props){
     <div className="top-nav-context"><current.icon/><span>{current.label}</span></div>
     <nav className="top-nav-links" aria-label="Navigation principale">
       {visible(dashboardItem)&&<button className={`top-nav-direct ${page==='dashboard'?'active':''}`} onClick={()=>navigate('dashboard')}>Tableau de bord</button>}
+      {visible(journalItem)&&<button className={`top-nav-direct ${page==='journal'?'active':''}`} onClick={()=>navigate('journal')}>Ce qui s’est passé</button>}
       {primary.map(group=><div className="top-nav-dropdown" key={group.id}>
         <button className={`top-nav-trigger ${groupActive(group)?'active':''}`} onClick={()=>setOpen(open===group.id?null:group.id)} aria-expanded={open===group.id} aria-haspopup="menu">{group.label}<ChevronDown/></button>
         {open===group.id&&<div className="top-nav-menu" role="menu"><div className="top-menu-heading"><group.icon/><span>{group.label}</span></div>{groupMenu(group)}</div>}
@@ -46,6 +47,7 @@ export default function TopNavigation({user,page,onPage}:Props){
     </div>
     {mobileOpen&&<div className="mobile-top-menu">
       {visible(dashboardItem)&&<button className={page==='dashboard'?'active':''} onClick={()=>navigate('dashboard')}><dashboardItem.icon/>Tableau de bord</button>}
+      {visible(journalItem)&&<button className={page==='journal'?'active':''} onClick={()=>navigate('journal')}><journalItem.icon/>Ce qui s’est passé</button>}
       {groups.map(group=>{const items=group.items.filter(visible);return items.length?<section key={group.id}><h3><group.icon/>{group.label}</h3>{items.map(item=><button key={item.id} className={page===item.id?'active':''} onClick={()=>navigate(item.id)}><item.icon/>{item.label}</button>)}</section>:null})}
     </div>}
   </header>;

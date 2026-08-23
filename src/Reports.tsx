@@ -143,6 +143,11 @@ export default function Reports(){
       </section>
 
       <section className="report-facts">
+        <Fact label="Bénéfice de la période" value={money(t.netResult)}
+          note={t.revenue>0&&t.cogs===0
+            ?'⚠ prix d’achat non renseignés : ce montant est le chiffre d’affaires, pas un bénéfice'
+            :`marge de ${money(t.grossMargin)} moins ${money(t.expenses + t.refunds)} de dépenses et retours`}
+          tone={t.revenue>0&&t.cogs===0?'warn':t.netResult>0?'ok':t.netResult<0?'bad':undefined}/>
         <Fact label="Encaissé sur la période" value={money(t.collected)} note="règlements datés, hors factures antérieures"/>
         <Fact label="Reste à encaisser" value={money(t.receivables)} note={`${data.receivables.length} client${data.receivables.length>1?'s':''} concerné${data.receivables.length>1?'s':''}`} tone={t.receivables?'warn':undefined}/>
         <Fact label="Factures émises" value={String(t.invoices)} note={`panier moyen ${money(t.averageBasket)}`}/>

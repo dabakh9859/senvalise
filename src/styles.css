@@ -1100,3 +1100,11 @@
 .shop-switch-message button{border:1px solid var(--accent);background:var(--accent);color:#fff;
   border-radius:8px;padding:11px 18px;font-size:12.5px;font-weight:650;cursor:pointer}
 .shop-switch-warn{flex:1 0 100%;margin:10px 0 0;font-size:11.5px;color:var(--bad);line-height:1.55}
+
+/* Bénéfice en tête des rapports. Il était calculé mais enterré dans le compte
+   de résultat : c'est pourtant le chiffre qu'on cherche en ouvrant la page.
+   La couleur dit le sens avant même la lecture du montant. */
+.fact.ok{background:var(--ok-surface);border-color:var(--ok-line)}
+.fact.ok strong{color:var(--ok)}
+.fact.bad{background:var(--bad-surface);border-color:var(--bad-line)}
+.fact.bad strong{color:var(--bad)}

@@ -60,6 +60,18 @@ func Open() (*gorm.DB, error) {
 	if err := db.Exec("CREATE SEQUENCE IF NOT EXISTS document_refs START 1").Error; err != nil {
 		return nil, err
 	}
+	// Code-barres : unique seulement quand il est renseigne. Un index unique
+	// ordinaire empechait d'avoir deux declinaisons sans code-barres, la chaine
+	// vide comptant comme une valeur.
+	for _, statement := range []string{
+		"DROP INDEX IF EXISTS idx_product_variants_barcode",
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_product_variants_barcode_set
+		   ON product_variants (barcode) WHERE barcode <> ''`,
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			return nil, err
+		}
+	}
 	return db, seed(db)
 }
 

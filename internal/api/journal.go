@@ -128,6 +128,7 @@ var motifs = map[string]string{
 	"retour_fournisseur": "retour au fournisseur", "sales_deleted": "facture supprimée, marchandise rendue",
 	"arrivals_deleted": "arrivage supprimé", "returns_deleted": "retour supprimé",
 	"orders_deleted": "commande supprimée", "adjust": "ajustement",
+	"initial": "stock de départ à la création",
 }
 
 // pieces nomme les tables comme le gerant les appelle. Le journal d'audit note

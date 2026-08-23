@@ -117,17 +117,21 @@ type ProductImage struct {
 }
 type ProductVariant struct {
 	Base
-	ProductID uint     `json:"productId" gorm:"index"`
-	SKU       string   `json:"sku" gorm:"uniqueIndex"`
-	Barcode   string   `json:"barcode" gorm:"uniqueIndex"`
-	Color     string   `json:"color"`
-	Size      string   `json:"size"`
-	Cost      int64    `json:"cost"`
-	Price     int64    `json:"price"`
-	Stock     int64    `json:"stock"`
-	AlertAt   int64    `json:"alertAt"`
-	Active    bool     `json:"active" gorm:"default:true"`
-	Product   *Product `json:"product,omitempty" gorm:"foreignKey:ProductID"`
+	ProductID uint   `json:"productId" gorm:"index"`
+	SKU       string `json:"sku" gorm:"uniqueIndex"`
+	// L'unicite du code-barres est portee par un index partiel cree a la
+	// migration, et non par ce tag : une declinaison sans code-barres stocke une
+	// chaine vide, et un index unique ordinaire traite deux chaines vides comme
+	// un doublon. Deux produits sans code-barres devenaient impossibles.
+	Barcode string   `json:"barcode" gorm:"index"`
+	Color   string   `json:"color"`
+	Size    string   `json:"size"`
+	Cost    int64    `json:"cost"`
+	Price   int64    `json:"price"`
+	Stock   int64    `json:"stock"`
+	AlertAt int64    `json:"alertAt"`
+	Active  bool     `json:"active" gorm:"default:true"`
+	Product *Product `json:"product,omitempty" gorm:"foreignKey:ProductID"`
 }
 type StockMovement struct {
 	Base

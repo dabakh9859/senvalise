@@ -429,10 +429,155 @@ func (s *Server) create(c *fiber.Ctx, name string) error {
 		hash, _ := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 		u.PasswordHash = string(hash)
 	}
+	if product, ok := out.(*models.Product); ok {
+		return s.createProduct(c, product)
+	}
+	// Categories et marques portent le meme index unique sur leur slug, et le
+	// formulaire les cree souvent sans le remplir : deux categories sans slug
+	// se seraient telescopees.
+	switch row := out.(type) {
+	case *models.Category:
+		if strings.TrimSpace(row.Slug) == "" {
+			row.Slug = uniqueTableSlug(s.DB, "categories", slugify(row.Name))
+		}
+	case *models.Brand:
+		if strings.TrimSpace(row.Slug) == "" {
+			row.Slug = uniqueTableSlug(s.DB, "brands", slugify(row.Name))
+		}
+	}
 	if e := s.DB.Create(out).Error; e != nil {
 		return dbError(e, "création "+name)
 	}
 	return c.Status(201).JSON(out)
+}
+
+// createProduct cree la fiche et sa premiere declinaison.
+//
+// Le stock et le prix ne vivent pas sur le produit mais sur ses declinaisons.
+// Demander a la gerante de creer une fiche, puis d'y ajouter une declinaison
+// pour saisir un prix et une quantite, c'etait lui demander de connaitre ce
+// decoupage interne. Le formulaire pose une quantite et un prix ; le serveur
+// fabrique la declinaison qui va avec.
+//
+// Un produit a plusieurs tailles ou couleurs se complete ensuite depuis sa
+// fiche : la premiere declinaison ne ferme rien.
+func (s *Server) createProduct(c *fiber.Ctx, product *models.Product) error {
+	var extra struct {
+		Price int64 `json:"price"`
+		Stock int64 `json:"stock"`
+	}
+	_ = c.BodyParser(&extra)
+	if extra.Stock < 0 || extra.Price < 0 {
+		return fiber.NewError(422, "Le prix et la quantité ne peuvent pas être négatifs.")
+	}
+	userID, _ := c.Locals("userID").(uint)
+
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		// Le slug identifie le produit sur la boutique et porte un index unique.
+		// Il n'etait jamais calcule : laisse vide au formulaire, le deuxieme
+		// produit butait sur cet index avec une erreur incomprehensible.
+		if strings.TrimSpace(product.Slug) == "" {
+			product.Slug = uniqueSlug(tx, slugify(product.Name))
+		}
+		if e := tx.Create(product).Error; e != nil {
+			return e
+		}
+		if extra.Price <= 0 && extra.Stock <= 0 {
+			return nil
+		}
+		variant := models.ProductVariant{
+			ProductID: product.ID, SKU: uniqueSKU(tx, "SV-"+product.Slug),
+			Price: extra.Price, Active: true,
+		}
+		if e := tx.Create(&variant).Error; e != nil {
+			return e
+		}
+		if extra.Stock > 0 {
+			// La quantite passe par un mouvement, comme toute entree de stock :
+			// une piece qui apparait sans ligne au journal est une piece que
+			// personne ne peut expliquer.
+			return s.adjustWithNote(tx, variant.ID, extra.Stock, userID, "initial", s.ref("STK"), "stock de départ à la création")
+		}
+		return nil
+	})
+	if err != nil {
+		return dbError(err, "création produits")
+	}
+	preload(s.DB, "products").First(product, product.ID)
+	return c.Status(201).JSON(product)
+}
+
+// slugify rend un identifiant d'adresse a partir d'un nom : « Baobab 45 »
+// devient « baobab-45 ». Les accents sont ramenes a leur lettre de base, le
+// reste devient un tiret.
+func slugify(name string) string {
+	accents := map[rune]rune{'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a', 'å': 'a',
+		'ç': 'c', 'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e', 'î': 'i', 'ï': 'i', 'í': 'i',
+		'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o', 'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+		'ÿ': 'y', 'ñ': 'n'}
+	var out []rune
+	previousDash := true
+	for _, r := range strings.ToLower(strings.TrimSpace(name)) {
+		if mapped, ok := accents[r]; ok {
+			r = mapped
+		}
+		switch {
+		case (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'):
+			out = append(out, r)
+			previousDash = false
+		case !previousDash:
+			out = append(out, '-')
+			previousDash = true
+		}
+	}
+	slug := strings.Trim(string(out), "-")
+	if slug == "" {
+		slug = "produit"
+	}
+	return slug
+}
+
+// uniqueSlug evite la collision sur l'index unique : deux « Sac Horizon »
+// deviennent « sac-horizon » et « sac-horizon-2 ».
+func uniqueSlug(tx *gorm.DB, base string) string {
+	candidate := base
+	for attempt := 2; attempt < 200; attempt++ {
+		var count int64
+		tx.Model(&models.Product{}).Where("slug = ?", candidate).Count(&count)
+		if count == 0 {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, attempt)
+	}
+	return fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
+}
+
+// uniqueTableSlug sert les tables qui portent un slug sans passer par le
+// chemin des produits.
+func uniqueTableSlug(db *gorm.DB, table, base string) string {
+	candidate := base
+	for attempt := 2; attempt < 200; attempt++ {
+		var count int64
+		db.Table(table).Where("slug = ?", candidate).Count(&count)
+		if count == 0 {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, attempt)
+	}
+	return fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
+}
+
+func uniqueSKU(tx *gorm.DB, base string) string {
+	candidate := base
+	for attempt := 2; attempt < 200; attempt++ {
+		var count int64
+		tx.Model(&models.ProductVariant{}).Where("sku = ?", candidate).Count(&count)
+		if count == 0 {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, attempt)
+	}
+	return fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
 }
 func (s *Server) update(c *fiber.Ctx, name string) error {
 	out := modelFor(name)

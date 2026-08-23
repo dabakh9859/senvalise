@@ -9,7 +9,7 @@ type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>
 type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string;parent?:Entity}|null;
 
 const labels:Record<string,string>={
-  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
+  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Quantité en stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix de vente',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
 };
 
 const configuredFields:Record<string,string[]>={
@@ -17,7 +17,7 @@ const configuredFields:Record<string,string[]>={
   suppliers:['name','phone','email','address'],
   categories:['name','slug','description'],
   brands:['name','slug'],
-  products:['name','categoryId','brandId','description','blurb','tag','active','online'],
+  products:['name','categoryId','price','stock','active','brandId','description','blurb','tag','online'],
   variants:['productId','sku','barcode','color','size','cost','price','stock','alertAt','active'],
   'stock/movements':['variantId','userId','type','reason','quantity','stockBefore','stockAfter','reference','note'],
   arrivals:['reference','supplierId','status','currency','exchangeRate','shipping','customs','otherFees','receivedAt'],
@@ -43,7 +43,22 @@ const PAGE_SIZE=100;
 // noyait les trois ou quatre valeurs qu'on vient reellement changer — le nom,
 // le prix, la mise en ligne. Ils restent accessibles, repliés.
 const advancedFields:Record<string,string[]>={
-  products:['slug','flag','cabin','volume','weight','position','featured'],
+  products:['brandId','description','blurb','tag','online','slug','flag','cabin','volume','weight','position','featured'],
+};
+
+// Champs qui n'existent qu'a la creation. Le prix et la quantite vivent en
+// realite sur la declinaison ; le serveur fabrique celle-ci a partir d'eux.
+// En modification ils disparaissent : le stock passe alors par le bloc dedie,
+// qui inscrit un mouvement.
+const creationOnlyFields:Record<string,string[]>={products:['price','stock']};
+
+// Valeurs de depart d'une creation. Un produit cree decoche n'apparait nulle
+// part — ni au catalogue, ni a la caisse — et on le cherche sans comprendre.
+const creationDefaults:Record<string,Record<string,string|boolean>>={
+  products:{active:true},
+  variants:{active:true},
+  customers:{active:true},
+  users:{active:true},
 };
 
 const readonly=new Set(['id','createdAt','updatedAt','items','variants','images','deposits','movements']);
@@ -482,10 +497,14 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
 
 function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resource:string;row?:Entity;mode:'create'|'edit';onClose:()=>void;onDone:()=>void}){
   const formFields=useMemo(()=>{const configured=configuredFields[resource]??[];if(mode==='create')return configured.length?configured:['name','status'];const actual=Object.keys(row??{}).filter(key=>!readonly.has(key)&&typeof row?.[key]!=='object');return [...new Set([...configured,...actual])]},[mode,resource,row]);
-  const initial=useMemo(()=>Object.fromEntries(formFields.map(field=>[field,toInputValue(field,row?.[field])])),[formFields,row]);
+  const initial=useMemo(()=>Object.fromEntries(formFields.map(field=>{
+    if(mode==='create'&&(creationDefaults[resource]??{})[field]!==undefined)return [field,(creationDefaults[resource] as Record<string,string|boolean>)[field]];
+    return [field,toInputValue(field,row?.[field])];
+  })),[formFields,row,mode,resource]);
   const hiddenFields=useMemo(()=>advancedFields[resource]??[],[resource]);
-  const mainFields=useMemo(()=>formFields.filter(field=>!hiddenFields.includes(field)),[formFields,hiddenFields]);
-  const extraFields=useMemo(()=>formFields.filter(field=>hiddenFields.includes(field)),[formFields,hiddenFields]);
+  const creationOnly=useMemo(()=>mode==='create'?[]:(creationOnlyFields[resource]??[]),[mode,resource]);
+  const mainFields=useMemo(()=>formFields.filter(field=>!hiddenFields.includes(field)&&!creationOnly.includes(field)),[formFields,hiddenFields,creationOnly]);
+  const extraFields=useMemo(()=>formFields.filter(field=>hiddenFields.includes(field)&&!creationOnly.includes(field)),[formFields,hiddenFields,creationOnly]);
   const[form,setForm]=useState<Record<string,string|boolean>>(initial);
   const[relationOptions,setRelationOptions]=useState<Record<string,Choice[]>>({});
   const[error,setError]=useState('');const[saving,setSaving]=useState(false);

@@ -1,5 +1,5 @@
 import {
-  BarChart3, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, LayoutDashboard, LogOut,
+  BarChart3, Moon, Sun, Boxes, CircleDollarSign, FileText, Globe2, HandCoins, LayoutDashboard, LogOut,
   MessageSquare, Package, Receipt, RotateCcw, Settings, ShoppingBag, ShoppingCart, Tags,
   Truck, Users, WalletCards, Wrench,
 } from 'lucide-react';
@@ -14,11 +14,14 @@ export type NavGroup={id:string;label:string;icon:typeof Package;items:NavItem[]
 export const dashboardItem:NavItem={id:'dashboard',label:'Tableau de bord',icon:LayoutDashboard,manager:true};
 export const groups:NavGroup[]=[
   {id:'stock',label:'Stock',icon:Boxes,items:[
-    {id:'products',label:'Produits',resource:'products',icon:Package},
-    {id:'variants',label:'État du stock',resource:'variants',icon:Boxes},
+    // « Produits » et « État du stock » montraient la même marchandise sous
+    // deux angles, obligeant à passer de l'un à l'autre pour une seule
+    // question. L'écran unique porte les deux : la fiche produit et le
+    // détail par déclinaison.
+    {id:'products',label:'Produits et stock',resource:'products',icon:Package},
     {id:'movements',label:'Mouvements',resource:'stock/movements',icon:RotateCcw},
-    {id:'arrivals',label:'Arrivages',resource:'arrivals',icon:Truck,manager:true},
-    {id:'suppliers',label:'Fournisseurs',resource:'suppliers',icon:Truck,manager:true},
+    {id:'arrivals',label:'Arrivages',resource:'arrivals',icon:Truck},
+    {id:'suppliers',label:'Fournisseurs',resource:'suppliers',icon:Truck},
   ]},
   {id:'sales-group',label:'Ventes',icon:ShoppingCart,items:[
     {id:'pos',label:'Nouvelle vente',icon:ShoppingBag},
@@ -27,10 +30,11 @@ export const groups:NavGroup[]=[
     {id:'delivery-notes',label:'Bons de livraison',resource:'delivery-notes',icon:Truck},
     {id:'returns',label:'Retours',resource:'returns',icon:RotateCcw},
     {id:'customers',label:'Clients',resource:'customers',icon:Users},
+    {id:'receivables',label:'Créances et relances',icon:HandCoins},
   ]},
   {id:'finance',label:'Finances',icon:CircleDollarSign,items:[
     {id:'cash-sessions',label:'Sessions de caisse',resource:'cash-sessions',icon:WalletCards},
-    {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt,manager:true},
+    {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt},
     {id:'reports',label:'Rapports',icon:BarChart3,manager:true},
   ]},
   {id:'shop',label:'Boutique',icon:Globe2,items:[
@@ -44,12 +48,12 @@ export const groups:NavGroup[]=[
     {id:'contacts',label:'Messages reçus',resource:'contact-messages',icon:MessageSquare,manager:true},
   ]},
   {id:'tools',label:'Outils',icon:Wrench,items:[
-    {id:'messages',label:'Messages',resource:'messages',icon:MessageSquare,manager:true},
-    {id:'templates',label:'Modèles',resource:'message-templates',icon:MessageSquare,manager:true},
+    {id:'messages',label:'Messages',resource:'messages',icon:MessageSquare},
+    {id:'templates',label:'Modèles',resource:'message-templates',icon:MessageSquare},
   ]},
   {id:'settings-group',label:'Paramètres',icon:Settings,items:[
-    {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards,manager:true},
-    {id:'categories',label:'Catégories',resource:'categories',icon:Tags,manager:true},
+    {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards},
+    {id:'categories',label:'Catégories',resource:'categories',icon:Tags},
     {id:'users',label:'Utilisateurs',resource:'users',icon:Users,manager:true},
   ]},
 ];

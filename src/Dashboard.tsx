@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react';
-import {AlertTriangle,ArrowDownRight,ArrowUpRight,BarChart3,Box,ChevronDown,RefreshCw,TriangleAlert,Users} from 'lucide-react';
+import {AlertTriangle,ArrowDownRight,ArrowUpRight,BarChart3,Box,Boxes,ChevronDown,FileText,RefreshCw,ShoppingBag,TriangleAlert,Users} from 'lucide-react';
 import {
   Area,AreaChart,Bar,BarChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,
   Tooltip,XAxis,YAxis,
@@ -27,7 +27,13 @@ const compact=(value:number)=>new Intl.NumberFormat('fr-FR',{notation:'compact',
 const dateLabel=(date:string,period:Period)=>new Intl.DateTimeFormat('fr-FR',period==='12m'?{month:'short'}:{day:'numeric',month:'short'}).format(new Date(date));
 const tooltipMoney=(value:unknown)=>money(Number(value));
 
-export default function Dashboard(){
+const shortcuts=[
+  {id:'pos',label:'Nouvelle vente',hint:'Ouvrir la caisse et encaisser',icon:ShoppingBag},
+  {id:'sales',label:'Factures',hint:'Consulter et régler les ventes',icon:FileText},
+  {id:'products',label:'Produits et stock',hint:'Voir l’état des déclinaisons',icon:Boxes},
+];
+
+export default function Dashboard({onPage}:{onPage:(id:string)=>void}){
   const chart=useChartTheme();
   const[period,setPeriod]=useState<Period>('30d');
   const[data,setData]=useState<DashboardData|null>(null);
@@ -45,6 +51,14 @@ export default function Dashboard(){
       <div><h1>Tableau de bord</h1><p>{range} · {data.summary.invoices} facture{data.summary.invoices!==1?'s':''}</p></div>
       <button className="refresh-button" onClick={()=>void load()} disabled={loading}><RefreshCw className={loading?'spin':''}/><span>Actualiser</span></button>
     </div>
+
+    <nav className="dashboard-shortcuts" aria-label="Accès rapides">
+      {shortcuts.map(item=><button key={item.id} onClick={()=>onPage(item.id)}>
+        <span className="shortcut-icon"><item.icon/></span>
+        <span className="shortcut-text"><strong>{item.label}</strong><small>{item.hint}</small></span>
+        <ArrowUpRight/>
+      </button>)}
+    </nav>
 
     <div className="period-row"><span>Période</span><div className="period-control">{periods.map(item=><button key={item.id} className={period===item.id?'active':''} onClick={()=>setPeriod(item.id)}>{item.label}</button>)}</div>{updated&&<small>Mis à jour à {updated.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small>}</div>
 

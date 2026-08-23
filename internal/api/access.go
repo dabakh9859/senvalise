@@ -14,13 +14,17 @@ import (
 // suffisait à lire les dépenses, les coûts d'achat ou la boutique. Les règles
 // ci-dessous sont appliquées côté serveur, seul endroit qui compte.
 
-// Ressources dont la lecture est réservée au gérant : les achats et les
-// fournisseurs (ils révèlent les marges), les comptes et réglages, le journal
-// d'audit, et tout ce qui relève de la boutique en ligne.
+// Ressources dont la lecture est réservée au gérant : la boutique en ligne,
+// les comptes, les réglages bruts et le journal d'audit.
+//
+// Le vendeur tient désormais aussi les fournisseurs, les arrivages et la
+// messagerie : ce sont des gestes de comptoir. Il les voit sans les prix
+// d'achat — le filtre des champs de coût plus bas s'en charge, quelle que
+// soit la ressource.
 var managerRead = map[string]bool{
-	"suppliers": true, "arrivals": true, "vaults": true, "orders": true,
-	"home-blocks": true, "contact-messages": true, "messages": true,
-	"message-templates": true, "settings": true, "delivery-zones": true,
+	"vaults": true, "orders": true,
+	"home-blocks": true, "contact-messages": true,
+	"settings": true, "delivery-zones": true,
 	"users": true, "activity-logs": true,
 }
 

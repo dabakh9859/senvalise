@@ -67,17 +67,20 @@ func (s *Server) Register(app *fiber.App) {
 	// c'est du pilotage, pas du comptoir.
 	a.Get("/dashboard", auth.Manager, s.dashboard)
 	a.Get("/checkout-settings", s.checkoutSettings)
-	a.Put("/checkout-settings", auth.Manager, s.updateCheckoutSettings)
-	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
-	// Les dépenses portent les salaires et le solde de la journée. Le module
-	// entier relève du gérant.
-	a.Get("/expenses", auth.Manager, s.listExpenses)
-	a.Get("/expenses/summary", auth.Manager, s.expenseSummary)
-	a.Get("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.show(c, "expenses") })
-	a.Post("/expenses", auth.Manager, s.createExpense)
-	a.Put("/expenses/:id", auth.Manager, s.updateExpense)
-	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
-	managerOnly := map[string]bool{"categories": true, "brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "messages": true, "message-templates": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
+	a.Put("/checkout-settings", s.updateCheckoutSettings)
+	a.Post("/invoice-assets", s.uploadInvoiceAsset)
+	// Les dépenses portent les salaires et le solde de la journée. Le vendeur
+	// qui tient la caisse les saisit lui-même.
+	a.Get("/expenses", s.listExpenses)
+	a.Get("/expenses/summary", s.expenseSummary)
+	a.Get("/expenses/:id", func(c *fiber.Ctx) error { return s.show(c, "expenses") })
+	a.Post("/expenses", s.createExpense)
+	a.Put("/expenses/:id", s.updateExpense)
+	a.Delete("/expenses/:id", func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
+	// Écriture réservée au gérant. Le catalogue produit reste sous sa main,
+	// mais le vendeur gère fournisseurs, arrivages, catégories et messagerie :
+	// ce sont ses gestes quotidiens.
+	managerOnly := map[string]bool{"brands": true, "products": true, "product-images": true, "variants": true, "orders": true, "vaults": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
 	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
 		if managerRead[r] {
@@ -123,7 +126,7 @@ func (s *Server) Register(app *fiber.App) {
 		a.Post("/"+r+"/:id/signatures/:kind", auth.Manager, func(c *fiber.Ctx) error { return s.uploadDocumentSignature(c, r) })
 		a.Delete("/"+r+"/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.removeBusinessLine(c, r) })
 	}
-	a.Post("/arrivals/:id/receive", auth.Manager, s.receiveArrival)
+	a.Post("/arrivals/:id/receive", s.receiveArrival)
 	a.Post("/returns/process", s.processReturn)
 	a.Post("/cash/open", s.openCash)
 	a.Post("/cash/:id/close", s.closeCash)
@@ -134,6 +137,10 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)
 	a.Post("/sales/:id/delivery-note", auth.Manager, s.createDeliveryNote)
 	a.Get("/reports", auth.Manager, s.reports)
+	// Créances et relances : le recouvrement se fait au comptoir, pas au
+	// bureau. Aucun coût d'achat n'y transite, le vendeur y a donc sa place.
+	a.Get("/receivables", s.receivables)
+	a.Post("/receivables/:customerId/reminder", s.createReminder)
 	// Préfixe volontairement distinct de /api/shop : le groupe de la vitrine y
 	// pose auth.Customer sans préfixe, et Fiber applique ce middleware à tout
 	// chemin commençant par la chaîne « /api/shop » — « /api/shop-admin » inclus.

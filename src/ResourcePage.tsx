@@ -1,5 +1,5 @@
 import {FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
-import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
+import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,ChevronDown,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
 import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
@@ -154,7 +154,7 @@ export default function ResourcePage({title,resource,user}:Props){
   </>;
 }
 
-type ProductVariantView=Entity&{price?:number;stock?:number;alertAt?:number;active?:boolean};
+type ProductVariantView=Entity&{sku?:string;barcode?:string;color?:string;size?:string;price?:number;stock?:number;alertAt?:number;active?:boolean};
 type ProductImageView=Entity&{url?:string;alt?:string;primary?:boolean;position?:number};
 
 function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDelete,onReload}:{rows:Entity[];loading:boolean;isAdmin:boolean;onOpen:(row:Entity)=>Promise<void>;onEdit:(row:Entity)=>void;onDelete:(row:Entity)=>Promise<void>;onReload:()=>void}){
@@ -162,6 +162,9 @@ function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDelete,onReload}:{
   const[sort,setSort]=useState<'recent'|'name'|'stock'>('recent');
   const[lookups,setLookups]=useState<{categories:Record<number,string>;brands:Record<number,string>}>({categories:{},brands:{}});
   const[uploading,setUploading]=useState<number|null>(null);const[uploadError,setUploadError]=useState('');
+  // « État du stock » était un second écran listant les mêmes déclinaisons.
+  // Il vit désormais ici, replié sous chaque produit.
+  const[openStock,setOpenStock]=useState<number|null>(null);
   useEffect(()=>{let active=true;Promise.all([api<Entity[]>('/api/categories'),api<Entity[]>('/api/brands')]).then(([categories,brands])=>{if(active)setLookups({categories:Object.fromEntries(categories.map(item=>[item.id,String(item.name??`Catégorie #${item.id}`)])),brands:Object.fromEntries(brands.map(item=>[item.id,String(item.name??`Marque #${item.id}`)]))})}).catch(()=>{});return()=>{active=false}},[]);
   const products=useMemo(()=>rows.map(row=>{const variants=(row.variants??[]) as ProductVariantView[];const activeVariants=variants.filter(item=>item.active!==false);const stock=activeVariants.reduce((sum,item)=>sum+Number(item.stock??0),0);const alerts=activeVariants.filter(item=>Number(item.stock??0)<=Number(item.alertAt??0));const prices=activeVariants.map(item=>Number(item.price??0)).filter(Boolean);return{row,variants:activeVariants,stock,alerts,price:prices.length?Math.min(...prices):0}}),[rows]);
   const visible=useMemo(()=>products.filter(product=>filter==='all'||filter==='available'?filter==='all'||product.stock>0:product.alerts.length>0).sort((a,b)=>sort==='name'?String(a.row.name).localeCompare(String(b.row.name),'fr'):sort==='stock'?a.stock-b.stock:Number(b.row.id)-Number(a.row.id)),[products,filter,sort]);
@@ -174,6 +177,21 @@ function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDelete,onReload}:{
     {visible.length===0?<Empty title="Produits"/>:<div className="product-library-grid">{visible.map(({row,variants,stock,alerts,price})=>{const images=(row.images??[]) as ProductImageView[];const image=images.find(item=>item.primary)??images.sort((a,b)=>Number(a.position??0)-Number(b.position??0))[0];const category=lookups.categories[Number(row.categoryId)]??'Sans catégorie';const brand=lookups.brands[Number(row.brandId)]??'SenValise';const out=stock<=0;const warning=!out&&alerts.length>0;return <article className="product-library-card" key={row.id} tabIndex={0} onClick={()=>void onOpen(row)} onKeyDown={event=>{if(event.key==='Enter')void onOpen(row)}}>
       <div className={`product-library-image shade-${row.id%6}`}><div className="product-image-placeholder"><Package/><span>{String(row.name??'SV').slice(0,2).toUpperCase()}</span></div>{image?.url&&<img src={image.url} alt={image.alt||String(row.name??'Produit')}/>}<span className={`product-stock-state ${out?'danger':warning?'warning':'success'}`}>{out?<XCircle/>:warning?<CircleAlert/>:<CircleCheck/>}{out?'Rupture':warning?'Stock faible':'Disponible'}</span>{row.featured===true&&<span className="featured-product">À la une</span>}</div>
       <div className="product-library-info"><div className="product-card-title"><h2>{String(row.name??'Produit')}</h2><span>#{row.id}</span></div><p>{brand} · {category}</p><div className="product-card-metrics"><span><Layers3/>{variants.length} variante{variants.length!==1?'s':''}</span><span><Boxes/>{stock} unité{stock!==1?'s':''}</span></div><div className="product-price"><small>À partir de</small><strong>{price?money(price):'Prix non défini'}</strong></div></div>
+      <div className="product-stock-detail" onClick={event=>event.stopPropagation()}>
+        <button className="product-stock-toggle" aria-expanded={openStock===row.id} onClick={()=>setOpenStock(openStock===row.id?null:Number(row.id))}><Boxes/>{openStock===row.id?'Masquer le stock':`Détail du stock (${variants.length})`}<ChevronDown className={openStock===row.id?'rotated':''}/></button>
+        {openStock===row.id&&(variants.length===0
+          ? <p className="product-stock-empty">Aucune déclinaison : ce produit n’a ni prix ni stock.</p>
+          : <table className="product-stock-table"><thead><tr><th>SKU</th><th>Déclinaison</th><th>Prix</th><th>Stock</th><th>Seuil</th></tr></thead><tbody>
+              {variants.map(variant=>{const quantity=Number(variant.stock??0);const threshold=Number(variant.alertAt??0);const state=quantity<=0?'danger':threshold>0&&quantity<=threshold?'warning':'success';
+                return <tr key={variant.id}>
+                  <td>{String(variant.sku??`#${variant.id}`)}</td>
+                  <td>{[variant.color,variant.size].filter(Boolean).join(' · ')||'—'}</td>
+                  <td>{variant.price?money(variant.price):'—'}</td>
+                  <td><span className={`stock-pill ${state}`}>{quantity}</span></td>
+                  <td>{threshold||'—'}</td>
+                </tr>})}
+            </tbody></table>)}
+      </div>
       <div className="product-card-actions" onClick={event=>event.stopPropagation()}><button title="Voir la fiche" aria-label={`Voir ${recordTitle(row)}`} onClick={()=>void onOpen(row)}><Eye/><span>Voir</span></button>{isAdmin&&<><button title="Modifier" aria-label={`Modifier ${recordTitle(row)}`} onClick={()=>onEdit(row)}><Pencil/><span>Modifier</span></button><label className={uploading===row.id?'uploading':''} title="Ajouter une photo"><ImagePlus/><span>{uploading===row.id?'Envoi…':'Photo'}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading!==null} onChange={event=>{void upload(row,event.target.files?.[0]);event.target.value=''}}/></label><button className="danger" title="Supprimer" aria-label={`Supprimer ${recordTitle(row)}`} onClick={()=>void onDelete(row)}><Trash2/></button></>}</div>
     </article>})}</div>}
   </section>;

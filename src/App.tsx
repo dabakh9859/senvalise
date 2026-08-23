@@ -1,4 +1,4 @@
-import {FormEvent,lazy,Suspense,useEffect,useState} from 'react';
+import {FormEvent,lazy,Suspense,useCallback,useEffect,useState} from 'react';
 import {FileText} from 'lucide-react';
 import {api} from './api';
 import Sidebar,{allNav,type Brand,User} from './Sidebar';
@@ -23,11 +23,38 @@ const Branding=lazy(()=>import('./Branding'));
 const Journal=lazy(()=>import('./Journal'));
 
 
+// pageFromUrl lit l'écran demandé dans l'adresse. Une adresse inconnue — un
+// favori d'une ancienne version, une faute de frappe — rend une chaîne vide :
+// l'application choisit alors l'accueil du rôle plutôt que d'afficher une page
+// blanche.
+function pageFromUrl(){
+  const id=window.location.pathname.replace(/^\/+|\/+$/g,'');
+  return allNav.some(item=>item.id===id)?id:'';
+}
+
 export default function App(){
   const[user,setUser]=useState<User|null>(null);
   // Le tableau de bord est réservé au gérant : un vendeur ouvre l'application
   // sur la caisse, qui est son poste de travail.
-  const[page,setPage]=useState('dashboard');
+  // L'écran ouvert vit dans l'adresse. Il n'y était pas : actualiser la page
+  // ramenait systématiquement au tableau de bord, on ne pouvait ni mettre un
+  // écran en favori ni l'envoyer à un collègue, et le bouton Retour du
+  // navigateur sortait de l'application.
+  //
+  // Pas de bibliothèque de routage pour autant : l'identifiant d'écran sert
+  // directement de chemin, et il n'existe donc aucune table de correspondance
+  // à tenir à jour quand un écran est ajouté.
+  const[page,setPageState]=useState(pageFromUrl);
+  const setPage=useCallback((id:string)=>{
+    setPageState(id);
+    if(pageFromUrl()!==id)window.history.pushState({page:id},'',`/${id}`);
+  },[]);
+  // Retour et Suivant du navigateur : l'adresse mène, l'écran suit.
+  useEffect(()=>{
+    const onPop=()=>setPageState(pageFromUrl());
+    window.addEventListener('popstate',onPop);
+    return()=>window.removeEventListener('popstate',onPop);
+  },[]);
   // La marque est publique : elle se charge avant la connexion, sinon l'écran
   // de login afficherait un logo générique puis le vrai, après coup.
   const[brand,setBrand]=useState<Brand|null>(null);
@@ -36,14 +63,24 @@ export default function App(){
   const[openDocument,setOpenDocument]=useState<{resource:string;id:number}|null>(null);
   useEffect(()=>{api<Brand>('/api/public/branding').then(setBrand).catch(()=>{})},[]);
   useEffect(()=>{if(localStorage.getItem('sv_token'))api<User>('/api/me').then(setUser).catch(()=>localStorage.removeItem('sv_token'))},[]);
-  if(!user)return <Login onLogin={setUser} brand={brand}/>;
-  const manager=user.role==='manager';
+  const manager=user?.role==='manager';
   const home=manager?'dashboard':'pos';
-  const requested=allNav.find(item=>item.id===page)??allNav[0];
+  const requested=allNav.find(item=>item.id===page)??allNav.find(item=>item.id===home)??allNav[0];
   // Filet côté écran : une page réservée ne s'ouvre pas, même si son
   // identifiant est forcé. L'API refuse déjà les données correspondantes.
   const current=requested.manager&&!manager?allNav.find(item=>item.id===home)??allNav[0]:requested;
   const view=current.id;
+  // L'adresse suit l'écran réellement affiché. Deux cas la font diverger :
+  // arriver sur « / », et un vendeur qui force une adresse réservée au gérant.
+  // Sans cette remise en accord, actualiser renverrait ailleurs que là où l'on
+  // se trouve — le défaut même qu'on corrige.
+  useEffect(()=>{
+    if(!user)return;
+    if(pageFromUrl()!==view)window.history.replaceState({page:view},'',`/${view}`);
+    document.title=`${current.label} · SenValise`;
+  },[user,view,current.label]);
+
+  if(!user)return <Login onLogin={setUser} brand={brand}/>;
   const logout=()=>{localStorage.removeItem('sv_token');setUser(null)};
   return <div className="app-shell rail-layout">
     <Sidebar user={user} onPage={setPage} onLogout={logout} brand={brand??undefined}/>

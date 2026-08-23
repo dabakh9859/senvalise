@@ -115,7 +115,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/expenses", s.createExpense)
 	a.Put("/expenses/:id", s.updateExpense)
 	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
-	managerOnly := map[string]bool{"brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
+	managerOnly := map[string]bool{"brands": true, "suppliers": true, "arrivals": true, "orders": true, "vaults": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
 	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "campaigns", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
 		if managerRead[r] {

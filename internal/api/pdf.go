@@ -577,6 +577,7 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 			pdf.CellFormat(40, 6, tr(row.label), "", 0, "L", false, 0, "")
 			pdf.CellFormat(35, 6, tr(messaging.Money(row.value)), "", 1, "R", false, 0, "")
 		}
+		totalsEnd := pdf.GetY()
 		// Mot de remerciement, cale a gauche en face des totaux.
 		pdf.SetXY(left, totalsTop)
 		pdf.SetFont(pdfFont, "B", 9.5)
@@ -586,6 +587,9 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 		pdf.SetTextColor(110, 110, 110)
 		pdf.MultiCell(width-85, 4.4, tr(doc.Company.FooterNote), "", "L", false)
 		pdf.SetTextColor(20, 20, 20)
+		// Les deux colonnes se terminent a des hauteurs differentes : la suite
+		// du document part de la plus basse, sinon elle chevauche l'autre.
+		pdf.SetY(maxFloat(pdf.GetY(), totalsEnd))
 	}
 
 	if strings.TrimSpace(doc.Notes) != "" {
@@ -601,7 +605,7 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	// Cartouche de signatures.
 	pdf.Ln(8)
 	signatureTop := pdf.GetY()
-	if signatureTop > 235 {
+	if signatureTop > 225 {
 		pdf.AddPage()
 		signatureTop = pdf.GetY()
 	}
@@ -613,25 +617,25 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 		pdf.SetFont(pdfFont, "", 8)
 		pdf.SetTextColor(110, 110, 110)
 		pdf.CellFormat(boxWidth, 5, tr(label), "", 2, "L", false, 0, "")
-		pdf.Rect(x, signatureTop+6, boxWidth, 18, "D")
+		pdf.Rect(x, signatureTop+6, boxWidth, 30, "D")
 		// La signature de l'entreprise s'incruste dans son cadre, a l'echelle,
 		// sans jamais le deborder : une image trop haute recouvrirait le pied de
 		// page, une image trop large mordrait sur le cadre du client.
 		if index == 1 && doc.SignatureFormat != "" && len(doc.Signature) > 0 {
 			pdf.RegisterImageOptionsReader("signature", fpdf.ImageOptions{ImageType: doc.SignatureFormat}, bytes.NewReader(doc.Signature))
 			if info := pdf.GetImageInfo("signature"); info != nil && info.Height() > 0 {
-				height := 15.0
+				height := 26.0
 				imageWidth := height * info.Width() / info.Height()
 				if imageWidth > boxWidth-6 {
 					imageWidth = boxWidth - 6
 					height = imageWidth * info.Height() / info.Width()
 				}
-				pdf.ImageOptions("signature", x+3, signatureTop+6+(18-height)/2, imageWidth, height, false,
+				pdf.ImageOptions("signature", x+3, signatureTop+6+(30-height)/2, imageWidth, height, false,
 					fpdf.ImageOptions{ImageType: doc.SignatureFormat}, 0, "")
 			}
 		}
 	}
-	pdf.SetXY(left, signatureTop+27)
+	pdf.SetXY(left, signatureTop+39)
 	pdf.SetFont(pdfFont, "", 7.5)
 	pdf.SetTextColor(130, 130, 130)
 	seller := doc.Seller

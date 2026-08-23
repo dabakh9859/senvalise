@@ -95,10 +95,24 @@ fi
 sudo nginx -t >/dev/null 2>&1 && sudo systemctl reload nginx
 
 step "Verification publique"
-for url in https://senvalise.online/ https://gestion.senvalise.online/ https://senvalise.online/sitemap.xml; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" || echo 000)
-  printf '  %-46s %s\n' "$url" "$code"
-  [ "$code" = "200" ] || die "$url repond $code"
-done
+# Une boutique volontairement fermee repond 503 sur toutes ses adresses : c'est
+# l'etat voulu, pas une panne. On lit le temoin plutot que de deviner, sinon le
+# script s'arrete en rouge sur un serveur parfaitement sain.
+closed=0
+sudo test -f /srv/senvalise/state/maintenance.on && closed=1
+[ "$closed" = "1" ] && echo "  (boutique fermee pour maintenance — 503 attendu sur la vitrine)"
+check() { # url  codes-acceptes
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$1" || echo 000)
+  printf '  %-46s %s\n' "$1" "$code"
+  case " $2 " in *" $code "*) ;; *) die "$1 repond $code" ;; esac
+}
+if [ "$closed" = "1" ]; then
+  check https://senvalise.online/ "503"
+  check https://senvalise.online/sitemap.xml "503"
+else
+  check https://senvalise.online/ "200"
+  check https://senvalise.online/sitemap.xml "200"
+fi
+check https://gestion.senvalise.online/ "200"
 
 printf '\n\033[32m✓ deploiement termine\033[0m — retour arriere possible avec : ./deploy/deploy.sh --rollback\n'

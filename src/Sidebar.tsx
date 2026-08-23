@@ -15,7 +15,6 @@ export const dashboardItem:NavItem={id:'dashboard',label:'Tableau de bord',icon:
 export const groups:NavGroup[]=[
   {id:'stock',label:'Stock',icon:Boxes,items:[
     {id:'products',label:'Produits',resource:'products',icon:Package},
-    {id:'variants',label:'État du stock',resource:'variants',icon:Boxes},
     {id:'movements',label:'Mouvements',resource:'stock/movements',icon:RotateCcw},
     {id:'arrivals',label:'Arrivages',resource:'arrivals',icon:Truck,manager:true},
     {id:'suppliers',label:'Fournisseurs',resource:'suppliers',icon:Truck,manager:true},
@@ -30,8 +29,8 @@ export const groups:NavGroup[]=[
   ]},
   {id:'finance',label:'Finances',icon:CircleDollarSign,items:[
     {id:'cash-sessions',label:'Sessions de caisse',resource:'cash-sessions',icon:WalletCards},
-    {id:'debts',label:'Créances et relances',icon:BellRing,manager:true},
-    {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt,manager:true},
+    {id:'debts',label:'Créances et relances',icon:BellRing},
+    {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt},
     {id:'reports',label:'Rapports',icon:BarChart3,manager:true},
   ]},
   {id:'shop',label:'Boutique',icon:Globe2,items:[
@@ -45,15 +44,15 @@ export const groups:NavGroup[]=[
     {id:'contacts',label:'Messages reçus',resource:'contact-messages',icon:MessageSquare,manager:true},
   ]},
   {id:'tools',label:'Outils',icon:Wrench,items:[
-    {id:'campaigns',label:'Campagnes pub',icon:Megaphone,manager:true},
-    {id:'messages',label:'Messages envoyés',resource:'messages',icon:MessageSquare,manager:true},
-    {id:'templates',label:'Modèles',resource:'message-templates',icon:MessageSquare,manager:true},
+    {id:'campaigns',label:'Campagnes pub',icon:Megaphone},
+    {id:'messages',label:'Messages envoyés',resource:'messages',icon:MessageSquare},
+    {id:'templates',label:'Modèles',resource:'message-templates',icon:MessageSquare},
   ]},
   {id:'settings-group',label:'Paramètres',icon:Settings,items:[
-    {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards,manager:true},
-    {id:'messaging',label:'WhatsApp et SMS',icon:MessageSquare,manager:true},
-    {id:'branding',label:'Logo et identité',icon:Palette,manager:true},
-    {id:'categories',label:'Catégories',resource:'categories',icon:Tags,manager:true},
+    {id:'checkout-settings',label:'Caisse et TVA',icon:WalletCards},
+    {id:'messaging',label:'WhatsApp et SMS',icon:MessageSquare},
+    {id:'branding',label:'Logo et identité',icon:Palette},
+    {id:'categories',label:'Catégories',resource:'categories',icon:Tags},
     {id:'users',label:'Utilisateurs',resource:'users',icon:Users,manager:true},
   ]},
 ];

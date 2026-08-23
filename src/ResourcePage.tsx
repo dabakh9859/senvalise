@@ -3,9 +3,10 @@ import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,CircleAlert,CircleCheck,Circ
 import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
+import Modal from './Modal';
 
 type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>void};
-type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string}|null;
+type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string;parent?:Entity}|null;
 
 const labels:Record<string,string>={
   id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
@@ -120,6 +121,7 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   const[total,setTotal]=useState(0);
   const[loadingMore,setLoadingMore]=useState(false);
   const[dialog,setDialog]=useState<Dialog>(null);
+  const[adjusting,setAdjusting]=useState<Entity|null>(null);
   const[error,setError]=useState('');
   const isAdmin=user.role==='manager';
   const openLinked=async(kind:'sales'|'quotes'|'delivery-notes',row:Entity)=>{try{const full=await api<Entity>(endpoint(kind,row.id));setDialog({mode:'detail',row:full,resource:kind})}catch(reason){setError((reason as Error).message)}};
@@ -170,8 +172,12 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
     {error&&<div className="error resource-error">{error}</div>}
     {resource==='products'?<ProductLibrary rows={shown} loading={loading} isAdmin={isAdmin} onOpen={openDetail} onEdit={row=>setDialog({mode:'edit',row})} onDelete={remove} onReload={load}/>:<div className="panel table-panel">{loading?<Loading/>:shown.length===0?<Empty title={title}/>:<div className="table-wrap"><table className="records-table"><thead><tr>{columns.map(column=><th key={column}>{labels[column]??column}</th>)}<th className="actions-heading">Actions</th></tr></thead><tbody>{shown.map(row=><tr key={row.id} tabIndex={0} onClick={()=>void openDetail(row)} onKeyDown={event=>{if(event.key==='Enter')void openDetail(row)}}>{columns.map(column=><td key={column}><SemanticValue field={column} value={row[column]} row={row}/></td>)}<td className="row-actions" onClick={event=>event.stopPropagation()}><button className="action-button" title="Voir la fiche" aria-label={`Voir ${recordTitle(row)}`} onClick={()=>void openDetail(row)}><Eye/><span>Voir</span></button>{isAdmin&&<><button className="action-button" title="Modifier cet enregistrement" aria-label={`Modifier ${recordTitle(row)}`} onClick={()=>setDialog({mode:'edit',row})}><Pencil/><span>Modifier</span></button><button className="action-button danger" title="Supprimer cet enregistrement" aria-label={`Supprimer ${recordTitle(row)}`} onClick={()=>void remove(row)}><Trash2/><span>Supprimer</span></button></>}</td></tr>)}</tbody></table></div>}</div>}
     {!loading&&shown.length>0&&<div className="list-footer"><span>{shown.length} sur {total} {total>1?'enregistrements':'enregistrement'}</span>{shown.length<total&&<button className="compact" disabled={loadingMore} onClick={loadMore}>{loadingMore?'Chargement…':'Charger la suite'}</button>}</div>}
-    {dialog?.mode==='detail'&&dialog.row&&(['sales','quotes','delivery-notes'].includes(dialog.resource??resource)?<DocumentWorkspace document={dialog.row} kind={(dialog.resource??resource)==='quotes'?'quote':(dialog.resource??resource)==='delivery-notes'?'delivery':'invoice'} isAdmin={isAdmin} onClose={()=>setDialog(null)} onDelete={()=>void remove(dialog.row!,dialog.resource??resource)} onUpdate={updateDocument} onUpdateLine={updateLine} onAddLine={addLine} onDeleteLine={deleteLine} onUploadSignature={uploadSignature} onAddPayment={addPayment} onCancelPayment={cancelPayment} onCancelAllPayments={cancelAllPayments} onConvert={(dialog.resource??resource)==='quotes'?()=>void convertQuote(dialog.row!):undefined} onGenerateDelivery={(dialog.resource??resource)==='sales'?()=>void createDelivery(dialog.row!):undefined} onOpenInvoice={row=>void openLinked('sales',row)} onOpenQuote={row=>void openLinked('quotes',row)} onOpenDelivery={row=>void openLinked('delivery-notes',row)}/>:<DetailDialog title={title} resource={dialog.resource??resource} row={dialog.row} isAdmin={isAdmin} onClose={()=>setDialog(null)} onEdit={()=>setDialog({mode:'edit',row:dialog.row})} onDelete={()=>void remove(dialog.row!)}/>)} 
-    {(dialog?.mode==='create'||dialog?.mode==='edit')&&<RecordForm title={title} resource={resource} row={dialog.row} mode={dialog.mode} onClose={()=>setDialog(null)} onDone={()=>{setDialog(null);load()}}/>}
+    {dialog?.mode==='detail'&&dialog.row&&(['sales','quotes','delivery-notes'].includes(dialog.resource??resource)?<DocumentWorkspace document={dialog.row} kind={(dialog.resource??resource)==='quotes'?'quote':(dialog.resource??resource)==='delivery-notes'?'delivery':'invoice'} isAdmin={isAdmin} onClose={()=>setDialog(null)} onDelete={()=>void remove(dialog.row!,dialog.resource??resource)} onUpdate={updateDocument} onUpdateLine={updateLine} onAddLine={addLine} onDeleteLine={deleteLine} onUploadSignature={uploadSignature} onAddPayment={addPayment} onCancelPayment={cancelPayment} onCancelAllPayments={cancelAllPayments} onConvert={(dialog.resource??resource)==='quotes'?()=>void convertQuote(dialog.row!):undefined} onGenerateDelivery={(dialog.resource??resource)==='sales'?()=>void createDelivery(dialog.row!):undefined} onOpenInvoice={row=>void openLinked('sales',row)} onOpenQuote={row=>void openLinked('quotes',row)} onOpenDelivery={row=>void openLinked('delivery-notes',row)}/>:<DetailDialog title={title} resource={dialog.resource??resource} row={dialog.row} isAdmin={isAdmin} onClose={()=>setDialog(null)} onEdit={()=>setDialog({mode:'edit',row:dialog.row})} onDelete={()=>void remove(dialog.row!)}
+      onAdjustStock={variant=>setAdjusting(variant)}
+      onEditVariant={variant=>setDialog({mode:'edit',row:variant,resource:'variants',parent:dialog.row})}
+      onAddVariant={()=>setDialog({mode:'create',row:{id:0,productId:dialog.row!.id} as Entity,resource:'variants',parent:dialog.row})}/>)} 
+    {(dialog?.mode==='create'||dialog?.mode==='edit')&&<RecordForm title={dialog.resource==='variants'?'Déclinaison':title} resource={dialog.resource??resource} row={dialog.row} mode={dialog.mode} onClose={()=>{const parent=dialog.parent;setDialog(parent?{mode:'detail',row:parent}:null)}} onDone={()=>{const parent=dialog.parent;if(parent)void openDetail(parent);else setDialog(null);load()}}/>}
+    {adjusting&&<StockAdjust variant={adjusting} onClose={()=>setAdjusting(null)} onDone={()=>{const parent=dialog?.row;setAdjusting(null);if(parent)void openDetail(parent);load()}}/>}
   </>;
 }
 
@@ -200,7 +206,7 @@ function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDelete,onReload}:{
   </section>;
 }
 
-type DetailProps={title:string;resource:string;row:Entity;isAdmin:boolean;onClose:()=>void;onEdit:()=>void;onDelete:()=>void};
+type DetailProps={title:string;resource:string;row:Entity;isAdmin:boolean;onClose:()=>void;onEdit:()=>void;onDelete:()=>void;onAdjustStock?:(variant:Entity)=>void;onEditVariant?:(variant:Entity)=>void;onAddVariant?:()=>void};
 type Metric={label:string;value:string;tone?:Tone;field?:string};
 type Contact={field:string;label:string;href:string;icon:typeof Phone};
 
@@ -395,7 +401,7 @@ function DetailLinked({name,record,relation}:{name:string;record:Entity;relation
   </div>;
 }
 
-function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete}:DetailProps){
+function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdjustStock,onEditVariant,onAddVariant}:DetailProps){
   const relation=useRelationLabels(row);
   const[shot,setShot]=useState(0);
   useEffect(()=>setShot(0),[row]);
@@ -410,7 +416,8 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete}:Detai
   const scalars=Object.entries(row).filter(([key,value])=>!hidden.has(key)&&!Array.isArray(value)&&(value===null||typeof value!=='object'));
   const sections=detailGroups.map(group=>({...group,fields:scalars.filter(([key,value])=>groupFor(key,value)===group.id)})).filter(group=>group.fields.length);
   const gallery=(row.images??[]) as ProductImageView[];
-  const collections=Object.entries(row).filter(([key,value])=>Array.isArray(value)&&value.length&&key!=='images') as [string,Entity[]][];
+  const isProduct=resource==='products'&&Boolean(onAdjustStock);
+  const collections=Object.entries(row).filter(([key,value])=>Array.isArray(value)&&value.length&&key!=='images'&&!(isProduct&&key==='variants')) as [string,Entity[]][];
   const linked=Object.entries(row).filter(([,value])=>value!==null&&typeof value==='object'&&!Array.isArray(value)) as [string,Entity][];
   const Icon=resourceIcons[resource]??Package;
   const index=Math.min(shot,Math.max(images.length-1,0));
@@ -453,6 +460,8 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete}:Detai
           <header><h3>Éléments liés</h3><span>{linked.length}</span><i/></header>
           <div className="detail-linked-list">{linked.map(([key,record])=><DetailLinked key={key} name={key} record={record} relation={relation}/>)}</div>
         </section>}
+        {isProduct&&<ProductVariants rows={(row.variants??[]) as Entity[]} isAdmin={isAdmin}
+          onAdjust={variant=>onAdjustStock?.(variant)} onEdit={variant=>onEditVariant?.(variant)} onAdd={()=>onAddVariant?.()}/>}
         {collections.map(([key,rows])=><DetailCollection key={key} name={key} rows={rows} parent={row} relation={relation}/>)}
       </div>
       <footer className="detail-actions">
@@ -524,3 +533,95 @@ function toPayloadValue(key:string,value:string|boolean){if(typeof value==='bool
 function recordTitle(row:Entity){return String(row.name??row.reference??row.sku??row.email??`Enregistrement #${row.id}`)}
 function Loading(){return <div className="loading"><i/><span>Chargement…</span></div>}
 function Empty({title}:{title:string}){return <div className="empty"><Package/><h3>Aucun élément</h3><p>Les premiers éléments de « {title} » apparaîtront ici.</p></div>}
+
+// Variantes d'un produit, avec le stock.
+//
+// « Produits » et « État du stock » étaient deux entrées de menu pour la même
+// marchandise : la fiche d'un côté, ses déclinaisons de l'autre. Répondre à
+// « qu'est-ce que j'ai en rayon ? » demandait de passer de l'une à l'autre, et
+// de faire le lien de tête entre un SKU et un modèle.
+//
+// La table vit désormais dans la fiche du produit, avec ce qu'il faut pour
+// agir : corriger un stock, modifier une déclinaison, en ajouter une. Le
+// tableau reste visible par le vendeur ; seules la modification et la création
+// sont réservées au gérant, comme l'API l'impose déjà.
+function ProductVariants({rows,isAdmin,onAdjust,onEdit,onAdd}:{
+  rows:Entity[];isAdmin:boolean;onAdjust:(variant:Entity)=>void;onEdit:(variant:Entity)=>void;onAdd:()=>void;
+}){
+  const total=rows.reduce((sum,item)=>sum+Number(item.stock??0),0);
+  return <section className="detail-block product-variants">
+    <header><h3>Déclinaisons et stock</h3><span>{rows.length}</span><i/>
+      <strong className="variants-total">{total} unité{total!==1?'s':''}</strong></header>
+    {rows.length===0
+      ?<p className="empty-inline">Aucune déclinaison. Un produit sans déclinaison n’est pas vendable : ajoutez-en une pour lui donner un prix et un stock.</p>
+      :<div className="detail-table-wrap"><table className="detail-table variants-table">
+        <thead><tr><th>SKU</th><th>Déclinaison</th><th>Prix</th><th>Stock</th><th>Seuil</th><th className="actions-heading">Actions</th></tr></thead>
+        <tbody>{rows.map(item=>{
+          const stock=Number(item.stock??0),alert=Number(item.alertAt??0);
+          // Le seuil d'alerte n'a de sens qu'au-dessus de zéro : à zéro, tout
+          // stock épuisé serait signalé deux fois, en rupture et en alerte.
+          const tone=stock<=0?'danger':alert>0&&stock<=alert?'warning':'success';
+          const label=[String(item.color??''),String(item.size??'')].filter(Boolean).join(' · ');
+          return <tr key={item.id} className={item.active===false?'is-inactive':''}>
+            <td><code>{String(item.sku??'—')}</code></td>
+            <td>{label||<em>Sans déclinaison</em>}{item.active===false&&<span className="variant-off">désactivée</span>}</td>
+            <td>{money(item.price)}</td>
+            <td><span className={`semantic-badge ${tone}`}>{stock} u.</span></td>
+            <td>{alert>0?`${alert} u.`:'—'}</td>
+            <td className="row-actions" onClick={event=>event.stopPropagation()}>
+              <button className="action-button" onClick={()=>onAdjust(item)} title="Corriger le stock"><RotateCcw/><span>Stock</span></button>
+              {isAdmin&&<button className="action-button" onClick={()=>onEdit(item)} title="Modifier la déclinaison"><Pencil/><span>Modifier</span></button>}
+            </td>
+          </tr>})}</tbody>
+      </table></div>}
+    {isAdmin&&<button type="button" className="add-variant" onClick={onAdd}><Plus/>Ajouter une déclinaison</button>}
+  </section>;
+}
+
+// Correction de stock. Elle passe par un mouvement — et non par une écriture
+// directe sur la colonne — pour que l'entrée ou la sortie laisse une trace
+// dans le journal, avec son motif. Un stock corrigé sans trace est un stock
+// que personne ne peut expliquer trois semaines plus tard.
+function StockAdjust({variant,onClose,onDone}:{variant:Entity;onClose:()=>void;onDone:()=>void}){
+  const current=Number(variant.stock??0);
+  const[quantity,setQuantity]=useState('');
+  const[reason,setReason]=useState('inventaire');
+  const[note,setNote]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+  const delta=Number(quantity)||0;
+  const after=current+delta;
+  const submit=async()=>{
+    if(!delta){setError('Indiquez une quantité différente de zéro.');return}
+    if(after<0){setError(`Le stock passerait à ${after} : une quantité ne peut pas être négative.`);return}
+    setSaving(true);setError('');
+    try{
+      await api('/api/stock/adjust',{method:'POST',body:JSON.stringify({variantId:variant.id,quantity:delta,reason,note})});
+      onDone();
+    }catch(reason){setError((reason as Error).message)}
+    finally{setSaving(false)}
+  };
+  return <Modal eyebrow="CORRECTION DE STOCK" title={String(variant.sku??'Déclinaison')}
+    subtitle={`Stock actuel : ${current} unité${current!==1?'s':''}`}
+    onClose={onClose}
+    footer={<>
+      <button type="button" onClick={onClose}>Annuler</button>
+      <button type="button" className="primary" onClick={()=>void submit()} disabled={saving||!delta}>
+        {saving?'Enregistrement…':`Passer à ${after} u.`}</button>
+    </>}>
+    <div className="form-help"><CircleAlert/><span>La correction s’inscrit au journal des mouvements avec son motif : elle reste explicable plus tard.</span></div>
+    <div className="form-grid">
+      <label>Quantité <small>(négative pour retirer)</small>
+        <input type="number" autoFocus value={quantity} onChange={event=>setQuantity(event.target.value)} placeholder="ex. 5 ou -2"/></label>
+      <label>Motif<select value={reason} onChange={event=>setReason(event.target.value)}>
+        <option value="inventaire">Inventaire</option>
+        <option value="casse">Casse ou perte</option>
+        <option value="correction">Correction de saisie</option>
+        <option value="retour_fournisseur">Retour fournisseur</option>
+        <option value="offert">Offert / échantillon</option>
+      </select></label>
+      <label className="field-wide">Note<input value={note} onChange={event=>setNote(event.target.value)} placeholder="Précision utile au prochain inventaire"/></label>
+    </div>
+    {error&&<div className="error">{error}</div>}
+  </Modal>;
+}

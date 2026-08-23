@@ -877,3 +877,23 @@
 .page-header .header-action:hover{border-color:var(--accent);color:var(--accent)}
 .page-header .header-action svg{width:15px;height:15px}
 .page-header .header-action+time{margin-left:14px}
+
+/* ── Déclinaisons dans la fiche produit ────────────────────────────────────
+   « Produits » et « État du stock » ne font plus qu'un : le stock se lit et se
+   corrige là où l'on regarde déjà le produit. */
+.product-variants header{display:flex;align-items:center;gap:9px}
+.variants-total{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.variants-table code{font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+.variants-table td{vertical-align:middle}
+.variants-table tr.is-inactive{opacity:.55}
+.variant-off{display:inline-block;margin-left:7px;font-size:9px;letter-spacing:.04em;color:var(--muted);
+  border:1px solid var(--line);border-radius:20px;padding:1px 6px;vertical-align:middle}
+.variants-table .row-actions{display:flex;gap:6px;justify-content:flex-end}
+.variants-table .action-button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);border-radius:7px;padding:5px 9px;font-size:10.5px;cursor:pointer}
+.variants-table .action-button:hover{border-color:var(--accent);color:var(--accent)}
+.variants-table .action-button svg{width:12px;height:12px}
+.add-variant{margin-top:12px;display:inline-flex;align-items:center;gap:7px;border:1px dashed var(--accent-line);
+  background:var(--accent-surface);color:var(--accent);border-radius:8px;padding:9px 14px;font-size:12px;font-weight:650;cursor:pointer}
+.add-variant svg{width:14px;height:14px}
+.empty-inline{font-size:11.5px;color:var(--muted);line-height:1.6;margin:6px 0 0}

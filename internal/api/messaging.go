@@ -12,7 +12,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"senvalise/internal/auth"
 	"senvalise/internal/messaging"
 	"senvalise/internal/models"
 )
@@ -905,24 +904,24 @@ func (s *Server) retryMessage(c *fiber.Ctx) error {
 // document, lui, est declare plus haut dans Register : il doit precede le
 // groupe « /api », dont le middleware s'applique par prefixe.
 func (s *Server) registerMessaging(a fiber.Router) {
-	a.Get("/messaging/config", auth.Manager, s.messagingConfig)
-	a.Put("/messaging/config", auth.Manager, s.updateMessagingConfig)
-	a.Get("/messaging/status", auth.Manager, s.messagingStatus)
-	a.Post("/messaging/session/:action", auth.Manager, s.whatsappSession)
-	a.Get("/messaging/qr", auth.Manager, s.whatsappQR)
-	a.Post("/messaging/test", auth.Manager, s.testMessage)
-	a.Post("/messages/:id/retry", auth.Manager, s.retryMessage)
+	a.Get("/messaging/config", s.messagingConfig)
+	a.Put("/messaging/config", s.updateMessagingConfig)
+	a.Get("/messaging/status", s.messagingStatus)
+	a.Post("/messaging/session/:action", s.whatsappSession)
+	a.Get("/messaging/qr", s.whatsappQR)
+	a.Post("/messaging/test", s.testMessage)
+	a.Post("/messages/:id/retry", s.retryMessage)
 
 	// L'envoi d'une piece reste ouvert au vendeur : c'est le prolongement de
 	// la vente qu'il vient de saisir. Le PDF suit la meme regle.
 	a.Get("/documents/:kind/:id/pdf", s.documentPDFHandler)
 	a.Post("/documents/:kind/:id/send", s.sendDocument)
 
-	a.Get("/debts", auth.Manager, s.debts)
-	a.Post("/debts/remind", auth.Manager, s.remindDebtors)
+	a.Get("/debts", s.debts)
+	a.Post("/debts/remind", s.remindDebtors)
 
-	a.Get("/campaigns/:id/preview", auth.Manager, s.campaignPreview)
-	a.Get("/campaigns/:id/report", auth.Manager, s.campaignReport)
-	a.Post("/campaigns/:id/send", auth.Manager, s.sendCampaign)
-	a.Post("/campaigns/:id/cancel", auth.Manager, s.cancelCampaign)
+	a.Get("/campaigns/:id/preview", s.campaignPreview)
+	a.Get("/campaigns/:id/report", s.campaignReport)
+	a.Post("/campaigns/:id/send", s.sendCampaign)
+	a.Post("/campaigns/:id/cancel", s.cancelCampaign)
 }

@@ -13,7 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"senvalise/internal/auth"
 	"senvalise/internal/models"
 )
 
@@ -285,7 +284,7 @@ func (s *Server) brandingLogoFile() (string, []byte) {
 }
 
 func (s *Server) registerBranding(a fiber.Router) {
-	a.Get("/branding", auth.Manager, s.brandingHandler)
-	a.Put("/branding", auth.Manager, s.updateBranding)
-	a.Post("/branding/:kind", auth.Manager, s.uploadBrandingImage)
+	a.Get("/branding", s.brandingHandler)
+	a.Put("/branding", s.updateBranding)
+	a.Post("/branding/:kind", s.uploadBrandingImage)
 }

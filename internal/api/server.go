@@ -101,17 +101,17 @@ func (s *Server) Register(app *fiber.App) {
 	// c'est du pilotage, pas du comptoir.
 	a.Get("/dashboard", auth.Manager, s.dashboard)
 	a.Get("/checkout-settings", s.checkoutSettings)
-	a.Put("/checkout-settings", auth.Manager, s.updateCheckoutSettings)
+	a.Put("/checkout-settings", s.updateCheckoutSettings)
 	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
 	// Les dépenses portent les salaires et le solde de la journée. Le module
 	// entier relève du gérant.
-	a.Get("/expenses", auth.Manager, s.listExpenses)
-	a.Get("/expenses/summary", auth.Manager, s.expenseSummary)
-	a.Get("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.show(c, "expenses") })
-	a.Post("/expenses", auth.Manager, s.createExpense)
-	a.Put("/expenses/:id", auth.Manager, s.updateExpense)
+	a.Get("/expenses", s.listExpenses)
+	a.Get("/expenses/summary", s.expenseSummary)
+	a.Get("/expenses/:id", func(c *fiber.Ctx) error { return s.show(c, "expenses") })
+	a.Post("/expenses", s.createExpense)
+	a.Put("/expenses/:id", s.updateExpense)
 	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
-	managerOnly := map[string]bool{"categories": true, "brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "messages": true, "message-templates": true, "campaigns": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
+	managerOnly := map[string]bool{"brands": true, "suppliers": true, "products": true, "product-images": true, "variants": true, "arrivals": true, "orders": true, "vaults": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
 	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "campaigns", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
 		if managerRead[r] {

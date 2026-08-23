@@ -17,10 +17,15 @@ import (
 // Ressources dont la lecture est réservée au gérant : les achats et les
 // fournisseurs (ils révèlent les marges), les comptes et réglages, le journal
 // d'audit, et tout ce qui relève de la boutique en ligne.
+// Le vendeur releve les impayes, note les depenses du jour et prepare les
+// diffusions : la messagerie, ses modeles et les campagnes lui sont ouverts.
+// Restent fermes les achats et les marges (fournisseurs, arrivages), la
+// boutique en ligne, les comptes et le journal d'audit — c'est-a-dire ce qui
+// revele le prix de revient ou permettrait de se donner des droits.
 var managerRead = map[string]bool{
 	"suppliers": true, "arrivals": true, "vaults": true, "orders": true,
-	"home-blocks": true, "contact-messages": true, "messages": true,
-	"message-templates": true, "campaigns": true, "settings": true, "delivery-zones": true,
+	"home-blocks": true, "contact-messages": true,
+	"settings": true, "delivery-zones": true,
 	"users": true, "activity-logs": true,
 }
 

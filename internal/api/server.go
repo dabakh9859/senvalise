@@ -529,6 +529,13 @@ type lineInput struct {
 	Discount  int64 `json:"discount"`
 }
 
+// paymentInput est une ligne de reglement : un moyen, un montant. Plusieurs
+// lignes decrivent un paiement fractionne.
+type paymentInput struct {
+	Method string `json:"method"`
+	Amount int64  `json:"amount"`
+}
+
 type paymentMethodSetting struct {
 	ID     string `json:"id"`
 	Label  string `json:"label"`
@@ -562,6 +569,23 @@ func (s *Server) readCheckoutSettings() checkoutSettingsPayload {
 	}
 	return settings
 }
+
+// distinctMethods liste les moyens reellement mouvementes, sans doublon et
+// dans l'ordre de saisie. Les lignes a zero ne comptent pas : une ligne
+// laissee vide a l'ecran ne doit pas faire passer la facture en « mixte ».
+func distinctMethods(payments []paymentInput) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, payment := range payments {
+		if payment.Amount <= 0 || seen[payment.Method] {
+			continue
+		}
+		seen[payment.Method] = true
+		out = append(out, payment.Method)
+	}
+	return out
+}
+
 func (s *Server) checkoutSettings(c *fiber.Ctx) error { return c.JSON(s.readCheckoutSettings()) }
 func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
 	var in checkoutSettingsPayload
@@ -610,27 +634,47 @@ func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
 
 func (s *Server) checkout(c *fiber.Ctx) error {
 	var in struct {
-		CustomerID    *uint       `json:"customerId"`
-		PaymentMethod string      `json:"paymentMethod"`
-		Paid          int64       `json:"paid"`
-		Discount      int64       `json:"discount"`
-		ApplyTax      bool        `json:"applyTax"`
-		TaxRate       float64     `json:"taxRate"`
-		Items         []lineInput `json:"items"`
+		CustomerID    *uint  `json:"customerId"`
+		PaymentMethod string `json:"paymentMethod"`
+		Paid          int64  `json:"paid"`
+		// Payments porte le reglement en plusieurs fois : un client paie
+		// couramment une partie en especes et le reste par Wave. La facture
+		// supportait deja plusieurs reglements, mais la caisse n'en acceptait
+		// qu'un, ce qui obligeait a mentir sur le moyen de paiement.
+		Payments []paymentInput `json:"payments"`
+		Discount int64          `json:"discount"`
+		ApplyTax bool           `json:"applyTax"`
+		TaxRate  float64        `json:"taxRate"`
+		Items    []lineInput    `json:"items"`
 	}
 	if c.BodyParser(&in) != nil || len(in.Items) == 0 {
 		return fiber.ErrBadRequest
 	}
 	config := s.readCheckoutSettings()
-	allowed := false
+	active := map[string]bool{}
 	for _, method := range config.PaymentMethods {
-		if method.Active && method.ID == in.PaymentMethod {
-			allowed = true
-			break
+		if method.Active {
+			active[method.ID] = true
 		}
 	}
-	if !allowed {
-		return fiber.NewError(422, "Moyen de paiement non autorisé")
+	// Un reglement fractionne remplace le couple methode + montant : on
+	// normalise les deux formes en une seule liste, pour que la suite du
+	// traitement n'ait plus a savoir laquelle a ete employee.
+	payments := in.Payments
+	if len(payments) == 0 {
+		payments = []paymentInput{{Method: in.PaymentMethod, Amount: in.Paid}}
+	}
+	for i := range payments {
+		payments[i].Method = strings.TrimSpace(payments[i].Method)
+		if !active[payments[i].Method] {
+			return fiber.NewError(422, "Moyen de paiement non autorisé")
+		}
+		if payments[i].Amount < 0 {
+			return fiber.NewError(422, "Un règlement ne peut pas être négatif.")
+		}
+	}
+	if in.PaymentMethod == "" {
+		in.PaymentMethod = payments[0].Method
 	}
 	if in.Discount < 0 {
 		return fiber.NewError(422, "La remise globale ne peut pas être négative")
@@ -703,23 +747,46 @@ func (s *Server) checkout(c *fiber.Ctx) error {
 		sale.Discount = lineDiscounts + in.Discount
 		sale.Tax = tax
 		sale.Total = total
-		applied := in.Paid
-		if applied > total {
-			applied = total
+		var applied int64
+		for _, payment := range payments {
+			applied += payment.Amount
 		}
-		if applied < 0 {
-			return fmt.Errorf("le montant payé ne peut pas être négatif")
+		if len(in.Payments) == 0 && applied > total {
+			// Forme historique : « montant recu » au comptoir. Le surplus est la
+			// monnaie rendue, il ne s'inscrit pas sur la facture.
+			applied = total
+			payments[0].Amount = total
+		}
+		if applied > total {
+			// Reglement fractionne : les montants sont saisis ligne par ligne,
+			// les ajuster en silence fausserait le detail. On refuse en disant
+			// de combien.
+			return fmt.Errorf("les règlements dépassent le total de %d F", applied-total)
 		}
 		sale.Paid = applied
 		sale.Status = paymentStatus(applied, total, sale.Status)
+		// Le moyen inscrit sur la facture doit rester exploitable par les
+		// rapports, qui groupent dessus : plusieurs moyens deviennent « mixte »,
+		// et le detail vit dans les lignes de reglement.
+		if distinct := distinctMethods(payments); len(distinct) > 1 {
+			sale.PaymentMethod = "mixte"
+		} else if len(distinct) == 1 {
+			sale.PaymentMethod = distinct[0]
+		}
 		if e := tx.Save(&sale).Error; e != nil {
 			return e
 		}
-		if applied > 0 {
-			if e := tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: sale.UserID, Method: in.PaymentMethod, Amount: applied, Status: "active", Reference: s.ref("REG")}).Error; e != nil {
+		for _, payment := range payments {
+			if payment.Amount <= 0 {
+				continue
+			}
+			if e := tx.Create(&models.SalePayment{SaleID: sale.ID, UserID: sale.UserID, Method: payment.Method,
+				Amount: payment.Amount, Status: "active", Reference: s.ref("REG")}).Error; e != nil {
 				return e
 			}
-			return s.trackCash(tx, sale.UserID, in.PaymentMethod, applied)
+			if e := s.trackCash(tx, sale.UserID, payment.Method, payment.Amount); e != nil {
+				return e
+			}
 		}
 		return nil
 	})

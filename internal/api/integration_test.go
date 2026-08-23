@@ -413,3 +413,69 @@ func TestDeletingAReceivedArrivalCannotCreateNegativeStock(t *testing.T) {
 		t.Fatal("l'arrivage a été supprimé malgré le refus")
 	}
 }
+
+// Un client paie couramment une partie en especes et le reste par Wave. La
+// caisse n'acceptait qu'un moyen : il fallait choisir lequel inscrire, donc
+// mentir sur l'un des deux, et la session de caisse recevait un montant qui
+// n'etait jamais entre dans le tiroir.
+func TestCheckoutAcceptsSplitPayment(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(5, 50000)
+
+	if status, body := h.call(http.MethodPost, "/api/cash/open", fiber.Map{"openingAmount": 0}); status >= 400 {
+		t.Fatalf("ouverture de caisse : %v", body)
+	}
+	status, sale := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash",
+		"payments":      []fiber.Map{{"method": "cash", "amount": 20000}, {"method": "wave", "amount": 30000}},
+		"items":         []fiber.Map{{"variantId": variant.ID, "quantity": 1, "unitPrice": 50000}},
+	})
+	if status >= 400 {
+		t.Fatalf("règlement fractionné refusé (%d) : %v", status, sale)
+	}
+	if paid := int64(sale["paid"].(float64)); paid != 50000 {
+		t.Fatalf("payé %d au lieu de 50000", paid)
+	}
+	if method := sale["paymentMethod"]; method != "mixte" {
+		t.Fatalf("moyen inscrit : %v, attendu « mixte » — les rapports groupent sur ce champ", method)
+	}
+	saleID := uint(sale["id"].(float64))
+	var lines []struct {
+		Method string
+		Amount int64
+	}
+	h.db.Raw(`select method, amount from sale_payments where sale_id = ? order by id`, saleID).Scan(&lines)
+	if len(lines) != 2 || lines[0].Method != "cash" || lines[0].Amount != 20000 || lines[1].Method != "wave" || lines[1].Amount != 30000 {
+		t.Fatalf("détail des règlements incorrect : %+v", lines)
+	}
+	// Seules les especes entrent dans le tiroir : compter les 30 000 F de Wave
+	// ferait constater un ecart de caisse tous les soirs.
+	var session models.CashSession
+	h.db.Where("status = 'open'").First(&session)
+	if session.ExpectedAmount != 20000 {
+		t.Fatalf("tiroir à %d au lieu de 20000", session.ExpectedAmount)
+	}
+}
+
+// Les montants d'un règlement fractionné sont saisis ligne par ligne : les
+// rogner en silence fausserait le détail remis au client.
+func TestSplitPaymentCannotExceedTotal(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(5, 10000)
+
+	status, body := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"payments": []fiber.Map{{"method": "cash", "amount": 8000}, {"method": "wave", "amount": 5000}},
+		"items":    []fiber.Map{{"variantId": variant.ID, "quantity": 1, "unitPrice": 10000}},
+	})
+	if status < 400 {
+		t.Fatalf("13 000 F encaissés pour une vente de 10 000 F (%d) : %v", status, body)
+	}
+	var sales int64
+	h.db.Model(&models.Sale{}).Count(&sales)
+	if sales != 0 {
+		t.Fatalf("%d vente(s) enregistrée(s) malgré le refus", sales)
+	}
+	if got := h.stockOf(variant.ID); got != 5 {
+		t.Fatalf("stock %d au lieu de 5 : le refus a quand même sorti la marchandise", got)
+	}
+}

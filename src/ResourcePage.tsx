@@ -69,7 +69,7 @@ const statusChoices:Record<string,Choice[]>={
   'contact-messages':[{value:'pending',label:'À traiter'},{value:'processing',label:'En cours'},{value:'completed',label:'Traité'}]
 };
 const relationResources:Record<string,string>={categoryId:'categories',brandId:'brands',productId:'products',variantId:'variants',customerId:'customers',supplierId:'suppliers',userId:'users',saleId:'sales',parentId:'documents',cashSessionId:'cash-sessions'};
-const valueLabels:Record<string,string>={cash:'Espèces',wave:'Wave',orange_money:'Orange Money',card:'Carte bancaire',credit:'Crédit',bank_transfer:'Virement',pos:'Boutique / caisse',online:'Boutique en ligne',whatsapp:'WhatsApp',email:'E-mail',invoice:'Facture',quote:'Devis',receipt:'Reçu',credit_note:'Avoir',order:'Commande',payment:'Paiement',information:'Information'};
+const valueLabels:Record<string,string>={cash:'Espèces',wave:'Wave',orange_money:'Orange Money',card:'Carte bancaire',credit:'Crédit',bank_transfer:'Virement',mixte:'Paiement mixte',pos:'Boutique / caisse',online:'Boutique en ligne',whatsapp:'WhatsApp',email:'E-mail',invoice:'Facture',quote:'Devis',receipt:'Reçu',credit_note:'Avoir',order:'Commande',payment:'Paiement',information:'Information'};
 
 const endpoint=(resource:string,id?:number)=>`/api/${resource}${id?`/${id}`:''}`;
 const displayValue=(key:string,value:unknown)=>{

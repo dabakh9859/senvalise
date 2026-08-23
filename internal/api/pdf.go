@@ -137,7 +137,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 	switch kind {
 	case "invoice":
 		var sale models.Sale
-		if s.DB.Preload("Items.Variant.Product").Preload("Customer").Preload("User").First(&sale, id).Error != nil {
+		if s.DB.Preload("Items.Variant.Product").Preload("Customer").Preload("User").Preload("Payments").First(&sale, id).Error != nil {
 			return doc, fmt.Errorf("facture introuvable")
 		}
 		doc.Reference, doc.IssuedAt = sale.Reference, sale.CreatedAt
@@ -152,7 +152,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 		if doc.Remaining > 0 {
 			status = "Reste " + messaging.Money(doc.Remaining)
 		}
-		doc.Meta = []pdfMeta{{"RÈGLEMENT", status}, {"MODE", paymentLabel(sale.PaymentMethod)}}
+		doc.Meta = []pdfMeta{{"RÈGLEMENT", status}, {"MODE", paymentSummary(sale)}}
 		for _, item := range sale.Items {
 			doc.Lines = append(doc.Lines, pdfLine{
 				Description: lineLabel("", item.Variant), Reference: variantSKU(item.Variant),
@@ -243,9 +243,30 @@ func variantSKU(variant *models.ProductVariant) string {
 	return variant.SKU
 }
 
+// paymentSummary decrit le reglement sur la facture. « Paiement mixte » ne dit
+// rien au client qui a paye moitie especes moitie Wave : le detail lui permet
+// de verifier ce qu'on a encaisse de chaque cote.
+func paymentSummary(sale models.Sale) string {
+	if sale.PaymentMethod != "mixte" {
+		return paymentLabel(sale.PaymentMethod)
+	}
+	parts := []string{}
+	for _, payment := range sale.Payments {
+		if payment.Status != "active" || payment.Amount <= 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s %s", paymentLabel(payment.Method), messaging.Money(payment.Amount)))
+	}
+	if len(parts) == 0 {
+		return paymentLabel(sale.PaymentMethod)
+	}
+	return strings.Join(parts, " · ")
+}
+
 func paymentLabel(method string) string {
 	labels := map[string]string{"cash": "Espèces", "wave": "Wave", "orange_money": "Orange Money",
-		"card": "Carte bancaire", "credit": "Crédit", "bank_transfer": "Virement", "vault": "Coffre"}
+		"card": "Carte bancaire", "credit": "Crédit", "bank_transfer": "Virement", "vault": "Coffre",
+		"mixte": "Paiement mixte"}
 	if label, ok := labels[method]; ok {
 		return label
 	}

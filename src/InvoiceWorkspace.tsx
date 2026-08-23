@@ -14,7 +14,7 @@ type Props={document:Entity;kind:Kind;isAdmin:boolean;onClose:()=>void;onDelete:
 const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
 
 const longDate=(value:unknown)=>value?new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date(String(value))):'—';
-const methodLabel=(value:unknown)=>({cash:'Espèces',wave:'Wave',orange_money:'Orange Money',card:'Carte bancaire',bank_transfer:'Virement',credit:'Crédit',legacy:'Paiement antérieur'}[String(value)]??String(value??'—'));
+const methodLabel=(value:unknown)=>({cash:'Espèces',wave:'Wave',orange_money:'Orange Money',card:'Carte bancaire',bank_transfer:'Virement',credit:'Crédit',mixte:'Paiement mixte',legacy:'Paiement antérieur'}[String(value)]??String(value??'—'));
 const lineName=(line:{variant?:Entity&{sku?:string;product?:Entity};description?:string})=>String(line.variant?.product?.name??line.description??line.variant?.sku??'Article SenValise');
 
 export default function InvoiceWorkspace(props:Props){

@@ -103,7 +103,6 @@ func (s *Server) Register(app *fiber.App) {
 	a.Get("/me", s.me)
 	// Le tableau de bord agrège chiffre d'affaires, créances et valeur du stock :
 	// c'est du pilotage, pas du comptoir.
-	a.Get("/overview", s.overview)
 	a.Get("/dashboard", auth.Manager, s.dashboard)
 	a.Get("/checkout-settings", s.checkoutSettings)
 	a.Put("/checkout-settings", s.updateCheckoutSettings)

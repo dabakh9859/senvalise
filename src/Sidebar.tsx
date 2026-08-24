@@ -11,7 +11,7 @@ export type User={id:number;name:string;email:string;role:string};
 export type NavItem={id:string;label:string;resource?:string;icon:typeof Package;manager?:boolean};
 export type NavGroup={id:string;label:string;icon:typeof Package;items:NavItem[]};
 
-export const dashboardItem:NavItem={id:'dashboard',label:'Accueil',icon:LayoutDashboard};
+export const dashboardItem:NavItem={id:'dashboard',label:'Tableau de bord',icon:LayoutDashboard,manager:true};
 export const journalItem:NavItem={id:'journal',label:'Ce qui s’est passé',icon:History,manager:true};
 export const groups:NavGroup[]=[
   {id:'stock',label:'Stock',icon:Boxes,items:[
@@ -68,7 +68,7 @@ export type Brand={siteName:string;tagline:string;logoUrl:string};
 export default function Sidebar({user,onPage,onLogout,brand}:Props){
   const role=user.role==='manager'?'Administrateur':'Vendeur';
   return <aside className="sidebar compact-rail" aria-label="Accès rapide">
-    <button className="rail-brand" onClick={()=>onPage('dashboard')} title={brand?.siteName??'SenValise'} aria-label="Revenir à l’accueil">{brand?.logoUrl?<img src={brand.logoUrl} alt=""/>:<span>{(brand?.siteName??'SenValise').slice(0,2).toUpperCase()}</span>}</button>
+    <button className="rail-brand" onClick={()=>onPage(user.role==='manager'?'dashboard':'pos')} title={brand?.siteName??'SenValise'} aria-label="Revenir à l’accueil">{brand?.logoUrl?<img src={brand.logoUrl} alt=""/>:<span>{(brand?.siteName??'SenValise').slice(0,2).toUpperCase()}</span>}</button>
     <div className="rail-profile">
       <span className="avatar" title={`${user.name} — ${role}`}>{user.name.slice(0,1).toUpperCase()}</span>
       <ThemeToggle/>

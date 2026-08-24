@@ -65,11 +65,7 @@ export default function App(){
   useEffect(()=>{api<Brand>('/api/public/branding').then(setBrand).catch(()=>{})},[]);
   useEffect(()=>{if(localStorage.getItem('sv_token'))api<User>('/api/me').then(setUser).catch(()=>localStorage.removeItem('sv_token'))},[]);
   const manager=user?.role==='manager';
-  // L'accueil est le même pour les deux rôles : le serveur y répond
-  // différemment — le vendeur y voit sa caisse et ses ventes du jour, pas le
-  // bénéfice de la boutique. Il ouvrait auparavant directement sur la caisse,
-  // et n'avait donc aucun écran lui disant ce qu'il restait à faire.
-  const home='dashboard';
+  const home=manager?'dashboard':'pos';
   const requested=allNav.find(item=>item.id===page)??allNav.find(item=>item.id===home)??allNav[0];
   // Filet côté écran : une page réservée ne s'ouvre pas, même si son
   // identifiant est forcé. L'API refuse déjà les données correspondantes.
@@ -92,7 +88,7 @@ export default function App(){
     <main className="main-area">
       <TopNavigation user={user} page={page} onPage={setPage}/>
       {view!=='dashboard'&&<header className="page-header"><div><small>ESPACE DE TRAVAIL</small><h1>{current.label}</h1></div>{view==='pos'&&<button className="header-action" onClick={()=>setPage('sales')}><FileText/>Voir les factures</button>}<time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date())}</time></header>}
-      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard user={user} onPage={setPage}/>:view==='pos'?<EnhancedPOS onOpenInvoice={id=>{setOpenDocument({resource:'sales',id});setPage('sales')}}/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:view==='messaging'?<Messaging/>:view==='campaigns'?<Campaigns/>:view==='debts'?<Debts/>:view==='vaults'?<Vaults/>:view==='branding'?<Branding/>:view==='journal'?<Journal onPage={setPage}/>:view==='cash-sessions'?<Cash/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user} openId={openDocument?.resource===current.resource?openDocument.id:undefined} onOpened={()=>setOpenDocument(null)}/>:null}</Suspense></section>
+      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS onOpenInvoice={id=>{setOpenDocument({resource:'sales',id});setPage('sales')}}/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:view==='messaging'?<Messaging/>:view==='campaigns'?<Campaigns/>:view==='debts'?<Debts/>:view==='vaults'?<Vaults/>:view==='branding'?<Branding/>:view==='journal'?<Journal onPage={setPage}/>:view==='cash-sessions'?<Cash/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user} openId={openDocument?.resource===current.resource?openDocument.id:undefined} onOpened={()=>setOpenDocument(null)}/>:null}</Suspense></section>
     </main>
   </div>;
 }

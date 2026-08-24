@@ -29,7 +29,7 @@ export const groups:NavGroup[]=[
     {id:'customers',label:'Clients',resource:'customers',icon:Users},
   ]},
   {id:'finance',label:'Finances',icon:CircleDollarSign,items:[
-    {id:'cash-sessions',label:'Sessions de caisse',resource:'cash-sessions',icon:WalletCards},
+    {id:'cash-sessions',label:'Caisse',icon:WalletCards},
     {id:'debts',label:'Créances et relances',icon:BellRing},
     {id:'expenses',label:'Dépenses quotidiennes',icon:Receipt},
     {id:'reports',label:'Rapports',icon:BarChart3,manager:true},

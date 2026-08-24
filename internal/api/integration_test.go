@@ -531,3 +531,64 @@ func TestReturnInTwoStepsRefundsEverythingPaid(t *testing.T) {
 		t.Fatalf("un quatrième retour sur trois pièces vendues a été accepté (%d) : %v", status, body)
 	}
 }
+
+// Une depense reglee en especes doit sortir du tiroir.
+//
+// Le montant attendu ignorait les depenses : le vendeur qui payait le livreur
+// sur la caisse comptait, le soir, moins d'argent que la caisse n'en
+// attendait, et l'ecart lui etait impute. Le test suit une depense de sa
+// creation a sa suppression : chaque etape doit se lire dans l'attendu.
+func TestCashExpenseLeavesTheDrawer(t *testing.T) {
+	h := newHarness(t)
+
+	status, opened := h.call(http.MethodPost, "/api/cash/open", fiber.Map{"openingAmount": 20000})
+	if status >= 400 {
+		t.Fatalf("ouverture de caisse refusée : %v", opened)
+	}
+	sessionID := uint(opened["id"].(float64))
+	expected := func() int64 {
+		var amount int64
+		h.db.Table("cash_sessions").Where("id = ?", sessionID).Select("expected_amount").Scan(&amount)
+		return amount
+	}
+
+	status, created := h.call(http.MethodPost, "/api/expenses", fiber.Map{
+		"label": "Livreur", "amount": 5000, "category": "transport", "paymentMethod": "cash",
+	})
+	if status >= 400 {
+		t.Fatalf("dépense refusée : %v", created)
+	}
+	expenseID := uint(created["id"].(float64))
+	if got := expected(); got != 15000 {
+		t.Fatalf("attendu %d F après une dépense de 5 000 F sur 20 000 F : la dépense n'est pas sortie du tiroir", got)
+	}
+
+	// Corriger la depense corrige le tiroir.
+	status, _ = h.call(http.MethodPut, fmt.Sprintf("/api/expenses/%d", expenseID), fiber.Map{
+		"label": "Livreur", "amount": 3000, "category": "transport", "paymentMethod": "cash",
+	})
+	if status >= 400 {
+		t.Fatalf("correction de la dépense refusée (%d)", status)
+	}
+	if got := expected(); got != 17000 {
+		t.Fatalf("attendu %d F après correction à 3 000 F : la caisse n'a pas suivi", got)
+	}
+
+	// Une depense reglee par Wave ne touche pas au tiroir.
+	if status, _ = h.call(http.MethodPost, "/api/expenses", fiber.Map{
+		"label": "Publicité", "amount": 2000, "category": "marketing", "paymentMethod": "wave",
+	}); status >= 400 {
+		t.Fatalf("dépense Wave refusée (%d)", status)
+	}
+	if got := expected(); got != 17000 {
+		t.Fatalf("attendu %d F : une dépense Wave a bougé le tiroir", got)
+	}
+
+	// La supprimer rend l'argent.
+	if status, _ = h.call(http.MethodDelete, fmt.Sprintf("/api/expenses/%d", expenseID), nil); status >= 400 {
+		t.Fatalf("suppression de la dépense refusée (%d)", status)
+	}
+	if got := expected(); got != 20000 {
+		t.Fatalf("attendu %d F après suppression : l'argent n'est pas revenu au tiroir", got)
+	}
+}

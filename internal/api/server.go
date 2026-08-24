@@ -114,7 +114,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Get("/expenses/:id", func(c *fiber.Ctx) error { return s.show(c, "expenses") })
 	a.Post("/expenses", s.createExpense)
 	a.Put("/expenses/:id", s.updateExpense)
-	a.Delete("/expenses/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, "expenses") })
+	a.Delete("/expenses/:id", auth.Manager, s.deleteExpense)
 	managerOnly := map[string]bool{"brands": true, "suppliers": true, "arrivals": true, "orders": true, "vaults": true, "home-blocks": true, "settings": true, "delivery-zones": true, "users": true}
 	for _, resource := range []string{"categories", "brands", "suppliers", "customers", "products", "product-images", "variants", "arrivals", "sales", "returns", "quotes", "delivery-notes", "orders", "vaults", "cash-sessions", "cash-movements", "messages", "message-templates", "campaigns", "home-blocks", "activity-logs", "settings", "delivery-zones", "contact-messages", "users"} {
 		r := resource
@@ -165,6 +165,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/returns/process", s.processReturn)
 	a.Get("/returns/sales/search", s.searchReturnableSales)
 	a.Get("/returns/lines/:id", s.returnableLines)
+	a.Get("/cash/current", s.currentCash)
 	a.Post("/cash/open", s.openCash)
 	a.Post("/cash/:id/close", s.closeCash)
 	a.Post("/vaults/:id/deposit", s.depositVault)
@@ -1794,7 +1795,13 @@ func (s *Server) openCash(c *fiber.Ctx) error {
 		return fiber.NewError(409, "Une caisse est déjà ouverte")
 	}
 	x := models.CashSession{UserID: uid, Status: "open", OpeningAmount: in.OpeningAmount, ExpectedAmount: in.OpeningAmount, OpenedAt: time.Now()}
-	s.DB.Create(&x)
+	// L'erreur d'écriture était ignorée : la réponse partait en 201 avec un
+	// identifiant nul, et le vendeur croyait son tiroir ouvert alors que rien
+	// n'avait été enregistré. Les encaissements de la journée n'étaient alors
+	// rattachés à aucune caisse.
+	if e := s.DB.Create(&x).Error; e != nil {
+		return dbError(e, "ouverture de caisse")
+	}
 	return c.Status(201).JSON(x)
 }
 func (s *Server) closeCash(c *fiber.Ctx) error {
@@ -1922,7 +1929,16 @@ func (s *Server) createExpense(c *fiber.Ctx) error {
 		Label: strings.TrimSpace(in.Label), Amount: in.Amount, PaymentMethod: in.PaymentMethod,
 		SupplierID: in.SupplierID, UserID: c.Locals("userID").(uint), Note: strings.TrimSpace(in.Note),
 	}
-	if e := s.DB.Create(&expense).Error; e != nil {
+	// Une dépense réglée en espèces sort du tiroir. Elle ne le faisait pas :
+	// à la clôture, le montant attendu ignorait l'argent sorti dans la
+	// journée, et l'écart tombait sur le vendeur.
+	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&expense).Error; err != nil {
+			return err
+		}
+		return s.trackCashAs(tx, expense.UserID, expense.PaymentMethod, -expense.Amount, "dépense")
+	})
+	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
 	_ = preload(s.DB, "expenses").First(&expense, expense.ID).Error
@@ -1940,6 +1956,7 @@ func (s *Server) updateExpense(c *fiber.Ctx) error {
 	if e := in.validate(); e != nil {
 		return e
 	}
+	before := expense
 	if in.SpentOn != "" {
 		expense.SpentOn = expenseDay(in.SpentOn)
 	}
@@ -1949,7 +1966,20 @@ func (s *Server) updateExpense(c *fiber.Ctx) error {
 	expense.PaymentMethod = in.PaymentMethod
 	expense.SupplierID = in.SupplierID
 	expense.Note = strings.TrimSpace(in.Note)
-	if e := s.DB.Save(&expense).Error; e != nil {
+	// La caisse suit la correction : on annule l'effet de l'ancienne dépense
+	// et on applique la nouvelle. Passer de 5 000 F à 3 000 F sans cela
+	// laissait 2 000 F manquants dans le tiroir jusqu'à la clôture.
+	uid := c.Locals("userID").(uint)
+	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.trackCashAs(tx, uid, before.PaymentMethod, before.Amount, "dépense"); err != nil {
+			return err
+		}
+		if err := tx.Save(&expense).Error; err != nil {
+			return err
+		}
+		return s.trackCashAs(tx, uid, expense.PaymentMethod, -expense.Amount, "dépense")
+	})
+	if e != nil {
 		return fiber.NewError(422, e.Error())
 	}
 	_ = preload(s.DB, "expenses").First(&expense, expense.ID).Error
@@ -2457,4 +2487,28 @@ func (s *Server) createDeliveryNote(c *fiber.Ctx) error {
 		return fiber.NewError(422, e.Error())
 	}
 	return c.Status(201).JSON(note)
+}
+
+// deleteExpense supprime une depense et rend son montant au tiroir.
+//
+// La suppression generique laissait le montant attendu ampute d'une depense
+// qui n'existait plus : le vendeur comptait alors plus d'argent que la caisse
+// n'en attendait, et l'ecart passait pour une erreur de comptage.
+func (s *Server) deleteExpense(c *fiber.Ctx) error {
+	var expense models.Expense
+	if s.DB.First(&expense, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	uid := c.Locals("userID").(uint)
+	e := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(&models.Expense{}, expense.ID).Error; err != nil {
+			return err
+		}
+		return s.trackCashAs(tx, uid, expense.PaymentMethod, expense.Amount, "dépense")
+	})
+	if e != nil {
+		return dbError(e, "suppression de la dépense")
+	}
+	s.log(c, "delete", "expenses", expense.ID, expense.Reference+" — "+expense.Label)
+	return c.SendStatus(204)
 }

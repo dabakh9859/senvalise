@@ -372,6 +372,9 @@ type CashSession struct {
 	OpenedAt       time.Time      `json:"openedAt"`
 	ClosedAt       *time.Time     `json:"closedAt"`
 	Movements      []CashMovement `json:"movements,omitempty"`
+	// Qui tenait le tiroir. La liste n'affichait qu'un numéro de compte, que
+	// le gérant ne sait pas relire.
+	User *User `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 type CashMovement struct {
 	Base

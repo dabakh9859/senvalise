@@ -142,7 +142,7 @@
     font-size:9.5pt !important;color:#6b7280 !important;text-align:left !important;
   }
   #print-root .invoice-signatures i{display:block !important;height:0 !important;border-bottom:.3mm solid #9ca3af !important}
-  #print-root .invoice-signatures img{max-height:20mm !important;object-fit:contain !important;object-position:left bottom !important}
+  #print-root .invoice-signatures img{max-height:36mm !important;object-fit:contain !important;object-position:left bottom !important}
   #print-root .invoice-signatures small{grid-column:1/-1 !important;margin-top:6mm !important;text-align:center !important;font-size:8.5pt !important;color:#9ca3af !important}
 
   /* Pied répété. Le retrait de 8mm tient compte de la zone qu'une

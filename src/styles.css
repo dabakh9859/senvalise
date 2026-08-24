@@ -1311,3 +1311,13 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
   .invoice-payments{margin-inline:18px}
   img.invoice-logo-mark{height:40px}
 }
+
+/* Le cachet de l'entreprise, à sa vraie taille.
+   ------------------------------------------------------------------------
+   Il était borné à 52 px de haut dans un emplacement large de 150 px. Un
+   cachet rond est aussi haut que large : cette contrainte le réduisait au
+   tiers de la place disponible, et le texte qui tourne autour du cercle
+   devenait illisible — or c'est précisément ce qui fait foi. Il remplit
+   maintenant sa hauteur, et n'est ramené que s'il déborde en largeur. */
+.invoice-signatures>button img{width:auto!important;height:110px!important;max-width:230px!important;object-position:left center!important}
+@media(max-width:700px){.invoice-signatures>button img{height:80px!important;max-width:170px!important}}

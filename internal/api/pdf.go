@@ -667,7 +667,9 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	// Cartouche de signatures.
 	pdf.Ln(8)
 	signatureTop := pdf.GetY()
-	if signatureTop > 225 {
+	// Le cartouche est plus haut qu'avant : le seuil de saut de page descend
+	// d'autant, sinon la signature part sous le pied de page.
+	if signatureTop > 205 {
 		pdf.AddPage()
 		signatureTop = pdf.GetY()
 	}
@@ -679,25 +681,29 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 		pdf.SetFont(pdfFont, "", 8)
 		pdf.SetTextColor(110, 110, 110)
 		pdf.CellFormat(boxWidth, 5, tr(label), "", 2, "L", false, 0, "")
-		pdf.Rect(x, signatureTop+6, boxWidth, 30, "D")
+		pdf.Rect(x, signatureTop+6, boxWidth, 46, "D")
 		// La signature de l'entreprise s'incruste dans son cadre, a l'echelle,
 		// sans jamais le deborder : une image trop haute recouvrirait le pied de
 		// page, une image trop large mordrait sur le cadre du client.
 		if index == 1 && doc.SignatureFormat != "" && len(doc.Signature) > 0 {
 			pdf.RegisterImageOptionsReader("signature", fpdf.ImageOptions{ImageType: doc.SignatureFormat}, bytes.NewReader(doc.Signature))
 			if info := pdf.GetImageInfo("signature"); info != nil && info.Height() > 0 {
-				height := 26.0
+				// Un cachet rond est aussi haut que large : borne par sa
+				// hauteur, il n'occupait qu'un tiers d'un cadre large et se
+				// lisait a peine. Il remplit desormais le cadre en hauteur, et
+				// n'est ramene que s'il deborde en largeur.
+				height := 42.0
 				imageWidth := height * info.Width() / info.Height()
 				if imageWidth > boxWidth-6 {
 					imageWidth = boxWidth - 6
 					height = imageWidth * info.Height() / info.Width()
 				}
-				pdf.ImageOptions("signature", x+3, signatureTop+6+(30-height)/2, imageWidth, height, false,
+				pdf.ImageOptions("signature", x+3, signatureTop+6+(46-height)/2, imageWidth, height, false,
 					fpdf.ImageOptions{ImageType: doc.SignatureFormat}, 0, "")
 			}
 		}
 	}
-	pdf.SetXY(left, signatureTop+39)
+	pdf.SetXY(left, signatureTop+55)
 	pdf.SetFont(pdfFont, "", 7.5)
 	pdf.SetTextColor(130, 130, 130)
 	seller := doc.Seller

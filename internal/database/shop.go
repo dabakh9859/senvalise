@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"gorm.io/gorm"
 	"senvalise/internal/models"
@@ -27,7 +29,22 @@ func generatedImage(url string) bool {
 	return len(url) >= 28 && url[:28] == "https://images.unsplash.com/"
 }
 
+// SEED_CATALOG commande la pose du catalogue de demonstration.
+//
+// seedShop s'executait a chaque demarrage et reecrivait les huit produits, les
+// categories, les teintes et les zones de livraison. C'est ce qu'il faut sur
+// une installation neuve, qui doit avoir de la matiere immediatement. Mais
+// une boutique qui a fait le menage de ce catalogue pour saisir le sien le
+// voyait revenir au redemarrage suivant : la suppression ne tenait pas une
+// journee, et rien ne disait pourquoi.
+//
+// La valeur par defaut reste « oui » : une nouvelle installation se comporte
+// comme avant. C'est a la boutique qui a pris la main sur son catalogue de
+// poser SEED_CATALOG=false.
 func seedShop(db *gorm.DB) error {
+	if strings.EqualFold(os.Getenv("SEED_CATALOG"), "false") {
+		return nil
+	}
 	for _, c := range shopColorways {
 		var row models.Colorway
 		if db.Where("slug = ?", c.Slug).First(&row).Error == gorm.ErrRecordNotFound {

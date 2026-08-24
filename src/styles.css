@@ -27,6 +27,33 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Caveat porte la phrase de remerciement du papier a en-tete, et elle seule.
+   Le gabarit de la boutique l'ecrit d'une main manuscrite ; en Inter, elle
+   perdait ce qui la distingue du reste — c'est un mot, pas une mention. La
+   fonte est sous licence ouverte, comme Inter, et servie depuis le serveur :
+   une facture ne doit pas dependre d'un domaine tiers pour s'afficher.
+
+   Les plages de caracteres comptent : sans elles, le sous-ensemble cyrillique
+   avait ete pris pour la fonte entiere. La face se chargeait « avec succes »
+   et chaque lettre latine retombait sur Inter — une phrase manuscrite ecrite
+   en gras ordinaire, sans qu'aucune erreur ne soit signalee. */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/caveat-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/caveat-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 
 /* Palette. Le theme clair reprend exactement les couleurs d'origine ; le
    theme sombre ne s'applique que sur data-theme="dark", jamais d'apres le
@@ -1310,4 +1337,110 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
   .invoice-brand-rule{margin-inline:18px}
   .invoice-payments{margin-inline:18px}
   img.invoice-logo-mark{height:40px}
+}
+
+/* ==========================================================================
+   Le papier à en-tête de la boutique, à l'écran.
+   ==========================================================================
+   La pièce affichée était celle d'un logiciel de gestion : bandeau plein,
+   trois colonnes, un tableau gris. La boutique a un papier dessiné — logo à
+   gauche, coordonnées derrière leurs pictogrammes, étiquettes arrondies,
+   tableau bleu, bandeau de pied de page — et c'est celui-là que le client
+   reconnaît. L'écran le reproduit à l'identique du PDF : imprimer depuis le
+   navigateur ou envoyer le fichier doit donner la même feuille. */
+:root{--tpl-blue:#1529d6;--tpl-yellow:#f7b214;--tpl-ink:#20242c;--tpl-muted:#6e747e;--tpl-line:#dee2ea}
+.invoice-paper{padding-bottom:0;overflow:hidden}
+
+.tpl-head{display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:start;padding:30px 34px 0}
+.tpl-logo{height:74px;width:auto;max-width:130px;object-fit:contain}
+/* Le filet vertical du papier à en-tête sépare le logo des coordonnées. */
+.tpl-company{border-left:2px solid var(--tpl-blue);padding-left:18px;text-align:left;background:none;border-top:0;border-right:0;border-bottom:0}
+.tpl-company strong{display:block;font:750 15px Inter,system-ui,sans-serif;color:var(--tpl-blue);letter-spacing:.02em}
+.tpl-contacts{list-style:none;margin:9px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tpl-contacts li{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--tpl-ink)}
+.tpl-contacts svg{width:13px;height:13px;flex:none;margin-top:1px;color:var(--tpl-blue)}
+.tpl-doc{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.tpl-doc h2{margin:0;font:800 34px Inter,system-ui,sans-serif;color:var(--tpl-blue);letter-spacing:-.02em}
+/* La gélule du numéro : segment bleu porteur du « N° », champ cerné de jaune.
+   C'est la première chose qu'un client cherche sur sa facture. */
+.tpl-number{display:flex;align-items:stretch;border:2px solid var(--tpl-yellow);border-radius:999px;overflow:hidden;background:#fff;min-width:250px}
+.tpl-number span{background:var(--tpl-blue);color:#fff;font:750 12px Inter,system-ui,sans-serif;padding:7px 20px;border-radius:999px;display:flex;align-items:center}
+.tpl-number b{flex:1;text-align:center;font:750 13px Inter,system-ui,sans-serif;color:var(--tpl-ink);padding:7px 14px;letter-spacing:.02em}
+.tpl-dates{margin:0;display:flex;flex-direction:column;gap:4px}
+.tpl-dates>div{display:flex;gap:8px;justify-content:flex-end}
+.tpl-dates dt{font:700 12px Inter,system-ui,sans-serif;color:var(--tpl-blue)}
+.tpl-dates dd{margin:0;font-size:12px;color:var(--tpl-ink);min-width:110px;text-align:left}
+
+.tpl-parties{display:grid;grid-template-columns:1fr 1fr;gap:26px;padding:30px 34px 0}
+.tpl-party{display:grid;grid-template-columns:auto 1fr;gap:0 10px;align-items:center;text-align:left;background:none;border:0;padding:0}
+.tpl-pill{padding:6px 18px;border-radius:999px;font:750 11px Inter,system-ui,sans-serif;color:#fff;white-space:nowrap}
+.tpl-pill.blue{background:var(--tpl-blue)}
+.tpl-pill.yellow{background:var(--tpl-yellow)}
+.tpl-rule{height:2px;border-radius:2px;display:block}
+.tpl-rule.blue{background:var(--tpl-blue)}
+.tpl-rule.yellow{background:var(--tpl-yellow)}
+.tpl-party-lines{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;margin-top:14px;font-size:12.5px;color:var(--tpl-ink)}
+.tpl-party-lines b{font-weight:600}
+
+.tpl-table{width:calc(100% - 68px);margin:26px 34px 0;border-collapse:collapse}
+.tpl-table th{background:var(--tpl-blue);color:#fff;font:750 10px Inter,system-ui,sans-serif;letter-spacing:.06em;padding:11px 10px;text-align:center}
+.tpl-table th:nth-child(2){text-align:left}
+.tpl-table td{border:1px solid var(--tpl-line);padding:11px 10px;font-size:12px;text-align:center;vertical-align:middle}
+.tpl-table td:nth-child(2){text-align:left}
+.tpl-table td:nth-child(2) span{display:block;font-size:10.5px;color:var(--tpl-muted);margin-top:3px}
+.tpl-table td:last-child{font-weight:700}
+
+.tpl-bottom{display:grid;grid-template-columns:1fr 1fr;gap:34px;padding:30px 34px 0;align-items:start}
+.tpl-left{display:flex;flex-direction:column;gap:16px}
+.tpl-left section{display:flex;gap:13px;align-items:flex-start}
+/* Le carré bleu arrondi des rubriques : c'est lui qui fait reconnaître le
+   bloc avant même d'en lire le titre. */
+.tpl-icon{width:38px;height:38px;border-radius:10px;background:var(--tpl-blue);display:grid;place-items:center;flex:none}
+.tpl-icon svg{width:19px;height:19px;color:#fff}
+.tpl-left h4{margin:2px 0 5px;font:750 11.5px Inter,system-ui,sans-serif;color:var(--tpl-blue);letter-spacing:.04em}
+.tpl-left p{margin:0 0 3px;font-size:12px;color:var(--tpl-ink)}
+/* Le mot de remerciement est écrit d'une main manuscrite sur le papier de la
+   boutique : la même police que le PDF, chargée avec le reste. */
+.tpl-thanks{text-align:left;background:none;border:0;padding:0;margin-top:4px}
+.tpl-thanks strong{display:inline-block;font:600 26px Caveat,"Segoe Script",cursive;color:var(--tpl-blue);line-height:1.15;
+  background:linear-gradient(var(--tpl-yellow),var(--tpl-yellow)) 0 100%/100% 5px no-repeat;padding-bottom:3px}
+.tpl-thanks p{margin:12px 0 0;font-size:11.5px;color:var(--tpl-muted);line-height:1.6}
+
+.tpl-right{display:flex;flex-direction:column;gap:12px}
+.tpl-totals,.tpl-paid{display:flex;flex-direction:column;gap:7px;text-align:left;background:none;border:0;padding:0}
+.tpl-totals span,.tpl-paid span{display:flex;justify-content:space-between;gap:16px;font-size:12.5px;color:var(--tpl-ink)}
+.tpl-totals b,.tpl-paid b{font-weight:600;font-variant-numeric:tabular-nums}
+.tpl-totals strong{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
+  border-top:2px solid var(--tpl-blue);padding-top:11px;margin-top:5px;
+  font:750 17px Inter,system-ui,sans-serif;color:var(--tpl-blue)}
+.tpl-totals strong b{font-weight:800;font-size:18px}
+.tpl-paid{color:var(--tpl-muted)}
+.tpl-paid span{color:var(--tpl-muted);font-size:12px}
+.tpl-paid span.due,.tpl-paid span.due b{color:#b02020;font-weight:700}
+/* Le cadre du cachet : sur le papier, c'est un rectangle bleu arrondi laissé
+   vide pour le tampon. Il reste vide tant que la signature n'est pas posée. */
+.tpl-stamp{position:relative;border:2px solid var(--tpl-blue);border-radius:10px;min-height:132px;background:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px}
+.tpl-stamp>span{position:absolute;top:9px;left:0;right:0;font:750 10.5px Inter,system-ui,sans-serif;color:var(--tpl-blue);letter-spacing:.05em}
+.tpl-stamp img{max-height:100px;max-width:80%;object-fit:contain}
+
+.tpl-legal{margin:22px 34px 0;text-align:center;font:700 10.5px Inter,system-ui,sans-serif;color:var(--tpl-muted)}
+.tpl-generated{display:block;margin:4px 34px 0;text-align:center;font-size:10px;color:var(--tpl-muted)}
+/* Le bandeau ferme la feuille. Le pan jaune est découpé en biais, comme sur le
+   papier : un dégradé conique le dessine sans image. */
+.tpl-band{position:relative;margin-top:22px;height:52px;background:var(--tpl-blue);display:flex;align-items:center;padding:0 34px;overflow:hidden}
+.tpl-band span{font:600 19px Caveat,"Segoe Script",cursive;color:#fff;position:relative;z-index:1}
+.tpl-band i{position:absolute;top:0;right:0;bottom:0;width:34%;background:var(--tpl-yellow);
+  clip-path:polygon(16% 0,100% 0,100% 100%,0 100%)}
+
+@media(max-width:760px){
+  .tpl-head{grid-template-columns:auto 1fr;padding-inline:18px}
+  .tpl-doc{grid-column:1/-1;align-items:flex-start;text-align:left}
+  .tpl-number{min-width:0;width:100%}
+  .tpl-dates>div{justify-content:flex-start}
+  .tpl-parties,.tpl-bottom{grid-template-columns:1fr;padding-inline:18px}
+  .tpl-table{width:calc(100% - 36px);margin-inline:18px}
+  .tpl-table th:nth-child(4),.tpl-table td:nth-child(4){display:none}
+  .tpl-legal,.tpl-generated{margin-inline:18px}
+  .tpl-band{padding-inline:18px}
 }

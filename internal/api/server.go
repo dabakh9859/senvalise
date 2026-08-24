@@ -731,9 +731,25 @@ type invoiceDefaults struct {
 	// les identifiants de l'entreprise, pas un texte d'emission. S'ils
 	// changent, c'est que l'entreprise a change, et l'ancienne valeur n'a plus
 	// de sens sur aucun document.
-	Ninea            string `json:"ninea"`
-	TradeRegister    string `json:"tradeRegister"`
-	LegalNote        string `json:"legalNote"`
+	Ninea         string `json:"ninea"`
+	TradeRegister string `json:"tradeRegister"`
+	LegalNote     string `json:"legalNote"`
+	// Coordonnees completes de l'en-tete : le gabarit de la boutique les
+	// affiche sous le nom, chacune derriere son pictogramme.
+	Email   string `json:"email"`
+	Website string `json:"website"`
+	// Bas de page : ce que le client doit savoir pour payer. Ces mentions
+	// etaient absentes, et chaque facture partait sans dire comment regler.
+	PaymentTerms string `json:"paymentTerms"`
+	BankName     string `json:"bankName"`
+	BankAccount  string `json:"bankAccount"`
+	BankIban     string `json:"bankIban"`
+	// Phrase du bandeau de pied de page.
+	FooterBanner string `json:"footerBanner"`
+	// Fond decoratif du papier a en-tete — les croquis d'avions, de valises et
+	// de passeports du gabarit. Il est televerse par la boutique : ces dessins
+	// sont son papier, pas quelque chose que le rendu sait inventer.
+	Background       string `json:"backgroundUrl"`
 	ThankYouTitle    string `json:"thankYouTitle"`
 	FooterNote       string `json:"footerNote"`
 	CompanySignature string `json:"companySignatureUrl"`
@@ -757,7 +773,7 @@ func (d invoiceDefaults) legalLine() string {
 }
 
 func defaultCheckoutSettings() checkoutSettingsPayload {
-	return checkoutSettingsPayload{TaxRate: 18, TaxEnabledByDefault: false, PaymentMethods: []paymentMethodSetting{{"cash", "Espèces", true}, {"wave", "Wave", true}, {"orange_money", "Orange Money", true}, {"card", "Carte bancaire", true}, {"credit", "Crédit", true}, {"bank_transfer", "Virement", false}}, InvoiceDefaults: invoiceDefaults{CompanyName: "SenValise", Tagline: "Solutions de voyage", Phone: "+221 77 888 53 74", Address: "Dakar, Sénégal", ThankYouTitle: "Merci pour votre confiance", FooterNote: "Conservez ce document pour vos besoins de garantie ou de comptabilité."}}
+	return checkoutSettingsPayload{TaxRate: 18, TaxEnabledByDefault: false, PaymentMethods: []paymentMethodSetting{{"cash", "Espèces", true}, {"wave", "Wave", true}, {"orange_money", "Orange Money", true}, {"card", "Carte bancaire", true}, {"credit", "Crédit", true}, {"bank_transfer", "Virement", false}}, InvoiceDefaults: invoiceDefaults{CompanyName: "SenValise", Tagline: "Solutions de voyage", Phone: "+221 77 888 53 74", Address: "Dakar, Sénégal", ThankYouTitle: "Merci pour votre confiance !", FooterNote: "Aucun retour ni échange possible après réception de la marchandise.", FooterBanner: "Sen Valise, votre compagnon de voyage !", PaymentTerms: "Paiement à la livraison ou virement."}}
 }
 func (s *Server) readCheckoutSettings() checkoutSettingsPayload {
 	settings := defaultCheckoutSettings()
@@ -815,6 +831,11 @@ func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
 	in.InvoiceDefaults.Ninea = strings.TrimSpace(in.InvoiceDefaults.Ninea)
 	in.InvoiceDefaults.TradeRegister = strings.TrimSpace(in.InvoiceDefaults.TradeRegister)
 	in.InvoiceDefaults.LegalNote = strings.TrimSpace(in.InvoiceDefaults.LegalNote)
+	for _, field := range []*string{&in.InvoiceDefaults.Email, &in.InvoiceDefaults.Website,
+		&in.InvoiceDefaults.PaymentTerms, &in.InvoiceDefaults.BankName, &in.InvoiceDefaults.BankAccount,
+		&in.InvoiceDefaults.BankIban, &in.InvoiceDefaults.FooterBanner} {
+		*field = strings.TrimSpace(*field)
+	}
 	if in.InvoiceDefaults.CompanyName == "" || in.InvoiceDefaults.FooterNote == "" {
 		return fiber.NewError(422, "Le nom de l’entreprise et le texte de pied de facture sont requis")
 	}

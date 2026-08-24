@@ -100,6 +100,11 @@ func profitFigure(f periodFigures, label string) overviewFigure {
 		Sentence: "ce qui reste une fois la marchandise et les dépenses payées",
 		Tone:     "good",
 	}
+	if profit == 0 && f.Revenue == 0 && f.Expenses == 0 {
+		figure.Tone = "neutral"
+		figure.Sentence = "aucune vente ni dépense pour l’instant"
+		return figure
+	}
 	if profit < 0 {
 		figure.Tone = "bad"
 		figure.Sentence = "vous avez dépensé plus que ce que la boutique a rapporté"
@@ -119,21 +124,23 @@ func (s *Server) managerOverview(c *fiber.Ctx) error {
 
 	figures := []overviewFigure{
 		{Key: "collected", Label: "Argent encaissé aujourd’hui", Amount: today.Collected, IsMoney: true,
-			Sentence: "l’argent réellement reçu, tous moyens de paiement confondus", Tone: "good"},
+			Sentence: "l’argent réellement reçu, tous moyens de paiement confondus",
+			Tone:     toneForAmount(today.Collected, "good")},
 		{Key: "sales", Label: "Ventes aujourd’hui", Count: today.Invoices, Tone: "neutral",
 			Sentence: pluralSentence(today.Sold, "article vendu", "articles vendus")},
 		{Key: "expenses", Label: "Dépenses aujourd’hui", Amount: today.Expenses, IsMoney: true,
-			Sentence: "l’argent sorti de la boutique aujourd’hui", Tone: "spend"},
+			Sentence: "l’argent sorti de la boutique aujourd’hui",
+			Tone:     toneForAmount(today.Expenses, "spend")},
 	}
 	figures = append(figures, profitFigure(today, "Bénéfice aujourd’hui"))
 
 	monthFigures := []overviewFigure{
 		{Key: "collected", Label: "Encaissé ce mois-ci", Amount: month.Collected, IsMoney: true,
-			Sentence: "depuis le 1er du mois", Tone: "good"},
+			Sentence: "depuis le 1er du mois", Tone: toneForAmount(month.Collected, "good")},
 		{Key: "sales", Label: "Ventes ce mois-ci", Count: month.Invoices, Tone: "neutral",
 			Sentence: pluralSentence(month.Sold, "article vendu", "articles vendus")},
 		{Key: "expenses", Label: "Dépenses ce mois-ci", Amount: month.Expenses, IsMoney: true,
-			Sentence: "depuis le 1er du mois", Tone: "spend"},
+			Sentence: "depuis le 1er du mois", Tone: toneForAmount(month.Expenses, "spend")},
 	}
 	monthFigures = append(monthFigures, profitFigure(month, "Bénéfice ce mois-ci"))
 
@@ -146,9 +153,21 @@ func (s *Server) managerOverview(c *fiber.Ctx) error {
 
 // pluralSentence evite « 1 articles ». Le detail parait mince ; il fait la
 // difference entre un ecran soigne et un ecran genere.
+// toneForAmount evite de peindre un zero. Le vert dit « c'est rentre » et
+// l'ambre « c'est sorti » ; sur une journee vide, les deux couleurs annoncent
+// un evenement qui n'a pas eu lieu.
+func toneForAmount(amount int64, tone string) string {
+	if amount == 0 {
+		return "neutral"
+	}
+	return tone
+}
+
 func pluralSentence(count int64, singular, plural string) string {
-	if count == 1 {
-		return "1 " + singular
+	// Zéro prend le singulier en français : « 0 article vendu », pas
+	// « 0 articles vendus ».
+	if count <= 1 {
+		return itoa64(count) + " " + singular
 	}
 	return itoa64(count) + " " + plural
 }
@@ -280,7 +299,8 @@ func (s *Server) vendorOverview(c *fiber.Ctx) error {
 		{Key: "sales", Label: "Mes ventes aujourd’hui", Count: mine.Sales, Tone: "neutral",
 			Sentence: pluralSentence(mine.Units, "article vendu", "articles vendus")},
 		{Key: "collected", Label: "Encaissé par moi aujourd’hui", Amount: mine.Collected, IsMoney: true,
-			Sentence: "les règlements que vous avez enregistrés", Tone: "good"},
+			Sentence: "les règlements que vous avez enregistrés",
+			Tone:     toneForAmount(mine.Collected, "good")},
 	}
 
 	// La caisse du vendeur, pas celle de la boutique : c'est la sienne qu'il

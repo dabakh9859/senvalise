@@ -1399,3 +1399,17 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
   .home-best li{grid-template-columns:auto 1fr auto}
   .home-best small{grid-column:2;grid-row:2}
 }
+
+/* Correctifs d'affichage de l'accueil.
+   ------------------------------------------------------------------------
+   Le panneau « Ce qui se vend le mieux » occupait la moitié de l'écran pour
+   afficher une seule phrase : la classe .empty est partagée avec les grands
+   tableaux, où un vide de 260 px de haut se justifie. Sur une carte de
+   l'accueil, il crée un trou. */
+.home .empty{min-height:0;padding:14px 0;font-size:13.5px}
+/* La date se lit « lundi 24 août » : capitalize mettait une majuscule à chaque
+   mot — « Lundi 24 Août » — ce qui n'est pas le français. */
+.home-head p{text-transform:none}
+.home-head p::first-letter{text-transform:uppercase}
+/* Un zéro n'est ni bon ni mauvais : il reste de la couleur du texte. */
+.home-figure.tone-neutral strong{color:inherit}

@@ -109,6 +109,11 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
 	// Les dépenses portent les salaires et le solde de la journée. Le module
 	// entier relève du gérant.
+	a.Get("/expense-types", s.listExpenseTypes)
+	a.Post("/expense-types", s.createExpenseType)
+	a.Put("/expense-types/:id", s.updateExpenseType)
+	a.Post("/expense-types/:id/image", s.uploadExpenseTypeImage)
+	a.Delete("/expense-types/:id", s.deleteExpenseType)
 	a.Get("/expenses", s.listExpenses)
 	a.Get("/expenses/summary", s.expenseSummary)
 	a.Get("/expenses/:id", func(c *fiber.Ctx) error { return s.show(c, "expenses") })

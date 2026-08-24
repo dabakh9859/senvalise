@@ -47,6 +47,10 @@ func main() {
 	// Le facteur de la messagerie tourne avec le serveur : les messages mis en
 	// file par les ecrans partent sans qu'aucune requete ne reste ouverte.
 	server.StartOutbox()
+	// Les postes de depense etaient codes en dur dans l'ecran : ils sont poses
+	// en base au premier demarrage qui suit, sans quoi la boutique se
+	// retrouverait devant un ecran de saisie vide.
+	server.SeedExpenseTypes()
 	// La vitrine retrouve l'etat enregistre : un fichier temoin perdu ne doit
 	// pas rouvrir une boutique que le gerant avait fermee.
 	server.RestoreMaintenance()

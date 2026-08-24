@@ -362,6 +362,24 @@ type VaultDeposit struct {
 	Reference string `json:"reference"`
 	Note      string `json:"note"`
 }
+// ExpenseType est un poste de depense tel que la boutique le nomme.
+//
+// Les postes etaient une liste figee dans le code de l'ecran : « carburant »,
+// « telecom », « fournitures ». Une boutique de Dakar n'a pas les memes
+// depenses qu'une autre, et personne ne pouvait en ajouter un. Ils vivent
+// desormais en base, avec une image : au comptoir on reconnait un pictogramme
+// de compteur electrique plus vite qu'on ne lit le mot « electricite ».
+type ExpenseType struct {
+	Base
+	Name string `json:"name"`
+	// Slug est ce que la depense enregistre dans sa colonne category. Il ne
+	// change plus une fois pose : les depenses passees le portent.
+	Slug     string `json:"slug" gorm:"index"`
+	ImageURL string `json:"imageUrl"`
+	Position int    `json:"position"`
+	Active   bool   `json:"active" gorm:"default:true"`
+}
+
 type CashSession struct {
 	Base
 	UserID         uint           `json:"userId"`

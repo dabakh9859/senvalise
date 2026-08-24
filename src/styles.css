@@ -144,56 +144,9 @@
 
 /* Dépenses quotidiennes : une journée à la fois, saisie à gauche, registre à droite. */
 .expenses-page{display:flex;flex-direction:column;gap:16px}
-.expense-daybar{background:var(--cffffffs);border:1px solid var(--line);border-radius:11px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.expense-day-nav{display:flex;align-items:center;gap:6px}
-.expense-day-nav>button{width:34px;height:34px;border:1px solid var(--line);background:var(--cffffffs);border-radius:8px;display:grid;place-items:center;color:var(--c5f646ct)}
-.expense-day-nav>button:hover:not(:disabled){border-color:var(--cc9cbd0l);background:var(--cf5f5f6s);color:var(--c202328t)}
-.expense-day-nav>button:disabled{opacity:.4;cursor:not-allowed}
-.expense-day-picker{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;display:flex;align-items:center;gap:7px;color:var(--c7e838at)}
-.expense-day-picker svg{width:15px;height:15px}
-.expense-day-picker input{border:0;background:none;font-size:13px;font-weight:600;color:var(--c22252at);outline:none}
-.expense-day-title{min-width:0;display:flex;flex-direction:column;gap:2px}
-.expense-day-title strong{font:700 16px Inter,system-ui,sans-serif;color:var(--c15181ct);text-transform:capitalize}
-.expense-day-title span{font-size:11px;color:var(--c8b9097t)}
-.expense-today{height:34px;margin-left:auto;border:1px solid var(--line);background:var(--cffffffs);border-radius:8px;padding:0 13px;font-size:12px;font-weight:600;color:var(--c5f646ct)}
-.expense-today:hover:not(:disabled){border-color:var(--cc9cbd0l);background:var(--cf5f5f6s);color:var(--c202328t)}
-.expense-today:disabled{opacity:.4;cursor:default}
-.expense-daybar .refresh-button span{display:inline}
 .expenses-page>.resource-error{margin:0}
-.expense-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.expense-cards .summary-card:last-child{grid-column:auto}
-.expense-layout{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:14px;align-items:start}
-.expense-form{padding:0;overflow:hidden;display:flex;flex-direction:column}
-.expense-form>header{padding:16px 18px;border-bottom:1px solid var(--ceceef0l);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.expense-form>header small,.expense-list>header small{font-size:10px;letter-spacing:.11em;color:var(--c9b9fa5t);font-weight:700}
-.expense-form>header h2,.expense-list>header h2{font:700 16px Inter,system-ui,sans-serif;margin:4px 0 0}
-.expense-fields{padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.expense-fields label{min-width:0;display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:650;color:var(--c62676ft)}
-.expense-fields label.field-wide{grid-column:1/-1}
-.expense-fields input,.expense-fields select,.expense-fields textarea{width:100%;min-width:0;height:38px;border:1px solid var(--cdfe1e4l);border-radius:8px;padding:0 10px;font-size:13px;color:var(--c22252at);background:var(--cffffffs);outline:none}
-.expense-fields textarea{height:auto;padding:9px 10px;resize:vertical;font-family:inherit}
-.expense-fields input:focus,.expense-fields select:focus,.expense-fields textarea:focus{border-color:var(--ca9adb4l)}
-.expense-amount-field input{height:46px;font:750 19px Inter,system-ui,sans-serif;letter-spacing:-.02em}
-.expense-form>.primary{margin:0 18px 18px}
-.expense-list{padding:0;overflow:hidden}
-.expense-list>header{padding:16px 18px;border-bottom:1px solid var(--ceceef0l);display:flex;align-items:center;justify-content:space-between;gap:10px}
-.expense-list>header strong{font:750 18px Inter,system-ui,sans-serif;color:var(--ca33c3ct);letter-spacing:-.02em}
-.expense-list .records-table tbody tr{cursor:default}
 .expenses-page .align-right{text-align:right}
 .expense-amount{font-weight:700;color:var(--c22252at);white-space:nowrap}
-.expense-note{display:block;font-size:11px;color:var(--c92969ct);margin-top:3px}
-.expense-list tfoot td{background:var(--cfafafas);font-weight:700;color:var(--c22252at);border-top:1px solid var(--ce5e6e9l)}
-.expense-analytics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.expense-analytics .chart-card{min-width:0}
-.expense-analytics .ranking>div{grid-template-columns:minmax(90px,150px) 1fr auto}
-.expense-analytics .ranking span,.expense-analytics .ranking strong{font-size:11px}
-.expense-analytics .ranking strong{color:var(--c5f646ct);white-space:nowrap}
-.expense-analytics .ranking i{background:var(--cc0603fs)}
-.expense-analytics .ranking>div:nth-child(1) i{background:var(--ca33c3cs)}
-.expense-trend-card{grid-column:1/-1}
-@media(max-width:1180px){.expense-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.expense-layout{grid-template-columns:1fr}.expense-analytics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:850px){.expense-analytics{grid-template-columns:1fr}.expense-trend-card{grid-column:auto}}
-@media(max-width:620px){.expense-cards{grid-template-columns:1fr}.expense-fields{grid-template-columns:1fr}.expense-daybar{gap:10px}.expense-day-title{order:3;width:100%}.expense-today{margin-left:0}.expense-daybar .refresh-button span{display:none}}
 
 /* Fiches détail : en-tête illustré, indicateurs clés, champs regroupés et collections lisibles. */
 .detail-modal{max-width:1060px;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh}
@@ -1229,4 +1182,84 @@
   .cash-closed-actions{margin-left:0;width:100%}
   .cash-open h2{font-size:30px}
   .cash-expected strong{font-size:34px}
+}
+
+/* Dépenses quotidiennes.
+   ------------------------------------------------------------------------
+   La page suit la forme des factures : un filtre de périodes, un total, une
+   liste groupée par jour. La saisie vit dans une fenêtre coupée en deux — les
+   postes illustrés à droite, le montant à gauche — parce que choisir un poste
+   est de loin la partie la plus longue à taper. */
+.expense-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.expense-periods{display:flex;gap:6px;flex-wrap:wrap}
+.expense-periods button{padding:8px 13px;border:1px solid var(--line);border-radius:9px;background:transparent;cursor:pointer;font-size:13px;color:inherit;display:inline-flex;align-items:center;gap:6px}
+.expense-periods button svg{width:15px;height:15px}
+.expense-periods button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.expense-custom{display:flex;gap:12px;flex-wrap:wrap}
+.expense-custom label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.expense-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.expense-actions button{display:inline-flex;align-items:center;gap:6px}
+
+.expense-total{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.expense-total small{font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.expense-total strong{display:block;font-size:32px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.expense-total span{color:var(--muted);font-size:13px}
+
+.expense-list{display:flex;flex-direction:column;gap:22px}
+.expense-day h3{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin:0 0 10px;font-size:14px;text-transform:capitalize}
+.expense-day h3 b{font-variant-numeric:tabular-nums;font-size:15px}
+.expense-day ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.expense-day li{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px}
+/* L'image du poste tient lieu de première lecture : on la reconnaît avant de
+   lire le nom, ce qui est tout l'intérêt d'un poste illustré. */
+.expense-icon{width:40px;height:40px;border-radius:9px;display:grid;place-items:center;background:var(--page);overflow:hidden;flex:none}
+.expense-icon img{width:100%;height:100%;object-fit:cover}
+.expense-icon svg{width:19px;height:19px;color:var(--muted)}
+.expense-what{display:flex;flex-direction:column;min-width:0}
+.expense-what small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.expense-amount{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.expense-row-actions{display:flex;gap:4px}
+.expense-row-actions button{border:0;background:none;padding:6px;border-radius:7px;cursor:pointer;color:var(--muted)}
+.expense-row-actions button:hover{background:var(--page);color:inherit}
+.expense-row-actions button.danger:hover{color:var(--danger,#c02626)}
+.expense-row-actions svg{width:16px;height:16px}
+
+.expense-record{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:22px}
+.expense-record-form{display:flex;flex-direction:column;gap:13px}
+.expense-record-form label{display:flex;flex-direction:column;gap:5px;font-size:13px}
+.expense-record-form label small{font-weight:400;color:var(--muted);font-size:12px}
+.expense-chosen{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;font-weight:600}
+.expense-chosen img{width:38px;height:38px;border-radius:8px;object-fit:cover}
+.expense-chosen svg{width:20px;height:20px;color:var(--muted)}
+/* Les postes sont des cibles au doigt, pas des lignes de liste : la grille
+   s'adapte au nombre de postes que la boutique s'est créés. */
+.expense-types-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;align-content:flex-start;max-height:56vh;overflow-y:auto}
+.expense-types-pick button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;color:inherit;font-size:12px;text-align:center;line-height:1.25}
+.expense-types-pick button img{width:44px;height:44px;object-fit:cover;border-radius:9px}
+.expense-types-pick button svg{width:26px;height:26px;color:var(--muted)}
+.expense-types-pick button.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+
+.expense-type-add{display:flex;gap:9px;margin-bottom:16px}
+.expense-type-add input{flex:1}
+.expense-type-add button{display:inline-flex;align-items:center;gap:6px}
+.expense-type-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;max-height:52vh;overflow-y:auto}
+.expense-type-list li{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:8px 11px;border:1px solid var(--line);border-radius:11px}
+.expense-type-image{width:44px;height:44px;border-radius:9px;display:grid;place-items:center;background:var(--page);overflow:hidden;cursor:pointer;position:relative}
+.expense-type-image img{width:100%;height:100%;object-fit:cover}
+.expense-type-image svg{width:18px;height:18px;color:var(--muted)}
+.expense-type-image input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.expense-type-image.uploading{opacity:.5}
+.expense-type-name{border:1px solid transparent;background:transparent;padding:6px 8px;border-radius:7px;font-size:14px;color:inherit;font-weight:600}
+.expense-type-name:hover,.expense-type-name:focus{border-color:var(--line);background:var(--panel)}
+.expense-type-active{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.expense-type-active input{width:16px;height:16px}
+.expense-type-list .danger{border:0;background:none;padding:7px;border-radius:7px;cursor:pointer;color:var(--muted)}
+.expense-type-list .danger:hover{color:var(--danger,#c02626);background:var(--page)}
+.expense-type-hint{display:flex;align-items:center;gap:8px;margin:16px 0 0;font-size:12px;color:var(--muted)}
+.expense-type-hint svg{width:15px;height:15px;flex:none}
+
+@media (max-width:860px){
+  .expense-record{grid-template-columns:1fr}
+  .expense-types-pick{max-height:34vh}
+  .expense-actions{margin-left:0;width:100%}
 }

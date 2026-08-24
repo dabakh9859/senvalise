@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -73,6 +74,16 @@ type pdfLine struct {
 
 type pdfMeta struct{ Label, Value string }
 
+// pdfPayment est un versement tel qu'il s'affiche sur la facture : la date, le
+// moyen, le montant. Une cliente qui paie en trois fois doit retrouver ses
+// trois versements sur le papier — sans cela elle ne peut pas verifier ce
+// qu'on a encaisse, ni prouver ce qu'elle a verse.
+type pdfPayment struct {
+	At     time.Time
+	Method string
+	Amount int64
+}
+
 type pdfDocument struct {
 	Kind        string
 	Title       string
@@ -89,6 +100,7 @@ type pdfDocument struct {
 	Total       int64
 	Paid        int64
 	Remaining   int64
+	Payments    []pdfPayment
 	Notes       string
 	Seller      string
 	// Logo de l'entreprise, lu sur disque au moment du rendu. fpdf ne sait pas
@@ -160,6 +172,7 @@ func (s *Server) loadDocument(kind string, id uint) (pdfDocument, error) {
 			status = "Reste " + messaging.Money(doc.Remaining)
 		}
 		doc.Meta = []pdfMeta{{"RÈGLEMENT", status}, {"MODE", paymentSummary(sale)}}
+		doc.Payments = documentPayments(sale)
 		for _, item := range sale.Items {
 			doc.Lines = append(doc.Lines, pdfLine{
 				Description: lineLabel("", item.Variant), Reference: variantSKU(item.Variant),
@@ -253,19 +266,25 @@ func variantSKU(variant *models.ProductVariant) string {
 	return variant.SKU
 }
 
-// paymentSummary decrit le reglement sur la facture. « Paiement mixte » ne dit
-// rien au client qui a paye moitie especes moitie Wave : le detail lui permet
-// de verifier ce qu'on a encaisse de chaque cote.
+// paymentSummary decrit le reglement en haut de la facture. « Paiement mixte »
+// ne dit rien au client qui a paye moitie especes moitie Wave : les moyens
+// employes sont nommes.
+//
+// Les montants, eux, ne sont plus repris ici : ils figurent au detail des
+// reglements, sous les totaux. Les ecrire deux fois faisait passer ce bloc
+// d'en-tete sur trois lignes et decalait les colonnes voisines.
 func paymentSummary(sale models.Sale) string {
-	if sale.PaymentMethod != "mixte" {
-		return paymentLabel(sale.PaymentMethod)
-	}
+	// Les moyens se lisent dans les reglements, pas dans la colonne de la
+	// vente : celle-ci retient le moyen choisi a l'encaissement initial et ne
+	// bouge plus. Une facture soldee plus tard par Wave affichait « Espèces ».
+	seen := map[string]bool{}
 	parts := []string{}
 	for _, payment := range sale.Payments {
-		if payment.Status != "active" || payment.Amount <= 0 {
+		if payment.Status != "active" || payment.Amount <= 0 || seen[payment.Method] {
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("%s %s", paymentLabel(payment.Method), messaging.Money(payment.Amount)))
+		seen[payment.Method] = true
+		parts = append(parts, paymentLabel(payment.Method))
 	}
 	if len(parts) == 0 {
 		return paymentLabel(sale.PaymentMethod)
@@ -349,13 +368,15 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf.AliasNbPages("{np}")
 	pdf.AddPage()
 
-	// Bandeau de marque. Le logo televerse y prend la place du nom quand il
-	// existe : c'est la meme image que celle de la boutique et de l'onglet du
-	// navigateur, un document ne doit pas porter une autre marque que le site.
-	pdf.SetFillColor(21, 41, 214)
-	pdf.Rect(left, 12, width, 18, "F")
-	pdf.SetTextColor(255, 255, 255)
-	textLeft := left + 5
+	// Bandeau de marque, sur fond blanc.
+	//
+	// Il etait bleu plein : un logo en couleur, dessine pour un fond blanc, s'y
+	// noyait — le bleu du logo disparaissait dans le bleu du bandeau. Le bleu
+	// et le jaune de la marque sont reportes sur un filet sous l'en-tete, sur
+	// l'entete du tableau et sur le total : ils marquent le document sans
+	// jamais passer derriere une image.
+	pdf.SetTextColor(20, 20, 20)
+	textLeft := left
 	if doc.LogoFormat != "" && len(doc.Logo) > 0 {
 		pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: doc.LogoFormat}, bytes.NewReader(doc.Logo))
 		if info := pdf.GetImageInfo("logo"); info != nil && info.Height() > 0 {
@@ -367,8 +388,8 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 				logoWidth = 46
 				height = logoWidth * info.Height() / info.Width()
 			}
-			pdf.ImageOptions("logo", left+5, 12+(18-height)/2, logoWidth, height, false, fpdf.ImageOptions{ImageType: doc.LogoFormat}, 0, "")
-			textLeft = left + 5 + logoWidth + 5
+			pdf.ImageOptions("logo", left, 12+(18-height)/2, logoWidth, height, false, fpdf.ImageOptions{ImageType: doc.LogoFormat}, 0, "")
+			textLeft = left + logoWidth + 6
 		}
 	}
 	pdf.SetXY(textLeft, 15)
@@ -378,12 +399,20 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf.CellFormat(80, 6, tr(doc.Company.Phone), "", 0, "R", false, 0, "")
 	pdf.SetXY(textLeft, 21)
 	pdf.SetFont(pdfFont, "", 8.5)
+	pdf.SetTextColor(110, 110, 110)
 	pdf.CellFormat(90, 5, tr(doc.Company.Tagline), "", 0, "L", false, 0, "")
 	pdf.CellFormat(80, 5, tr(doc.Company.Address), "", 0, "R", false, 0, "")
 
+	// Filet de marque : deux tiers bleus, un tiers jaune. C'est la seule
+	// couleur pleine de la page haute, et elle ne recouvre rien.
+	pdf.SetFillColor(21, 41, 214)
+	pdf.Rect(left, 32, width*2/3, 1.6, "F")
+	pdf.SetFillColor(246, 207, 34)
+	pdf.Rect(left+width*2/3, 32, width/3, 1.6, "F")
+
 	// Titre et reference.
 	pdf.SetTextColor(20, 20, 20)
-	pdf.SetXY(left, 36)
+	pdf.SetXY(left, 38)
 	pdf.SetFont(pdfFont, "B", 20)
 	pdf.CellFormat(110, 9, tr(strings.ToUpper(doc.Title)), "", 0, "L", false, 0, "")
 	pdf.SetFont(pdfFont, "B", 12)
@@ -471,8 +500,8 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	}
 	headers[0].width = width - fixed
 
-	pdf.SetFillColor(243, 244, 248)
-	pdf.SetTextColor(90, 90, 90)
+	pdf.SetFillColor(246, 207, 34)
+	pdf.SetTextColor(60, 48, 8)
 	pdf.SetFont(pdfFont, "B", 7.5)
 	for _, header := range headers {
 		pdf.CellFormat(header.width, 7, tr(header.label), "", 0, header.align, true, 0, "")
@@ -574,8 +603,13 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 				style = "B"
 			}
 			pdf.SetFont(pdfFont, style, 9.5)
+			if row.label == "Total TTC" {
+				pdf.SetTextColor(21, 41, 214)
+				pdf.SetFont(pdfFont, "B", 11)
+			}
 			pdf.CellFormat(40, 6, tr(row.label), "", 0, "L", false, 0, "")
 			pdf.CellFormat(35, 6, tr(messaging.Money(row.value)), "", 1, "R", false, 0, "")
+			pdf.SetTextColor(20, 20, 20)
 		}
 		totalsEnd := pdf.GetY()
 		// Mot de remerciement, cale a gauche en face des totaux.
@@ -590,6 +624,34 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 		// Les deux colonnes se terminent a des hauteurs differentes : la suite
 		// du document part de la plus basse, sinon elle chevauche l'autre.
 		pdf.SetY(maxFloat(pdf.GetY(), totalsEnd))
+	}
+
+	// Detail des reglements.
+	//
+	// Une seule ligne, quel qu'en soit le nombre : « 23 août · Espèces
+	// 10 000 F  |  24 août · Wave 8 000 F ». Un tableau aurait pris six lignes
+	// pour trois versements et repousse la signature en deuxieme page. Quand
+	// un seul reglement existe, il est deja dit en haut de la piece : on ne le
+	// repete pas.
+	if doc.Kind == "invoice" && len(doc.Payments) > 1 {
+		pdf.Ln(3)
+		pdf.SetX(left)
+		pdf.SetFont(pdfFont, "B", 7)
+		pdf.SetTextColor(130, 130, 130)
+		pdf.CellFormat(width, 4, tr("RÈGLEMENTS REÇUS"), "", 1, "L", false, 0, "")
+		parts := make([]string, 0, len(doc.Payments))
+		for _, payment := range doc.Payments {
+			label := paymentLabel(payment.Method)
+			if payment.Amount < 0 {
+				label = "Remboursement " + strings.ToLower(label)
+			}
+			parts = append(parts, fmt.Sprintf("%s · %s %s", shortFrenchDate(payment.At), label,
+				messaging.Money(abs64(payment.Amount))))
+		}
+		pdf.SetX(left)
+		pdf.SetFont(pdfFont, "", 8)
+		pdf.SetTextColor(20, 20, 20)
+		pdf.MultiCell(width, 4.4, tr(strings.Join(parts, "   |   ")), "", "L", false)
 	}
 
 	if strings.TrimSpace(doc.Notes) != "" {
@@ -642,7 +704,18 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	if seller == "" {
 		seller = doc.Company.CompanyName
 	}
-	pdf.CellFormat(width, 4, tr("Document généré le "+frenchDate(time.Now())+" · Vendeur : "+seller), "", 0, "L", false, 0, "")
+	// Mentions legales d'abord, en gras : c'est ce que l'administration et le
+	// comptable du client viennent chercher. La ligne de generation, elle, ne
+	// sert qu'a la boutique.
+	if legal := doc.Company.legalLine(); legal != "" {
+		pdf.SetFont(pdfFont, "B", 7.5)
+		pdf.SetTextColor(90, 90, 90)
+		pdf.CellFormat(width, 4, tr(legal), "", 1, "C", false, 0, "")
+		pdf.SetX(left)
+		pdf.SetFont(pdfFont, "", 7.5)
+		pdf.SetTextColor(130, 130, 130)
+	}
+	pdf.CellFormat(width, 4, tr("Document généré le "+frenchDate(time.Now())+" · Vendeur : "+seller), "", 0, "C", false, 0, "")
 
 	var out bytes.Buffer
 	if err := pdf.Output(&out); err != nil {
@@ -672,4 +745,41 @@ func (s *Server) documentPDF(kind string, id uint) ([]byte, string, pdfDocument,
 		return nil, "", doc, err
 	}
 	return raw, documentFileName(kind, doc.Reference), doc, nil
+}
+
+// documentPayments rend les versements d'une facture, du plus ancien au plus
+// recent, remboursements compris.
+//
+// La facture n'affichait que « Montant paye » : une cliente qui avait regle en
+// trois fois — un acompte, un versement Wave, le solde en especes — ne
+// retrouvait aucune trace de ses versements. Elle n'avait alors aucun moyen de
+// verifier ce qui avait ete encaisse, et la boutique aucun moyen de le prouver.
+//
+// Les reglements annules sont ecartes : ils ne representent pas de l'argent
+// recu. Les remboursements, eux, sont montres — ce sont des mouvements reels
+// sur la facture, et les taire ferait mentir le total.
+func documentPayments(sale models.Sale) []pdfPayment {
+	rows := []pdfPayment{}
+	for _, payment := range sale.Payments {
+		if payment.Status != "active" || payment.Amount == 0 {
+			continue
+		}
+		rows = append(rows, pdfPayment{At: payment.CreatedAt, Method: payment.Method, Amount: payment.Amount})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].At.Before(rows[j].At) })
+	return rows
+}
+
+// shortFrenchDate donne « 23 août » : sur une ligne de reglements, l'annee est
+// celle de la facture et n'apporte rien.
+func shortFrenchDate(at time.Time) string {
+	months := []string{"janv.", "févr.", "mars", "avril", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."}
+	return fmt.Sprintf("%d %s", at.Day(), months[int(at.Month())-1])
+}
+
+func abs64(value int64) int64 {
+	if value < 0 {
+		return -value
+	}
+	return value
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -35,10 +36,14 @@ import (
 // possible sur une machine sans base.
 
 type harness struct {
-	t     *testing.T
-	app   *fiber.App
-	db    *gorm.DB
-	token string
+	t   *testing.T
+	app *fiber.App
+	db  *gorm.DB
+	// server sert aux tests qui verifient un rendu plutot qu'une reponse HTTP :
+	// le PDF se lit plus surement dans sa forme intermediaire que dans ses
+	// octets.
+	server *Server
+	token  string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -86,7 +91,7 @@ func newHarness(t *testing.T) *harness {
 		db.Create(&user)
 	}
 	token, _ := auth.Sign(user.ID, "manager")
-	return &harness{t: t, app: app, db: db, token: token}
+	return &harness{t: t, app: app, db: db, server: server, token: token}
 }
 
 func joinTables(tables []string) string {
@@ -590,5 +595,73 @@ func TestCashExpenseLeavesTheDrawer(t *testing.T) {
 	}
 	if got := expected(); got != 20000 {
 		t.Fatalf("attendu %d F après suppression : l'argent n'est pas revenu au tiroir", got)
+	}
+}
+
+// La facture doit porter les mentions legales et le detail des reglements.
+//
+// Elle n'affichait que « Montant paye » : une cliente qui avait regle en trois
+// fois ne retrouvait aucune trace de ses versements, et la facture ne portait
+// ni NINEA ni registre de commerce — sans quoi l'administration senegalaise la
+// refuse et le comptable du client ne peut pas la passer en charge.
+func TestInvoicePDFCarriesLegalsAndPayments(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(5, 10000)
+
+	status, saved := h.call(http.MethodPut, "/api/checkout-settings", fiber.Map{
+		"taxRate": 18, "taxEnabledByDefault": false,
+		"paymentMethods": []fiber.Map{{"id": "cash", "label": "Espèces", "active": true}, {"id": "wave", "label": "Wave", "active": true}},
+		"invoiceDefaults": fiber.Map{
+			"companyName": "SenValise", "address": "Dakar", "phone": "+221 77 000 00 00",
+			"ninea": "005812345 2V2", "tradeRegister": "SN DKR 2024 B 1234", "legalNote": "TVA non applicable",
+			"thankYouTitle": "Merci", "footerNote": "Conservez ce document.",
+		},
+	})
+	if status >= 400 {
+		t.Fatalf("réglages refusés : %v", saved)
+	}
+
+	status, sale := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 10000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 3, "unitPrice": 10000}},
+	})
+	if status >= 400 {
+		t.Fatalf("vente refusée : %v", sale)
+	}
+	saleID := uint(sale["id"].(float64))
+	for _, payment := range []fiber.Map{{"method": "wave", "amount": 12000}, {"method": "cash", "amount": 8000}} {
+		if status, body := h.call(http.MethodPost, fmt.Sprintf("/api/sales/%d/payments", saleID), payment); status >= 400 {
+			t.Fatalf("règlement refusé : %v", body)
+		}
+	}
+
+	doc, err := h.server.loadDocument("invoice", saleID)
+	if err != nil {
+		t.Fatalf("lecture du document : %v", err)
+	}
+	if len(doc.Payments) != 3 {
+		t.Fatalf("%d règlement(s) sur la facture au lieu de 3 : le détail des versements manque", len(doc.Payments))
+	}
+	// Les versements sont rendus dans l'ordre ou ils ont ete recus : une
+	// facture qui les melange ne se relit pas.
+	for i := 1; i < len(doc.Payments); i++ {
+		if doc.Payments[i].At.Before(doc.Payments[i-1].At) {
+			t.Fatalf("les règlements ne sont pas dans l'ordre chronologique")
+		}
+	}
+	legal := doc.Company.legalLine()
+	for _, mention := range []string{"005812345 2V2", "SN DKR 2024 B 1234", "TVA non applicable"} {
+		if !strings.Contains(legal, mention) {
+			t.Fatalf("mention « %s » absente du pied de page : %q", mention, legal)
+		}
+	}
+
+	// Le PDF se rend sans erreur avec ces mentions et ces trois versements.
+	pdf, err := renderPDF(doc)
+	if err != nil {
+		t.Fatalf("rendu du PDF : %v", err)
+	}
+	if len(pdf) < 1000 {
+		t.Fatalf("PDF de %d octets : rendu vide", len(pdf))
 	}
 }

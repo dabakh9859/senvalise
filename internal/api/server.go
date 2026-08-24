@@ -719,13 +719,41 @@ type checkoutSettingsPayload struct {
 }
 
 type invoiceDefaults struct {
-	CompanyName      string `json:"companyName"`
-	Tagline          string `json:"tagline"`
-	Phone            string `json:"phone"`
-	Address          string `json:"address"`
+	CompanyName string `json:"companyName"`
+	Tagline     string `json:"tagline"`
+	Phone       string `json:"phone"`
+	Address     string `json:"address"`
+	// Mentions legales du bas de page. Une facture senegalaise porte le NINEA
+	// et le registre de commerce : sans eux, le client ne peut pas la passer en
+	// charge, et l'administration la refuse.
+	//
+	// Elles ne sont pas figees sur chaque piece comme l'en-tete l'est : ce sont
+	// les identifiants de l'entreprise, pas un texte d'emission. S'ils
+	// changent, c'est que l'entreprise a change, et l'ancienne valeur n'a plus
+	// de sens sur aucun document.
+	Ninea            string `json:"ninea"`
+	TradeRegister    string `json:"tradeRegister"`
+	LegalNote        string `json:"legalNote"`
 	ThankYouTitle    string `json:"thankYouTitle"`
 	FooterNote       string `json:"footerNote"`
 	CompanySignature string `json:"companySignatureUrl"`
+}
+
+// legalLine assemble les mentions du bas de page en une seule ligne, en
+// n'ecrivant que ce qui est renseigne : une facture qui afficherait « NINEA : »
+// suivi de rien inquiete plus qu'elle ne rassure.
+func (d invoiceDefaults) legalLine() string {
+	parts := []string{}
+	if v := strings.TrimSpace(d.Ninea); v != "" {
+		parts = append(parts, "NINEA : "+v)
+	}
+	if v := strings.TrimSpace(d.TradeRegister); v != "" {
+		parts = append(parts, "RC : "+v)
+	}
+	if v := strings.TrimSpace(d.LegalNote); v != "" {
+		parts = append(parts, v)
+	}
+	return strings.Join(parts, "  ·  ")
 }
 
 func defaultCheckoutSettings() checkoutSettingsPayload {
@@ -784,6 +812,9 @@ func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
 	in.InvoiceDefaults.Address = strings.TrimSpace(in.InvoiceDefaults.Address)
 	in.InvoiceDefaults.ThankYouTitle = strings.TrimSpace(in.InvoiceDefaults.ThankYouTitle)
 	in.InvoiceDefaults.FooterNote = strings.TrimSpace(in.InvoiceDefaults.FooterNote)
+	in.InvoiceDefaults.Ninea = strings.TrimSpace(in.InvoiceDefaults.Ninea)
+	in.InvoiceDefaults.TradeRegister = strings.TrimSpace(in.InvoiceDefaults.TradeRegister)
+	in.InvoiceDefaults.LegalNote = strings.TrimSpace(in.InvoiceDefaults.LegalNote)
 	if in.InvoiceDefaults.CompanyName == "" || in.InvoiceDefaults.FooterNote == "" {
 		return fiber.NewError(422, "Le nom de l’entreprise et le texte de pied de facture sont requis")
 	}

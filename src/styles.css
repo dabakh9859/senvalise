@@ -1263,3 +1263,51 @@
   .expense-types-pick{max-height:34vh}
   .expense-actions{margin-left:0;width:100%}
 }
+
+/* Facture à l'écran : bandeau blanc, couleurs déplacées.
+   ------------------------------------------------------------------------
+   Le bandeau du haut était bleu plein. Le logo de la boutique est en couleur
+   et dessiné pour un fond blanc : son bleu disparaissait dans celui du
+   bandeau, et le jaune virait au sale. Le fond passe au blanc, et le bleu et
+   le jaune de la marque se reportent sur un filet sous l'en-tête, sur la
+   ligne d'en-tête du tableau et sur le total — trois endroits où ils ne
+   passent derrière aucune image. */
+.invoice-brand-bar{background:#fff;color:var(--c22252at,#22252a);min-height:0;padding:26px 34px 16px;align-items:center}
+.invoice-brand-bar strong{font-size:22px;color:var(--c22252at,#22252a)}
+.invoice-brand-bar small{color:var(--c777c83t,#777c83)}
+.invoice-brand-contact{color:var(--c777c83t,#777c83);font-size:11px;text-align:right;margin-left:auto;line-height:1.55}
+/* Le vrai logo, celui de la boutique et de l'onglet du navigateur : un
+   document ne doit pas porter une autre marque que le site. */
+img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;flex:none;margin-right:14px}
+.invoice-brand-rule{display:flex;height:4px;margin:0 34px}
+.invoice-brand-rule i:first-child{flex:2;background:var(--c0755d8s,#0755d8)}
+.invoice-brand-rule i:last-child{flex:1;background:var(--cf6cf22s,#f6cf22)}
+
+/* Détail des règlements : une seule ligne, quel qu'en soit le nombre. Un
+   tableau aurait pris six lignes pour trois versements et repoussé la
+   signature sur une deuxième page à l'impression. */
+.invoice-payments{margin:18px 34px 0;padding:11px 14px;border:1px solid var(--ceceef0l,#eceef0);border-radius:9px;background:var(--cfafbfcs,#fafbfc)}
+.invoice-payments small{font-size:9px;letter-spacing:.11em;color:var(--c838890t,#838890);font-weight:750}
+.invoice-payments p{margin:6px 0 0;font-size:11px;line-height:1.9;color:var(--c4a4f57t,#4a4f57)}
+.invoice-payments span{white-space:nowrap}
+.invoice-payments b{font-weight:700;color:var(--c22252at,#22252a)}
+/* Le séparateur est une bordure et non un caractère : il ne se copie pas
+   quand le client sélectionne la ligne. */
+.invoice-payments i{display:inline-block;width:1px;height:10px;margin:0 10px;vertical-align:-1px;background:var(--cced2d8l,#ced2d8)}
+
+/* Mentions légales — NINEA, registre de commerce. C'est ce que le comptable du
+   client et l'administration viennent chercher : elles passent avant la ligne
+   de génération, qui ne sert qu'à la boutique. */
+.invoice-legal{grid-column:1/-1;text-align:center;font-size:10px;font-weight:700;color:var(--c5a6069t,#5a6069);letter-spacing:.02em;margin-top:4px}
+.invoice-signatures small{margin-top:2px}
+
+/* Le total reprend le bleu de la marque : c'est le chiffre que le client
+   cherche en premier sur la page. */
+.document-totals strong b,.invoice-total dd{color:var(--c0755d8t,#0755d8)}
+
+@media(max-width:760px){
+  .invoice-brand-bar{padding-left:18px;padding-right:18px}
+  .invoice-brand-rule{margin-inline:18px}
+  .invoice-payments{margin-inline:18px}
+  img.invoice-logo-mark{height:40px}
+}

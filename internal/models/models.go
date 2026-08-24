@@ -168,23 +168,19 @@ type ArrivalItem struct {
 }
 type Sale struct {
 	Base
-	Reference     string  `json:"reference" gorm:"uniqueIndex"`
-	QuoteID       *uint   `json:"quoteId" gorm:"uniqueIndex"`
-	CustomerID    *uint   `json:"customerId"`
-	UserID        uint    `json:"userId"`
-	Channel       string  `json:"channel"`
-	Status        string  `json:"status"`
-	PaymentMethod string  `json:"paymentMethod"`
-	Subtotal      int64   `json:"subtotal"`
-	Discount      int64   `json:"discount"`
-	TaxRate       float64 `json:"taxRate"`
-	Tax           int64   `json:"tax"`
-	Total         int64   `json:"total"`
-	Paid          int64   `json:"paid"`
-	// Echeance de reglement. La facture n'en portait aucune : une vente a
-	// credit partait sans date limite, et l'ecran des creances ne pouvait pas
-	// dire ce qui etait en retard. Nulle quand la vente est payee comptant.
-	DueAt                *time.Time    `json:"dueAt"`
+	Reference            string        `json:"reference" gorm:"uniqueIndex"`
+	QuoteID              *uint         `json:"quoteId" gorm:"uniqueIndex"`
+	CustomerID           *uint         `json:"customerId"`
+	UserID               uint          `json:"userId"`
+	Channel              string        `json:"channel"`
+	Status               string        `json:"status"`
+	PaymentMethod        string        `json:"paymentMethod"`
+	Subtotal             int64         `json:"subtotal"`
+	Discount             int64         `json:"discount"`
+	TaxRate              float64       `json:"taxRate"`
+	Tax                  int64         `json:"tax"`
+	Total                int64         `json:"total"`
+	Paid                 int64         `json:"paid"`
 	InvoiceCompanyName   string        `json:"invoiceCompanyName"`
 	InvoiceTagline       string        `json:"invoiceTagline"`
 	InvoicePhone         string        `json:"invoicePhone"`
@@ -366,7 +362,6 @@ type VaultDeposit struct {
 	Reference string `json:"reference"`
 	Note      string `json:"note"`
 }
-
 // ExpenseType est un poste de depense tel que la boutique le nomme.
 //
 // Les postes etaient une liste figee dans le code de l'ecran : « carburant »,

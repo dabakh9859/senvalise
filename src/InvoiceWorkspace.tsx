@@ -1,5 +1,5 @@
 import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
-import {Ban,ChevronDown,CreditCard,Download,FileCheck2,Globe,ImagePlus,Landmark,Link2,Mail,MapPin,MessageCircle,PackagePlus,Pencil,Phone,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
+import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
 import type {InvoiceDefaults} from './CheckoutSettings';
 import {api,apiForm,Entity,money,openFile} from './api';
@@ -7,13 +7,12 @@ import {api,apiForm,Entity,money,openFile} from './api';
 type Kind='invoice'|'quote'|'delivery';
 type Payment=Entity&{method?:string;amount?:number;status?:string;reference?:string};
 type Line=Entity&{quantity?:number;unitPrice?:number;discount?:number;total?:number;description?:string;variant?:Entity&{sku?:string;product?:Entity}};
-type Doc=Entity&{reference?:string;status?:string;customerId?:number;subtotal?:number;discount?:number;taxRate?:number;tax?:number;total?:number;paid?:number;notes?:string;validUntil?:string;items?:Line[];payments?:Payment[];customer?:Entity;user?:Entity;quote?:Entity;deliveryNote?:Entity;convertedSale?:Entity;sale?:Entity;saleId?:number;convertedSaleId?:number;invoiceCompanyName?:string;invoiceTagline?:string;invoicePhone?:string;invoiceAddress?:string;invoiceThankYouTitle?:string;invoiceFooterNote?:string;clientSignatureUrl?:string;companySignatureUrl?:string;dueAt?:string};
+type Doc=Entity&{reference?:string;status?:string;customerId?:number;subtotal?:number;discount?:number;taxRate?:number;tax?:number;total?:number;paid?:number;notes?:string;validUntil?:string;items?:Line[];payments?:Payment[];customer?:Entity;user?:Entity;quote?:Entity;deliveryNote?:Entity;convertedSale?:Entity;sale?:Entity;saleId?:number;convertedSaleId?:number;invoiceCompanyName?:string;invoiceTagline?:string;invoicePhone?:string;invoiceAddress?:string;invoiceThankYouTitle?:string;invoiceFooterNote?:string;clientSignatureUrl?:string;companySignatureUrl?:string};
 type Variant=Entity&{sku?:string;color?:string;size?:string;price?:number;stock?:number;active?:boolean;product?:Entity};
 type Props={document:Entity;kind:Kind;isAdmin:boolean;onClose:()=>void;onDelete:()=>void;onUpdate:(values:Record<string,unknown>)=>Promise<void>;onUpdateLine:(line:Entity,values:Record<string,unknown>)=>Promise<void>;onAddLine:(values:Record<string,unknown>)=>Promise<void>;onDeleteLine:(line:Entity)=>Promise<void>;onAddPayment:(method:string,amount:number)=>Promise<void>;onCancelPayment:(payment:Entity)=>Promise<void>;onCancelAllPayments:()=>Promise<void>;onConvert?:()=>void;onGenerateDelivery?:()=>void;onOpenInvoice?:(row:Entity)=>void;onOpenQuote?:(row:Entity)=>void;onOpenDelivery?:(row:Entity)=>void};
 
-const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',email:'',website:'',ninea:'',tradeRegister:'',legalNote:'',paymentTerms:'',bankName:'',bankAccount:'',bankIban:'',footerBanner:'',backgroundUrl:'',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
+const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',ninea:'',tradeRegister:'',legalNote:'',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
 
-const amount=(value:unknown)=>new Intl.NumberFormat('fr-FR').format(Number(value??0));
 const shortDate=(value:unknown)=>value?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short'}).format(new Date(String(value))):'';
 // Les mentions legales du bas de page : on n'ecrit que ce qui est renseigne,
 // une facture qui affiche « NINEA : » suivi de rien inquiete plus qu'elle ne
@@ -28,15 +27,15 @@ const lineName=(line:{variant?:Entity&{sku?:string;product?:Entity};description?
 export default function InvoiceWorkspace(props:Props){
   const doc=props.document as Doc;
   const items=doc.items??[];const payments=doc.payments??[];
-  // Mémoïsé pour que les blocs qui en dépendent — l'adresse de livraison —
-  // puissent déclarer leur dépendance sans être recalculés à chaque rendu.
-  const customer=useMemo(()=>(doc.customer??{}) as Entity,[doc.customer]);
-  const user=(doc.user??{}) as Entity;
   // Les règlements annulés ne sont pas de l'argent reçu : la facture ne les
   // montre pas. Ils restent visibles dans le tiroir de modification, là où
   // c'est une trace utile.
   const activePayments=useMemo(()=>[...((doc.payments??[]) as Entity[])].filter(row=>row.status!=='cancelled'&&Number(row.amount)!==0)
     .sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt))),[doc.payments]);
+  // Les moyens employés se lisent dans les règlements, pas dans la colonne de
+  // la vente : celle-ci retient le moyen du premier encaissement et ne bouge
+  // plus. Une facture soldée plus tard par Wave affichait « Espèces ».
+  const methodsUsed=useMemo(()=>[...new Set(activePayments.filter(row=>Number(row.amount)>0).map(row=>methodLabel(row.method)))].join(' · '),[activePayments]);const customer=(doc.customer??{}) as Entity;const user=(doc.user??{}) as Entity;
   const [editing,setEditing]=useState<string|null>(null);const [saving,setSaving]=useState(false);const [error,setError]=useState('');
   const [customers,setCustomers]=useState<Entity[]>([]);const [variants,setVariants]=useState<Variant[]>([]);const [defaults,setDefaults]=useState<InvoiceDefaults>(baseInvoiceDefaults);const [form,setForm]=useState<Record<string,string>>({});
   // Envoi depuis le serveur : le document part avec son PDF en piece jointe.
@@ -59,22 +58,10 @@ export default function InvoiceWorkspace(props:Props){
   // Memoise pour que l'effet de remise a zero du formulaire puisse declarer
   // ses dependances honnetement : invoiceInfo ne change que si le document ou
   // les reglages changent, ce qui etait deja la condition de declenchement.
-  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,ninea:defaults.ninea,tradeRegister:defaults.tradeRegister,legalNote:defaults.legalNote,email:defaults.email,website:defaults.website,paymentTerms:defaults.paymentTerms,bankName:defaults.bankName,bankAccount:defaults.bankAccount,bankIban:defaults.bankIban,footerBanner:defaults.footerBanner,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:String(doc.companySignatureUrl??'')}),[doc,defaults]);
-  // « Livrer à » : l'adresse du client quand elle existe. Une vente au
-  // comptoir sans client n'a pas d'adresse de livraison — le bloc disparaît
-  // plutôt que d'afficher un cadre vide.
-  const shipTo=useMemo(()=>{
-    const rows=[String(customer.name??''),String(customer.address??''),String(customer.zone??'')].filter(Boolean);
-    return rows.length>1?rows:[];
-  },[customer]);
-  const bankLines=useMemo(()=>[
-    invoiceInfo.bankName?`Banque : ${invoiceInfo.bankName}`:'',
-    invoiceInfo.bankAccount?`Compte : ${invoiceInfo.bankAccount}`:'',
-    invoiceInfo.bankIban?`IBAN : ${invoiceInfo.bankIban}`:'',
-  ].filter(Boolean),[invoiceInfo]);
+  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,ninea:defaults.ninea,tradeRegister:defaults.tradeRegister,legalNote:defaults.legalNote,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:String(doc.companySignatureUrl??'')}),[doc,defaults]);
   const editLine=editing?.startsWith('item:')?items.find(row=>String(row.id)===editing.slice(5)):undefined;
   useEffect(()=>{Promise.all([api<Entity[]>('/api/customers?limit=500'),api<Variant[]>('/api/variants?limit=500'),api<{invoiceDefaults:InvoiceDefaults}>('/api/checkout-settings')]).then(([customerRows,variantRows,settings])=>{setCustomers(customerRows);setVariants(variantRows.filter(row=>row.active!==false));setDefaults({...baseInvoiceDefaults,...settings.invoiceDefaults})}).catch(()=>{})},[]);
-  useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',dueAt:doc.dueAt?.slice(0,10)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[doc,defaults,invoiceInfo,remaining]);
+  useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[doc,defaults,invoiceInfo,remaining]);
   // Les champs de la ligne ne se rechargent qu'au changement de ligne. Une
   // dependance sur editLine seul les reecrirait a chaque rafraichissement de
   // la facture, en ecrasant une saisie en cours ; le garde par identifiant
@@ -87,11 +74,7 @@ export default function InvoiceWorkspace(props:Props){
     if(editLine){await props.onUpdateLine(editLine,{quantity:Number(form.lineQuantity),unitPrice:Number(form.lineUnitPrice),discount:Number(form.lineDiscount)});setEditing(null);return}
     if(editing==='add-item'){await props.onAddLine({variantId:Number(form.addVariantId),quantity:Number(form.addQuantity),unitPrice:Number(form.addUnitPrice),discount:Number(form.addDiscount)});setEditing(null);return}
     if(editing==='payment'){await props.onAddPayment(form.paymentMethod,Number(form.paymentAmount));setEditing(null);return}
-    // L'échéance part en date pleine ou en null : une chaîne vide serait lue
-    // comme une date invalide par le serveur, et la facture n'aurait plus
-    // d'échéance du tout sans qu'on l'ait demandé.
-    if(editing==='general')await props.onUpdate({reference:form.reference,
-      ...(props.kind==='invoice'?{dueAt:form.dueAt?new Date(form.dueAt).toISOString():null}:{status:form.status})});
+    if(editing==='general')await props.onUpdate({reference:form.reference,...(props.kind==='invoice'?{}:{status:form.status})});
     if(editing==='client')await props.onUpdate({customerId:form.customerId?Number(form.customerId):null});
     if(editing==='amounts')await props.onUpdate({subtotal:Number(form.subtotal),discount:Number(form.discount),taxRate:Number(form.taxRate),tax:Number(form.tax),total:Number(form.total)});
     if(editing==='details')await props.onUpdate({notes:form.notes,validUntil:form.validUntil?new Date(form.validUntil).toISOString():null});
@@ -143,102 +126,21 @@ export default function InvoiceWorkspace(props:Props){
       <div className="business-main">
         <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
         <div className="invoice-scroll"><article className="invoice-paper" id="business-document-print">
-          {/* Le papier à en-tête de la boutique, reproduit à l'écran : logo,
-              coordonnées derrière leurs pictogrammes, étiquettes arrondies,
-              tableau bleu, bandeau de pied de page. C'est le document que le
-              client reconnaît — l'écran et le PDF doivent être le même papier. */}
-          <header className="tpl-head">
-            <img className="tpl-logo" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/>
-            <button className={`tpl-company document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>
-              <strong>{invoiceInfo.companyName.toUpperCase()}</strong>
-              <ul className="tpl-contacts">
-                {invoiceInfo.address&&<li><MapPin/><span>{invoiceInfo.address}</span></li>}
-                {invoiceInfo.phone&&<li><Phone/><span>{invoiceInfo.phone}</span></li>}
-                {invoiceInfo.email&&<li><Mail/><span>{invoiceInfo.email}</span></li>}
-                {invoiceInfo.website&&<li><Globe/><span>{invoiceInfo.website}</span></li>}
-              </ul>
-            </button>
-            <div className="tpl-doc">
-              <h2>{title}</h2>
-              <button className="tpl-number document-editable" onClick={()=>openEdit('general')}><span>N°</span><b>{String(doc.reference)}</b></button>
-              <dl className="tpl-dates">
-                <div><dt>Date :</dt><dd>{longDate(doc.createdAt)}</dd></div>
-                {props.kind==='invoice'&&Boolean(doc.dueAt)&&<div><dt>Échéance :</dt><dd>{longDate(doc.dueAt)}</dd></div>}
-                {props.kind==='quote'&&doc.validUntil&&<div><dt>Validité :</dt><dd>{longDate(doc.validUntil)}</dd></div>}
-              </dl>
-            </div>
-          </header>
-
-          <div className="tpl-parties">
-            <button className="tpl-party document-editable" onClick={()=>openEdit('client')}>
-              <span className="tpl-pill blue">{props.kind==='delivery'?'DESTINATAIRE :':'FACTURÉ À :'}</span>
-              <em className="tpl-rule blue"/>
-              <span className="tpl-party-lines">
-                <b>{String(customer.name??'Client comptoir')}</b>
-                {customer.address?<span>{String(customer.address)}</span>:null}
-                {customer.zone?<span>{String(customer.zone)}</span>:null}
-                {customer.phone?<span>Téléphone : {String(customer.phone)}</span>:null}
-                {customer.email?<span>Email : {String(customer.email)}</span>:null}
-              </span>
-            </button>
-            {shipTo.length>0&&<div className="tpl-party">
-              <span className="tpl-pill yellow">LIVRER À :</span>
-              <em className="tpl-rule yellow"/>
-              <span className="tpl-party-lines"><b>{shipTo[0]}</b>{shipTo.slice(1).map(line=><span key={line}>{line}</span>)}</span>
-            </div>}
-          </div>
-
+          <div className="invoice-brand-bar"><img className="invoice-logo-mark" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/><button className={`invoice-brand-details document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><strong>{invoiceInfo.companyName}</strong><small>{invoiceInfo.tagline}</small></button><button className={`invoice-brand-contact document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>{invoiceInfo.phone}<br/>{invoiceInfo.address}</button></div>
+          <div className="invoice-brand-rule"><i/><i/></div>
+          <div className="invoice-title-row"><button className="document-editable" onClick={()=>openEdit('general')}><small>{title}</small><h2>{title}</h2></button><button className="document-editable align-right" onClick={()=>openEdit('general')}><strong>{doc.reference}</strong><span>Émis le {longDate(doc.createdAt)}</span></button></div>
+          <div className="invoice-parties"><button className={`document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><small>ÉMETTEUR</small><strong>{invoiceInfo.companyName}</strong><span>{invoiceInfo.address}</span><span>{invoiceInfo.phone}</span></button><button className="document-editable" onClick={()=>openEdit('client')}><small>{props.kind==='delivery'?'DESTINATAIRE':'CLIENT'}</small><strong>{String(customer.name??'Client comptoir')}</strong><span>{String(customer.phone??customer.email??'')}</span><span>{String(customer.address??'')}</span></button><button className="document-editable" onClick={()=>openEdit(props.kind==='invoice'?'payment':'details')}><small>{props.kind==='invoice'?'RÈGLEMENT':props.kind==='quote'?'VALIDITÉ':'LIVRAISON'}</small><strong>{status}</strong>{props.kind==='invoice'&&<span>{remaining?`Reste : ${money(remaining)}`:'Solde réglé'}</span>}{props.kind==='invoice'&&methodsUsed&&<span>{methodsUsed}</span>}{props.kind==='quote'&&<span>{doc.validUntil?`Jusqu’au ${longDate(doc.validUntil)}`:'Sans échéance'}</span>}{props.kind==='delivery'&&<span>Facture : {String(linkedInvoice?.reference??doc.saleId??'—')}</span>}</button></div>
           <DocumentLinks doc={doc} kind={props.kind} linkedInvoice={linkedInvoice} onOpenInvoice={props.onOpenInvoice} onOpenQuote={props.onOpenQuote} onOpenDelivery={props.onOpenDelivery}/>
-
-          <table className="tpl-table"><thead><tr>
-            <th>#</th><th>DÉSIGNATION</th><th>QTÉ</th>
-            {props.kind!=='delivery'&&<><th>PRIX UNIT. (FCFA)</th><th>MONTANT (FCFA)</th></>}
-          </tr></thead><tbody>
-            {items.map((item,index)=><tr key={item.id} className={props.isAdmin?'document-line-clickable':''} onClick={()=>openEdit(`item:${item.id}`)}>
-              <td>{index+1}</td>
-              <td><strong>{lineName(item)}</strong>{item.variant?.sku?<span>{String(item.variant.sku)}</span>:null}</td>
-              <td>{item.quantity}</td>
-              {props.kind!=='delivery'&&<><td>{amount(item.unitPrice)}</td><td><strong>{amount(item.total)}</strong></td></>}
-            </tr>)}
-          </tbody></table>
+          <table className="invoice-table"><thead><tr><th>Description</th><th>Qté</th>{props.kind!=='delivery'&&<><th>Prix unitaire</th><th>Remise</th><th>Montant</th></>}</tr></thead><tbody>{items.map(item=><tr key={item.id} className={props.isAdmin?'document-line-clickable':''} onClick={()=>openEdit(`item:${item.id}`)}><td><strong>{lineName(item)}</strong><span>{String(item.variant?.sku??'')}</span></td><td>{item.quantity}</td>{props.kind!=='delivery'&&<><td>{money(item.unitPrice)}</td><td>{Number(item.discount)>0?`− ${money(item.discount)}`:'—'}</td><td><strong>{money(item.total)}</strong></td></>}</tr>)}</tbody></table>
           {props.isAdmin&&!locked&&<button className="invoice-add-product" onClick={()=>openEdit('add-item')}><PackagePlus/>Ajouter un produit à {pieceLabel}</button>}
-
-          {props.kind!=='delivery'&&<div className="tpl-bottom">
-            <div className="tpl-left">
-              {invoiceInfo.paymentTerms&&<section><span className="tpl-icon"><CreditCard/></span>
-                <div><h4>CONDITIONS DE PAIEMENT</h4><p>{invoiceInfo.paymentTerms}</p></div></section>}
-              {bankLines.length>0&&<section><span className="tpl-icon"><Landmark/></span>
-                <div><h4>INFORMATIONS BANCAIRES</h4>{bankLines.map(line=><p key={line}>{line}</p>)}</div></section>}
-              {props.kind==='invoice'&&activePayments.length>1&&<section><span className="tpl-icon"><CreditCard/></span>
-                <div><h4>RÈGLEMENTS REÇUS</h4>{activePayments.map(row=><p key={String(row.id)}>
-                  {shortDate(row.createdAt)} · {Number(row.amount)<0?'Remboursement ':''}{methodLabel(row.method)} <b>{money(Math.abs(Number(row.amount)))}</b>
-                </p>)}</div></section>}
-              <button className="tpl-thanks document-editable" onClick={()=>openEdit(props.kind==='invoice'?'content':'details')}>
-                <strong>{invoiceInfo.thankYouTitle}</strong>
-                <p>{invoiceInfo.footerNote}</p>
-              </button>
-            </div>
-            <div className="tpl-right">
-              <button className="tpl-totals document-editable" onClick={()=>openEdit('amounts')}>
-                <span>Sous-total<b>{amount(doc.subtotal)} FCFA</b></span>
-                {Number(doc.discount)>0&&<span>Remise<b>− {amount(doc.discount)} FCFA</b></span>}
-                {Number(doc.tax)>0&&<span>TVA<b>{amount(doc.tax)} FCFA</b></span>}
-                <strong>TOTAL<b>{amount(doc.total)} FCFA</b></strong>
-              </button>
-              {props.kind==='invoice'&&<button className="tpl-paid document-editable" onClick={()=>openEdit('payment')}>
-                <span>Montant payé<b>{amount(doc.paid)} FCFA</b></span>
-                <span className={remaining>0?'due':''}>Reste à payer<b>{amount(remaining)} FCFA</b></span>
-              </button>}
-              <button className="tpl-stamp document-editable" onClick={()=>openEdit('signatures')}>
-                <span>CACHET &amp; SIGNATURE</span>
-                {invoiceInfo.companySignatureUrl&&<img src={invoiceInfo.companySignatureUrl} alt="Cachet de l’entreprise"/>}
-              </button>
-            </div>
+          {props.kind!=='delivery'&&<div className="invoice-bottom"><button className="invoice-note document-editable" onClick={()=>openEdit(props.kind==='invoice'?'content':'details')}><strong>{invoiceInfo.thankYouTitle}</strong><p>{invoiceInfo.footerNote}</p></button><button className="document-totals document-editable" onClick={()=>openEdit('amounts')}><span>Sous-total <b>{money(doc.subtotal)}</b></span>{Number(doc.discount)>0&&<span>Remise <b>− {money(doc.discount)}</b></span>}{Number(doc.tax)>0&&<span>TVA <b>{money(doc.tax)}</b></span>}<strong>Total TTC <b>{money(doc.total)}</b></strong>{props.kind==='invoice'&&<><span>Montant payé <b>{money(doc.paid)}</b></span><span>Reste à payer <b>{money(remaining)}</b></span></>}</button></div>}
+          {props.kind==='invoice'&&activePayments.length>1&&<div className="invoice-payments">
+            <small>RÈGLEMENTS REÇUS</small>
+            <p>{activePayments.map((row,index)=><span key={String(row.id)}>
+              {index>0&&<i/>}{shortDate(row.createdAt)} · {Number(row.amount)<0?'Remboursement ':''}{methodLabel(row.method)} <b>{money(Math.abs(Number(row.amount)))}</b>
+            </span>)}</p>
           </div>}
-
-          {legalLine(invoiceInfo)&&<p className="tpl-legal">{legalLine(invoiceInfo)}</p>}
-          <small className="tpl-generated">Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small>
-          <div className="tpl-band"><span>{invoiceInfo.footerBanner}</span><i/></div>
+          <footer className="invoice-signatures"><div className="signature-slot"><span>Signature client</span><i/></div><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Pour {invoiceInfo.companyName}</span>{invoiceInfo.companySignatureUrl?<img src={invoiceInfo.companySignatureUrl} alt="Signature entreprise"/>:<i/>}</button>{legalLine(invoiceInfo)&&<b className="invoice-legal">{legalLine(invoiceInfo)}</b>}<small>Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small></footer>
         </article></div>
         {props.isAdmin&&<footer className="invoice-manager-actions"><span>Cliquez sur le client, le règlement, les montants ou une ligne pour les modifier.</span><div>{props.onConvert&&<button className="primary" onClick={props.onConvert} disabled={Boolean(doc.convertedSaleId)}><FileCheck2/>{doc.convertedSaleId?'Déjà converti':'Créer la facture'}</button>}{props.onGenerateDelivery&&<button className="primary" onClick={props.onGenerateDelivery} disabled={Boolean(doc.deliveryNote)}><Truck/>{doc.deliveryNote?'Bon déjà généré':'Générer le bon'}</button>}<button onClick={()=>openEdit('general')}><Pencil/>Modifier</button><button className="invoice-delete" onClick={props.onDelete}>Supprimer</button></div></footer>}
       </div>
@@ -268,7 +170,7 @@ function editorTitle(editing:string,line?:Line){if(line)return'Ligne de produit'
 function EditDrawer({title,editing,kind,form,setForm,customers,variants,usedVariantIds,payments,remaining,editLine,canDeleteLine,onDeleteLine,storedSignature,signed,isAdmin,saving,error,onClose,onSubmit,onCancelPayment,onCancelAll,onToggleSignature,onReplaceSignature}:{title:string;editing:string;kind:Kind;form:Record<string,string>;setForm:(form:Record<string,string>)=>void;customers:Entity[];variants:Variant[];usedVariantIds:number[];payments:Payment[];remaining:number;editLine?:Line;canDeleteLine:boolean;onDeleteLine:(line:Line)=>void;storedSignature:string;signed:boolean;isAdmin:boolean;saving:boolean;error:string;onClose:()=>void;onSubmit:(event:FormEvent)=>void;onCancelPayment:(payment:Payment)=>void;onCancelAll:()=>void;onToggleSignature:(value:boolean)=>Promise<void>;onReplaceSignature:(file:File)=>Promise<void>}){
   const field=(name:string,value:string)=>setForm({...form,[name]:value});
   return <aside className="invoice-edit-drawer"><header><div><small>MODIFICATION</small><h2>{title}</h2><p>La pièce reste visible pendant la modification.</p></div><button className="icon" onClick={onClose}><X/></button></header>{error&&<div className="error">{error}</div>}<form onSubmit={onSubmit}>
-    {editing==='general'&&<><label>Référence<input value={form.reference} onChange={event=>field('reference',event.target.value)}/></label>{kind==='invoice'&&<label>Échéance de règlement<input type="date" value={form.dueAt} onChange={event=>field('dueAt',event.target.value)}/><small>Laissez vide pour une vente réglée comptant.</small></label>}{kind!=='invoice'&&<label>Statut<select value={form.status} onChange={event=>field('status',event.target.value)}><option value="draft">Brouillon</option><option value="sent">Envoyé</option><option value="accepted">Accepté</option><option value="ready">Prêt à livrer</option><option value="delivered">Livré</option><option value="cancelled">Annulé</option></select></label>}</>}
+    {editing==='general'&&<><label>Référence<input value={form.reference} onChange={event=>field('reference',event.target.value)}/></label>{kind!=='invoice'&&<label>Statut<select value={form.status} onChange={event=>field('status',event.target.value)}><option value="draft">Brouillon</option><option value="sent">Envoyé</option><option value="accepted">Accepté</option><option value="ready">Prêt à livrer</option><option value="delivered">Livré</option><option value="cancelled">Annulé</option></select></label>}</>}
     {editing==='client'&&<CustomerSearchSelect customers={customers} value={form.customerId} onChange={value=>field('customerId',value)}/>} 
     {editing==='branding'&&<><label>Nom de l’entreprise<input value={form.invoiceCompanyName} onChange={event=>field('invoiceCompanyName',event.target.value)}/></label><label>Slogan<input value={form.invoiceTagline} onChange={event=>field('invoiceTagline',event.target.value)}/></label><label>Téléphone<input value={form.invoicePhone} onChange={event=>field('invoicePhone',event.target.value)}/></label><label>Adresse<input value={form.invoiceAddress} onChange={event=>field('invoiceAddress',event.target.value)}/></label></>}
     {editing==='content'&&<><label>Titre du message<input value={form.invoiceThankYouTitle} onChange={event=>field('invoiceThankYouTitle',event.target.value)}/></label><label>Texte de la facture<textarea value={form.invoiceFooterNote} onChange={event=>field('invoiceFooterNote',event.target.value)}/></label></>}

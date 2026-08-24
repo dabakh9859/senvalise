@@ -32,70 +32,118 @@
     box-sizing:border-box !important;
     display:flex !important;flex-direction:column !important;
     width:100% !important;max-width:none !important;min-height:294mm !important;
-    margin:0 !important;padding:0 !important;
+    margin:0 !important;padding:0 0 20mm !important;
     border:0 !important;border-radius:0 !important;background:#fff !important;
     font:400 10pt/1.5 Inter,system-ui,sans-serif !important;color:#1f2937 !important;
   }
 
-  /* Les affordances d'édition redeviennent du texte.
-
-     Elles etaient remises a zero avec « all:unset ». Depuis que le gabarit
-     porte sa mise en forme sur ces memes boutons — la gelule du numero, le
-     cadre du cachet, le bloc des totaux — cette remise a zero effacait le
-     dessin de la piece : le cadre du cachet disparaissait et son etiquette,
-     positionnee par rapport a lui, s'echappait dans le coin de la feuille.
-     Seule l'apparence de bouton est donc neutralisee. */
+  /* Les affordances d'édition redeviennent du texte. */
   #print-root button,#print-root .document-editable{
-    cursor:default !important;outline:0 !important;
-    -webkit-appearance:none !important;appearance:none !important;
+    all:unset !important;display:block !important;
+    font:inherit !important;color:inherit !important;cursor:default !important;
   }
-  #print-root .print-page-footer{display:none !important}
   #print-root .document-links,
   #print-root .invoice-add-product,
   #print-root [data-print-hide]{display:none !important}
 
-  /* ----------------------------------------------------------------
-     Le papier a en-tete de la boutique, a l'impression.
-
-     L'ecran porte deja le gabarit — logo, coordonnees, etiquettes
-     arrondies, tableau bleu, bandeau de pied. La feuille imprimee ne
-     le redessine donc pas : elle se contente de le poser sur un A4 et
-     de regler ce que le navigateur seul ne sait pas faire — repeter
-     l'en-tete du tableau d'une page a l'autre, empecher les blocs de
-     se couper, et coller le bandeau en bas de la derniere page.
-     ---------------------------------------------------------------- */
-  #print-root .tpl-head,
-  #print-root .tpl-parties,
-  #print-root .tpl-bottom{padding-left:var(--pad) !important;padding-right:var(--pad) !important}
-  #print-root .tpl-parties,
-  #print-root .tpl-bottom{break-inside:avoid;page-break-inside:avoid}
-  #print-root .tpl-logo{max-width:34mm !important;height:auto !important;max-height:24mm !important}
-
-  /* Le tableau est le seul bloc qui a le droit de se couper : c'est lui
-     qui grandit. Son en-tete se reimprime en haut de chaque page. */
-  #print-root .tpl-table{
-    width:calc(100% - 2*var(--pad)) !important;margin:8mm var(--pad) 0 !important;
-    border-collapse:collapse !important;font-size:9.5pt !important;
+  /* Bandeau de marque, d'un bord à l'autre de la feuille. */
+  #print-root .invoice-brand-bar{
+    display:flex !important;align-items:center !important;gap:5mm !important;
+    min-height:0 !important;margin:0 0 11mm !important;padding:11mm var(--pad) !important;
+    background:#0755d8 !important;color:#fff !important;border-radius:0 !important;
   }
-  #print-root .tpl-table thead{display:table-header-group !important}
-  #print-root .tpl-table tr{break-inside:avoid;page-break-inside:avoid}
-  #print-root .tpl-table th{padding:3.5mm 3mm !important;background:#1529d6 !important;color:#fff !important}
-  #print-root .tpl-table td{padding:3.5mm 3mm !important;border:.25mm solid #dee2ea !important}
+  #print-root .invoice-brand-bar strong{font:800 19pt/1.1 Inter,sans-serif !important;color:#fff !important}
+  #print-root .invoice-brand-bar strong span{color:#f6cf22 !important}
+  #print-root .invoice-brand-bar small{display:block !important;margin-top:1mm !important;font-size:9pt !important;color:#dbe6fb !important}
+  #print-root .invoice-brand-bar p,
+  #print-root .invoice-brand-contact{margin:0 0 0 auto !important;text-align:right !important;font-size:9.5pt !important;line-height:1.5 !important;color:#e8f0fe !important}
+  #print-root .invoice-logo-mark{position:relative !important;flex:0 0 auto !important;width:14mm !important;height:14mm !important}
+  #print-root .invoice-logo-mark i{position:absolute !important;width:5mm !important;height:11.5mm !important;border-radius:1.5mm !important;background:#f6cf22 !important;transform:skew(-14deg) !important}
+  #print-root .invoice-logo-mark i:last-child{left:6.5mm !important;top:1.2mm !important;background:#fff !important}
 
-  /* Les mentions et le bandeau se collent en bas de la feuille, quel que
-     soit le nombre de lignes au-dessus : c'est ce que fait un papier
-     pre-imprime, et c'est ce que le client reconnait. */
-  /* margin-top:auto colle la fin de piece en bas de la feuille, comme sur un
-     papier pre-imprime. Les mentions legales sont facultatives : la ligne de
-     generation porte la meme regle pour prendre le relais quand elles
-     manquent, et la rend a zero quand elles sont la. */
-  #print-root .tpl-legal,
-  #print-root .tpl-generated{margin-top:auto !important;padding-top:6mm !important}
-  #print-root .tpl-legal+.tpl-generated{margin-top:0 !important;padding-top:1mm !important}
-  #print-root .tpl-band{margin-top:0 !important;height:16mm !important;padding:0 var(--pad) !important;
-    break-inside:avoid;page-break-inside:avoid}
-  #print-root .tpl-band span{font-size:14pt !important}
-  #print-root .tpl-stamp{min-height:34mm !important}
+  /* Titre et référence. */
+  #print-root .invoice-title-row{
+    display:flex !important;align-items:flex-start !important;justify-content:space-between !important;
+    gap:12mm !important;padding:0 var(--pad) 9mm !important;
+  }
+  #print-root .invoice-title-row h2{margin:1.5mm 0 0 !important;font:800 30pt/1 Inter,sans-serif !important;color:#0755d8 !important}
+  #print-root .invoice-title-row .align-right,
+  #print-root .invoice-title-row>*:last-child{text-align:right !important}
+  #print-root .invoice-title-row strong{font:700 13pt/1.3 Inter,sans-serif !important;color:#1f2937 !important}
+  #print-root .invoice-title-row span{display:block !important;margin-top:1.5mm !important;font-size:10pt !important;color:#6b7280 !important}
+
+  /* Émetteur, client, règlement. */
+  #print-root .invoice-parties{
+    display:grid !important;grid-template-columns:repeat(3,1fr) !important;
+    gap:8mm !important;padding:0 var(--pad) 10mm !important;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  #print-root .invoice-parties>*{
+    display:flex !important;flex-direction:column !important;gap:1.2mm !important;
+    font-size:10pt !important;line-height:1.45 !important;color:#4b5563 !important;text-align:left !important;
+  }
+  #print-root .invoice-parties strong{font:700 11.5pt/1.3 Inter,sans-serif !important;color:#1f2937 !important}
+  #print-root .invoice-parties small,
+  #print-root .invoice-title-row small{
+    font-size:8pt !important;font-weight:700 !important;letter-spacing:.11em !important;
+    text-transform:uppercase !important;color:#8b9099 !important;
+  }
+
+  /* Tableau des lignes : c'est ici que se joue la pagination.
+     thead en table-header-group réimprime l'en-tête de colonnes en
+     haut de chaque page, exactement comme le gabarit d'Odoo. */
+  #print-root .invoice-table{
+    width:calc(100% - 2*var(--pad)) !important;margin:0 var(--pad) !important;
+    border-collapse:collapse !important;font-size:10pt !important;
+  }
+  #print-root .invoice-table thead{display:table-header-group !important}
+  #print-root .invoice-table tfoot{display:table-footer-group !important}
+  #print-root .invoice-table tr{break-inside:avoid;page-break-inside:avoid}
+  #print-root .invoice-table th{
+    padding:4mm 3mm !important;background:#f6cf22 !important;color:#42360a !important;
+    font:700 8.5pt/1.2 Inter,sans-serif !important;letter-spacing:.08em !important;
+    text-transform:uppercase !important;text-align:left !important;border:0 !important;
+  }
+  #print-root .invoice-table td{
+    padding:4.5mm 3mm !important;border:0 !important;border-bottom:.3mm solid #e5e7eb !important;
+    vertical-align:top !important;background:none !important;
+  }
+  #print-root .invoice-table th:not(:first-child),
+  #print-root .invoice-table td:not(:first-child){text-align:right !important;white-space:nowrap !important}
+  #print-root .invoice-table td:first-child strong{font-weight:600 !important;font-size:10.5pt !important;color:#1f2937 !important}
+  #print-root .invoice-table td:first-child span{display:block !important;margin-top:1mm !important;font-size:8.5pt !important;color:#8b9099 !important}
+
+  /* Totaux : jamais coupés en deux. */
+  #print-root .invoice-bottom{
+    display:grid !important;grid-template-columns:1fr 76mm !important;gap:12mm !important;
+    margin:10mm var(--pad) 0 !important;padding:0 !important;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  #print-root .invoice-note{font-size:9.5pt !important;line-height:1.6 !important;color:#5b6470 !important;text-align:left !important}
+  #print-root .invoice-note strong{display:block !important;margin-bottom:2mm !important;font-size:10.5pt !important;color:#0755d8 !important;font-weight:700 !important}
+  #print-root .invoice-bottom dl{margin:0 !important;padding:0 !important}
+  #print-root .invoice-bottom dl div{display:flex !important;justify-content:space-between !important;gap:8mm !important;padding:2mm 0 !important;font-size:10pt !important}
+  #print-root .invoice-bottom dt{color:#6b7280 !important}
+  #print-root .invoice-bottom dd{margin:0 !important;font-weight:600 !important;color:#1f2937 !important;white-space:nowrap !important}
+  #print-root .invoice-total{margin-top:2mm !important;padding-top:3mm !important;border-top:.6mm solid #0755d8 !important;font-size:14pt !important}
+  #print-root .invoice-total dt,
+  #print-root .invoice-total dd{font-weight:800 !important;color:#0755d8 !important}
+
+  /* Signatures : margin-top:auto les colle en bas de la feuille,
+     quel que soit le nombre de lignes au-dessus. */
+  #print-root .invoice-signatures{
+    display:grid !important;grid-template-columns:1fr 1fr !important;gap:18mm !important;
+    margin:auto var(--pad) 0 !important;padding-top:7mm !important;
+    border-top:.3mm solid #e5e7eb !important;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  #print-root .invoice-signatures>*{
+    display:flex !important;flex-direction:column !important;gap:11mm !important;
+    font-size:9.5pt !important;color:#6b7280 !important;text-align:left !important;
+  }
+  #print-root .invoice-signatures i{display:block !important;height:0 !important;border-bottom:.3mm solid #9ca3af !important}
+  #print-root .invoice-signatures img{max-height:20mm !important;object-fit:contain !important;object-position:left bottom !important}
+  #print-root .invoice-signatures small{grid-column:1/-1 !important;margin-top:6mm !important;text-align:center !important;font-size:8.5pt !important;color:#9ca3af !important}
 
   /* Pied répété. Le retrait de 8mm tient compte de la zone qu'une
      imprimante physique ne sait pas atteindre. Chrome et Edge le

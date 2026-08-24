@@ -479,3 +479,55 @@ func TestSplitPaymentCannotExceedTotal(t *testing.T) {
 		t.Fatalf("stock %d au lieu de 5 : le refus a quand même sorti la marchandise", got)
 	}
 }
+
+// Un retour en deux fois doit rendre au client la totalite de ce qu'il a paye.
+//
+// Les deux plafonds — celui de la ligne et celui de la facture — retranchaient
+// le remboursement precedent d'un montant qui l'excluait deja. Une cliente qui
+// rapportait une valise, puis les deux autres, se voyait refuser la moitie de
+// son du. Le test rend en deux temps ce qui a ete achete en une fois : la
+// somme rendue doit egaler la somme payee, et le stock revenir a son point de
+// depart.
+func TestReturnInTwoStepsRefundsEverythingPaid(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(5, 5000)
+
+	status, sale := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 15000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 3, "unitPrice": 5000}},
+	})
+	if status >= 400 {
+		t.Fatalf("la vente de référence a échoué : %v", sale)
+	}
+	saleID := uint(sale["id"].(float64))
+
+	for step, quantity := range []int{1, 2} {
+		amount := quantity * 5000
+		status, body := h.call(http.MethodPost, "/api/returns/process", fiber.Map{
+			"saleId": saleID, "reason": "Ne convient pas", "refundMethod": "cash", "restock": true,
+			"items": []fiber.Map{{"variantId": variant.ID, "quantity": quantity, "amount": amount}},
+		})
+		if status >= 400 {
+			t.Fatalf("retour %d de %d pièce(s) refusé (%d) : %v", step+1, quantity, status, body)
+		}
+	}
+
+	// Tout est rendu : la boutique ne detient plus rien sur cette facture.
+	var paid int64
+	h.db.Table("sales").Where("id = ?", saleID).Select("paid").Scan(&paid)
+	if paid != 0 {
+		t.Fatalf("il reste %d F encaissés alors que tout a été rendu", paid)
+	}
+	if got := h.stockOf(variant.ID); got != 5 {
+		t.Fatalf("stock %d au lieu de 5 : la marchandise rendue n'est pas revenue en entier", got)
+	}
+
+	// La borne tient toujours : rien ne peut etre rendu au-dela.
+	status, body := h.call(http.MethodPost, "/api/returns/process", fiber.Map{
+		"saleId": saleID, "reason": "Retour de trop", "refundMethod": "cash", "restock": true,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 1, "amount": 5000}},
+	})
+	if status < 400 {
+		t.Fatalf("un quatrième retour sur trois pièces vendues a été accepté (%d) : %v", status, body)
+	}
+}

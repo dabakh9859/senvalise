@@ -1108,3 +1108,65 @@
 .fact.ok strong{color:var(--ok)}
 .fact.bad{background:var(--bad-surface);border-color:var(--bad-line)}
 .fact.bad strong{color:var(--bad)}
+
+/* Écran de retour client.
+   ------------------------------------------------------------------------
+   Le retour se fait debout, au comptoir, pendant que la cliente attend : la
+   liste des factures et celle des articles doivent se lire d'un coup d'œil et
+   se cocher au doigt. D'où des lignes hautes, une seule colonne de décision
+   par ligne, et le montant à rembourser toujours visible en bas. */
+.return-search .search{width:100%;margin-bottom:14px}
+.return-sales{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow-y:auto}
+.return-sales button{
+  width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;
+  padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+  text-align:left;cursor:pointer;color:inherit;
+}
+.return-sales button:hover,.return-sales button:focus-visible{border-color:var(--accent);background:var(--hover,rgba(21,41,214,.05))}
+.return-sale-ref{font-weight:700;font-variant-numeric:tabular-nums}
+.return-sale-who{font-weight:600}
+.return-sale-amount{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.return-sale-when{grid-column:1/3;font-size:12px;color:var(--muted)}
+
+.return-back{display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;background:none;border:0;color:var(--accent);cursor:pointer;font-weight:600}
+.return-back svg{width:16px;height:16px}
+
+.return-lines{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto}
+.return-lines li{
+  display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center;
+  padding:12px 14px;border:1px solid var(--line);border-radius:12px;
+}
+.return-lines li.picked{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.return-lines li.done{opacity:.55}
+.return-line-pick{display:flex;align-items:center;gap:12px;cursor:pointer;margin:0}
+.return-line-pick input{width:20px;height:20px;flex:none}
+.return-line-name{display:flex;flex-direction:column}
+.return-line-name small{color:var(--muted);font-size:12px}
+.return-line-state{font-size:13px;color:var(--muted);text-align:right;display:flex;flex-direction:column;align-items:flex-end}
+.return-line-state small{font-size:11px}
+/* Les deux champs occupent toute la largeur sous la ligne : imbriqués à droite,
+   ils écrasaient le nom de l'article sur les écrans de comptoir. */
+.return-line-inputs{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;padding-top:10px;border-top:1px dashed var(--line)}
+.return-line-inputs label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.return-line-inputs input{width:150px;font-variant-numeric:tabular-nums}
+
+.return-settings{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.return-settings label{display:flex;flex-direction:column;gap:5px;font-size:13px}
+.return-restock{grid-column:1/-1;flex-direction:row!important;align-items:flex-start;gap:10px}
+.return-restock input{width:18px;height:18px;margin-top:2px;flex:none}
+.return-restock span{display:flex;flex-direction:column}
+.return-restock small{color:var(--muted);font-size:12px}
+
+/* Le montant reste dans le bandeau d'actions, poussé à gauche : c'est le
+   chiffre qu'on relit avant de valider. */
+.return-total{margin-right:auto;display:flex;flex-direction:column;text-align:left}
+.return-total small{font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.return-total strong{font-size:22px;font-variant-numeric:tabular-nums}
+.return-total strong.over{color:var(--danger,#c02626)}
+.return-total span{font-size:12px;color:var(--danger,#c02626)}
+
+@media (max-width:720px){
+  .return-lines li{grid-template-columns:1fr}
+  .return-line-state{text-align:left;align-items:flex-start}
+  .return-settings{grid-template-columns:1fr}
+}

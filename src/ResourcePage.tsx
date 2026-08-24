@@ -4,6 +4,7 @@ import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
 import Modal from './Modal';
+import ReturnForm from './ReturnForm';
 
 type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>void};
 type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string;parent?:Entity}|null;
@@ -55,7 +56,7 @@ const advancedFields:Record<string,string[]>={
 // ouvert, parce que c'est lui qui tient le comptoir.
 const managerOnlyResources=new Set(['brands','suppliers','arrivals','orders','vaults','home-blocks','settings','delivery-zones','users']);
 
-const creationOnlyFields:Record<string,string[]>={products:['price','stock']};
+const creationOnlyFields:Record<string,string[]>={products:['stock']};
 
 // Valeurs de depart d'une creation. Un produit cree decoche n'apparait nulle
 // part — ni au catalogue, ni a la caisse — et on le cherche sans comprendre.
@@ -148,6 +149,7 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   const[total,setTotal]=useState(0);
   const[loadingMore,setLoadingMore]=useState(false);
   const[dialog,setDialog]=useState<Dialog>(null);
+  const[returning,setReturning]=useState(false);
   const[adjusting,setAdjusting]=useState<Entity|null>(null);
   const[error,setError]=useState('');
   const isAdmin=user.role==='manager';
@@ -194,17 +196,17 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   };
   const remove=async(row:Entity,resourceName=resource)=>{const note=stockWarning[resourceName];if(!confirm(`Supprimer définitivement « ${recordTitle(row)} » ?${note?`\n\n${note}`:''}`))return;try{await api(endpoint(resourceName,row.id),{method:'DELETE'});if(dialog?.row?.id===row.id)setDialog(null);load()}catch(reason){setError((reason as Error).message)}};
   return <>
-    <div className="toolbar"><div className="search"><Search/><input placeholder={resource==='sales'?'Rechercher une facture, un client…':resource==='quotes'?'Rechercher un devis, un client…':resource==='delivery-notes'?'Rechercher un bon de livraison…':`Rechercher dans ${title.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/></div>{canWrite&&!['sales','delivery-notes'].includes(resource)&&<button className="primary compact" onClick={()=>setDialog({mode:'create'})}><Plus/>Nouveau</button>}</div>
+    <div className="toolbar"><div className="search"><Search/><input placeholder={resource==='sales'?'Rechercher une facture, un client…':resource==='quotes'?'Rechercher un devis, un client…':resource==='delivery-notes'?'Rechercher un bon de livraison…':`Rechercher dans ${title.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/></div>{canWrite&&!['sales','delivery-notes'].includes(resource)&&<button className="primary compact" onClick={()=>resource==='returns'?setReturning(true):setDialog({mode:'create'})}><Plus/>{resource==='returns'?'Nouveau retour':'Nouveau'}</button>}</div>
     <Legend resource={resource}/>
     {error&&<div className="error resource-error">{error}</div>}
     {resource==='products'?<ProductLibrary rows={shown} loading={loading} isAdmin={canWrite} onOpen={openDetail} onEdit={row=>setDialog({mode:'edit',row})} onDelete={remove} onReload={load}/>:<div className="panel table-panel">{loading?<Loading/>:shown.length===0?<Empty title={title}/>:<div className="table-wrap"><table className="records-table"><thead><tr>{columns.map(column=><th key={column}>{labels[column]??column}</th>)}<th className="actions-heading">Actions</th></tr></thead><tbody>{shown.map(row=><tr key={row.id} tabIndex={0} onClick={()=>void openDetail(row)} onKeyDown={event=>{if(event.key==='Enter')void openDetail(row)}}>{columns.map(column=><td key={column}><SemanticValue field={column} value={row[column]} row={row}/></td>)}<td className="row-actions" onClick={event=>event.stopPropagation()}><button className="action-button" title="Voir la fiche" aria-label={`Voir ${recordTitle(row)}`} onClick={()=>void openDetail(row)}><Eye/><span>Voir</span></button>{canWrite&&<><button className="action-button" title="Modifier cet enregistrement" aria-label={`Modifier ${recordTitle(row)}`} onClick={()=>setDialog({mode:'edit',row})}><Pencil/><span>Modifier</span></button><button className="action-button danger" title="Supprimer cet enregistrement" aria-label={`Supprimer ${recordTitle(row)}`} onClick={()=>void remove(row)}><Trash2/><span>Supprimer</span></button></>}</td></tr>)}</tbody></table></div>}</div>}
     {!loading&&shown.length>0&&<div className="list-footer"><span>{shown.length} sur {total} {total>1?'enregistrements':'enregistrement'}</span>{shown.length<total&&<button className="compact" disabled={loadingMore} onClick={loadMore}>{loadingMore?'Chargement…':'Charger la suite'}</button>}</div>}
     {dialog?.mode==='detail'&&dialog.row&&(['sales','quotes','delivery-notes'].includes(dialog.resource??resource)?<DocumentWorkspace document={dialog.row} kind={(dialog.resource??resource)==='quotes'?'quote':(dialog.resource??resource)==='delivery-notes'?'delivery':'invoice'} isAdmin={isAdmin} onClose={()=>setDialog(null)} onDelete={()=>void remove(dialog.row!,dialog.resource??resource)} onUpdate={updateDocument} onUpdateLine={updateLine} onAddLine={addLine} onDeleteLine={deleteLine} onAddPayment={addPayment} onCancelPayment={cancelPayment} onCancelAllPayments={cancelAllPayments} onConvert={(dialog.resource??resource)==='quotes'?()=>void convertQuote(dialog.row!):undefined} onGenerateDelivery={(dialog.resource??resource)==='sales'?()=>void createDelivery(dialog.row!):undefined} onOpenInvoice={row=>void openLinked('sales',row)} onOpenQuote={row=>void openLinked('quotes',row)} onOpenDelivery={row=>void openLinked('delivery-notes',row)}/>:<DetailDialog title={title} resource={dialog.resource??resource} row={dialog.row} isAdmin={canWrite} onClose={()=>setDialog(null)} onEdit={()=>setDialog({mode:'edit',row:dialog.row})} onDelete={()=>void remove(dialog.row!)}
       onAdjustStock={variant=>setAdjusting(variant)}
-      onEditVariant={variant=>setDialog({mode:'edit',row:variant,resource:'variants',parent:dialog.row})}
-      onAddVariant={()=>setDialog({mode:'create',row:{id:0,productId:dialog.row!.id} as Entity,resource:'variants',parent:dialog.row})}/>)} 
+/>)} 
     {(dialog?.mode==='create'||dialog?.mode==='edit')&&<RecordForm title={dialog.resource==='variants'?'Déclinaison':title} resource={dialog.resource??resource} row={dialog.row} mode={dialog.mode} onClose={()=>{const parent=dialog.parent;setDialog(parent?{mode:'detail',row:parent}:null)}} onDone={()=>{const parent=dialog.parent;if(parent)void openDetail(parent);else setDialog(null);load()}}/>}
     {adjusting&&<StockAdjust variant={adjusting} onClose={()=>setAdjusting(null)} onDone={()=>{const parent=dialog?.row;setAdjusting(null);if(parent)void openDetail(parent);load()}}/>}
+    {returning&&<ReturnForm onClose={()=>setReturning(false)} onSaved={load}/>}
   </>;
 }
 
@@ -233,12 +235,17 @@ function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDelete,onReload}:{
   </section>;
 }
 
-type DetailProps={title:string;resource:string;row:Entity;isAdmin:boolean;onClose:()=>void;onEdit:()=>void;onDelete:()=>void;onAdjustStock?:(variant:Entity)=>void;onEditVariant?:(variant:Entity)=>void;onAddVariant?:()=>void};
+type DetailProps={title:string;resource:string;row:Entity;isAdmin:boolean;onClose:()=>void;onEdit:()=>void;onDelete:()=>void;onAdjustStock?:(variant:Entity)=>void};
 type Metric={label:string;value:string;tone?:Tone;field?:string};
 type Contact={field:string;label:string;href:string;icon:typeof Phone};
 
 const resourceIcons:Record<string,typeof Package>={products:Package,variants:Boxes,'stock/movements':RotateCcw,arrivals:Truck,suppliers:Truck,customers:Users,users:UserRound,returns:RotateCcw,orders:ShoppingCart,vaults:WalletCards,'cash-sessions':WalletCards,'cash-movements':CircleDollarSign,messages:MessageSquare,'message-templates':MessageSquare,'contact-messages':MessageSquare,'home-blocks':Globe2,'delivery-zones':MapPin,categories:Tags,brands:Tags,settings:Settings};
 const resourceEyebrow:Record<string,string>={products:'FICHE PRODUIT',variants:'FICHE VARIANTE','stock/movements':'MOUVEMENT DE STOCK',arrivals:'ARRIVAGE FOURNISSEUR',suppliers:'FICHE FOURNISSEUR',customers:'FICHE CLIENT',users:'COMPTE UTILISATEUR',returns:'RETOUR CLIENT',orders:'COMMANDE BOUTIQUE',vaults:'COFFRE CLIENT','cash-sessions':'SESSION DE CAISSE','cash-movements':'MOUVEMENT DE CAISSE',messages:'MESSAGE ENVOYÉ','message-templates':'MODÈLE DE MESSAGE','contact-messages':'MESSAGE REÇU','home-blocks':'BLOC PAGE D’ACCUEIL','delivery-zones':'ZONE DE LIVRAISON',categories:'CATÉGORIE',brands:'MARQUE',settings:'PARAMÈTRE'};
+
+// Ce qu'une fiche produit n'a pas a montrer : l'identifiant de la ligne et les
+// dates d'ecriture ne servent qu'au developpeur, et le gerant les lisait comme
+// une information de plus a comprendre.
+const productNoise=new Set(['id','createdAt','updatedAt','position','slug']);
 
 const detailGroups:{id:string;label:string}[]=[
   {id:'identity',label:'Identité'},{id:'links',label:'Rattachements et classement'},{id:'numbers',label:'Chiffres'},
@@ -428,7 +435,7 @@ function DetailLinked({name,record,relation}:{name:string;record:Entity;relation
   </div>;
 }
 
-function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdjustStock,onEditVariant,onAddVariant}:DetailProps){
+function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdjustStock}:DetailProps){
   const relation=useRelationLabels(row);
   const[shot,setShot]=useState(0);
   useEffect(()=>setShot(0),[row]);
@@ -441,7 +448,7 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
     .filter((entry):entry is{field:string;info:StateInfo}=>Boolean(entry.info)).slice(0,5);
   const hidden=new Set<string>([...metricFields,...badges.map(entry=>entry.field),...contacts.map(contact=>contact.field)]);
   const scalars=Object.entries(row).filter(([key,value])=>!hidden.has(key)&&!Array.isArray(value)&&(value===null||typeof value!=='object'))
-    .filter(([,value])=>resource!=='products'||(value!==null&&value!==''&&value!==false));
+    .filter(([key,value])=>resource!=='products'||(value!==null&&value!==''&&value!==false&&value!==0&&!productNoise.has(key)));
   const sections=detailGroups.map(group=>({...group,fields:scalars.filter(([key,value])=>groupFor(key,value)===group.id)})).filter(group=>group.fields.length);
   const gallery=(row.images??[]) as ProductImageView[];
   const isProduct=resource==='products'&&Boolean(onAdjustStock);
@@ -473,8 +480,6 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
       <div className="detail-body">
         {metrics.length>0&&<div className="detail-metrics">{metrics.map(metric=>
           <div className={`detail-metric tone-${metric.tone??'neutral'}`} key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></div>)}</div>}
-        {isProduct&&<ProductVariants rows={(row.variants??[]) as Entity[]} isAdmin={isAdmin}
-          onAdjust={variant=>onAdjustStock?.(variant)} onEdit={variant=>onEditVariant?.(variant)} onAdd={()=>onAddVariant?.()}/>}
         {sections.map(group=><section className={`detail-section group-${group.id} ${isProduct?'compact-section':''}`} key={group.id}>
           <header><h3>{group.label}</h3><i/></header>
           <div className="detail-fields">{group.fields.map(([key,value])=><div key={key}>
@@ -505,6 +510,7 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
   const formFields=useMemo(()=>{const configured=configuredFields[resource]??[];if(mode==='create')return configured.length?configured:['name','status'];const actual=Object.keys(row??{}).filter(key=>!readonly.has(key)&&typeof row?.[key]!=='object');return [...new Set([...configured,...actual])]},[mode,resource,row]);
   const initial=useMemo(()=>Object.fromEntries(formFields.map(field=>{
     if(mode==='create'&&(creationDefaults[resource]??{})[field]!==undefined)return [field,(creationDefaults[resource] as Record<string,string|boolean>)[field]];
+    if(mode==='edit'&&resource==='products'&&field==='price')return [field,String(((row?.variants??[]) as Entity[])[0]?.price??0)];
     return [field,toInputValue(field,row?.[field])];
   })),[formFields,row,mode,resource]);
   const hiddenFields=useMemo(()=>advancedFields[resource]??[],[resource]);
@@ -555,6 +561,13 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
           payload.append('image',file);
           payload.append('alt',String(form.name??title));
           await apiForm(`/api/products/${target}/images`,payload);
+        }
+      }
+      if(mode==='edit'&&resource==='products'){
+        const first=((row?.variants??[]) as Entity[])[0];
+        const wanted=Number(form.price)||0;
+        if(first&&wanted!==Number(first.price??0)){
+          await api(`/api/variants/${first.id}`,{method:'PUT',body:JSON.stringify({...first,price:wanted})});
         }
       }
       // Les corrections de stock partent après l'enregistrement de la fiche :
@@ -616,50 +629,6 @@ function toPayloadValue(key:string,value:string|boolean){if(typeof value==='bool
 function recordTitle(row:Entity){return String(row.name??row.reference??row.sku??row.email??`Enregistrement #${row.id}`)}
 function Loading(){return <div className="loading"><i/><span>Chargement…</span></div>}
 function Empty({title}:{title:string}){return <div className="empty"><Package/><h3>Aucun élément</h3><p>Les premiers éléments de « {title} » apparaîtront ici.</p></div>}
-
-// Variantes d'un produit, avec le stock.
-//
-// « Produits » et « État du stock » étaient deux entrées de menu pour la même
-// marchandise : la fiche d'un côté, ses déclinaisons de l'autre. Répondre à
-// « qu'est-ce que j'ai en rayon ? » demandait de passer de l'une à l'autre, et
-// de faire le lien de tête entre un SKU et un modèle.
-//
-// La table vit désormais dans la fiche du produit, avec ce qu'il faut pour
-// agir : corriger un stock, modifier une déclinaison, en ajouter une. Le
-// tableau reste visible par le vendeur ; seules la modification et la création
-// sont réservées au gérant, comme l'API l'impose déjà.
-function ProductVariants({rows,isAdmin,onAdjust,onEdit,onAdd}:{
-  rows:Entity[];isAdmin:boolean;onAdjust:(variant:Entity)=>void;onEdit:(variant:Entity)=>void;onAdd:()=>void;
-}){
-  const total=rows.reduce((sum,item)=>sum+Number(item.stock??0),0);
-  return <section className="detail-block product-variants">
-    <header><h3>Déclinaisons et stock</h3><span>{rows.length}</span><i/>
-      <strong className="variants-total">{total} unité{total!==1?'s':''}</strong></header>
-    {rows.length===0
-      ?<p className="empty-inline">Aucune déclinaison. Un produit sans déclinaison n’est pas vendable : ajoutez-en une pour lui donner un prix et un stock.</p>
-      :<div className="detail-table-wrap"><table className="detail-table variants-table">
-        <thead><tr><th>SKU</th><th>Déclinaison</th><th>Prix</th><th>Stock</th><th>Seuil</th><th className="actions-heading">Actions</th></tr></thead>
-        <tbody>{rows.map(item=>{
-          const stock=Number(item.stock??0),alert=Number(item.alertAt??0);
-          // Le seuil d'alerte n'a de sens qu'au-dessus de zéro : à zéro, tout
-          // stock épuisé serait signalé deux fois, en rupture et en alerte.
-          const tone=stock<=0?'danger':alert>0&&stock<=alert?'warning':'success';
-          const label=[String(item.color??''),String(item.size??'')].filter(Boolean).join(' · ');
-          return <tr key={item.id} className={item.active===false?'is-inactive':''}>
-            <td><code>{String(item.sku??'—')}</code></td>
-            <td>{label||<em>Sans déclinaison</em>}{item.active===false&&<span className="variant-off">désactivée</span>}</td>
-            <td>{money(item.price)}</td>
-            <td><span className={`semantic-badge ${tone}`}>{stock} u.</span></td>
-            <td>{alert>0?`${alert} u.`:'—'}</td>
-            <td className="row-actions" onClick={event=>event.stopPropagation()}>
-              <button className="action-button" onClick={()=>onAdjust(item)} title="Corriger le stock"><RotateCcw/><span>Stock</span></button>
-              {isAdmin&&<button className="action-button" onClick={()=>onEdit(item)} title="Modifier la déclinaison"><Pencil/><span>Modifier</span></button>}
-            </td>
-          </tr>})}</tbody>
-      </table></div>}
-    {isAdmin&&<button type="button" className="add-variant" onClick={onAdd}><Plus/>Ajouter une déclinaison</button>}
-  </section>;
-}
 
 // Correction de stock. Elle passe par un mouvement — et non par une écriture
 // directe sur la colonne — pour que l'entrée ou la sortie laisse une trace

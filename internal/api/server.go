@@ -163,6 +163,8 @@ func (s *Server) Register(app *fiber.App) {
 	}
 	a.Post("/arrivals/:id/receive", auth.Manager, s.receiveArrival)
 	a.Post("/returns/process", s.processReturn)
+	a.Get("/returns/sales/search", s.searchReturnableSales)
+	a.Get("/returns/lines/:id", s.returnableLines)
 	a.Post("/cash/open", s.openCash)
 	a.Post("/cash/:id/close", s.closeCash)
 	a.Post("/vaults/:id/deposit", s.depositVault)
@@ -1634,7 +1636,6 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 		}
 		type prior struct{ quantity, amount int64 }
 		already := map[uint]prior{}
-		var previousRefunds int64
 		var earlier []models.ReturnItem
 		tx.Table("return_items").
 			Joins("JOIN sale_returns ON sale_returns.id = return_items.sale_return_id").
@@ -1643,7 +1644,6 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 		for _, item := range earlier {
 			p := already[item.VariantID]
 			already[item.VariantID] = prior{p.quantity + item.Quantity, p.amount + item.Amount}
-			previousRefunds += item.Amount
 		}
 
 		ids := make([]uint, 0, len(in.Items))
@@ -1682,7 +1682,14 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 			}
 			// Le remboursement ne peut pas dépasser ce que la ligne a
 			// réellement rapporté, au prorata des unités rendues.
-			maximum := item.Total*line.Quantity/item.Quantity - already[line.VariantID].amount
+			//
+			// Le prorata porte sur le cumul — ce qui a déjà été rendu plus ce
+			// qui l'est aujourd'hui — avant d'en retrancher ce qui a déjà été
+			// remboursé. Calculé sur les seules unités du jour, il retranchait
+			// deux fois le remboursement précédent : une cliente qui rendait
+			// une valise puis les deux autres se voyait refuser la moitié de
+			// son dû, avec un message qui n'expliquait rien.
+			maximum := item.Total*(already[line.VariantID].quantity+line.Quantity)/item.Quantity - already[line.VariantID].amount
 			if maximum < 0 {
 				maximum = 0
 			}
@@ -1701,10 +1708,13 @@ func (s *Server) processReturn(c *fiber.Ctx) error {
 			}
 		}
 
-		// On ne rembourse jamais plus que ce que le client a versé.
-		if r.Amount+previousRefunds > sale.Paid {
-			return fmt.Errorf("remboursement de %d F impossible : seuls %d F ont été encaissés sur cette facture",
-				r.Amount, sale.Paid-previousRefunds)
+		// On ne rembourse jamais plus que ce que la boutique détient encore
+		// sur cette facture. Paid est déjà net des remboursements passés —
+		// ceux-ci y figurent en règlements négatifs — et les y rajouter
+		// revenait à les compter deux fois.
+		if r.Amount > sale.Paid {
+			return fmt.Errorf("remboursement de %d F impossible : seuls %d F restent encaissés sur cette facture",
+				r.Amount, sale.Paid)
 		}
 		if e := tx.Save(&r).Error; e != nil {
 			return e

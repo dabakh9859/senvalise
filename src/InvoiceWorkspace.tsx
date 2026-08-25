@@ -11,7 +11,7 @@ type Doc=Entity&{reference?:string;status?:string;customerId?:number;subtotal?:n
 type Variant=Entity&{sku?:string;color?:string;size?:string;price?:number;stock?:number;active?:boolean;product?:Entity};
 type Props={document:Entity;kind:Kind;isAdmin:boolean;canSettle:boolean;onClose:()=>void;onDelete:()=>void;onUpdate:(values:Record<string,unknown>)=>Promise<void>;onUpdateLine:(line:Entity,values:Record<string,unknown>)=>Promise<void>;onAddLine:(values:Record<string,unknown>)=>Promise<void>;onDeleteLine:(line:Entity)=>Promise<void>;onAddPayment:(method:string,amount:number)=>Promise<void>;onCancelPayment:(payment:Entity)=>Promise<void>;onCancelAllPayments:()=>Promise<void>;onConvert?:()=>void;onGenerateDelivery?:()=>void;onOpenInvoice?:(row:Entity)=>void;onOpenQuote?:(row:Entity)=>void;onOpenDelivery?:(row:Entity)=>void};
 
-const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',ninea:'',tradeRegister:'',legalNote:'',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
+const baseInvoiceDefaults:InvoiceDefaults={companyName:'SenValise',tagline:'Solutions de voyage',phone:'+221 77 888 53 74',address:'Dakar, Sénégal',ninea:'',tradeRegister:'',legalNote:'',paymentTerms:'',bankDetails:'',email:'',website:'',thankYouTitle:'Merci pour votre confiance',footerNote:'Conservez ce document pour vos besoins de garantie ou de comptabilité.',companySignatureUrl:''};
 
 const shortDate=(value:unknown)=>value?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short'}).format(new Date(String(value))):'';
 // Les mentions legales du bas de page : on n'ecrit que ce qui est renseigne,
@@ -58,7 +58,7 @@ export default function InvoiceWorkspace(props:Props){
   // Memoise pour que l'effet de remise a zero du formulaire puisse declarer
   // ses dependances honnetement : invoiceInfo ne change que si le document ou
   // les reglages changent, ce qui etait deja la condition de declenchement.
-  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,ninea:defaults.ninea,tradeRegister:defaults.tradeRegister,legalNote:defaults.legalNote,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:String(doc.companySignatureUrl??'')}),[doc,defaults]);
+  const invoiceInfo=useMemo(()=>({companyName:doc.invoiceCompanyName||defaults.companyName,tagline:doc.invoiceTagline||defaults.tagline,phone:doc.invoicePhone||defaults.phone,address:doc.invoiceAddress||defaults.address,ninea:defaults.ninea,tradeRegister:defaults.tradeRegister,legalNote:defaults.legalNote,paymentTerms:defaults.paymentTerms,bankDetails:defaults.bankDetails,email:defaults.email,website:defaults.website,thankYouTitle:doc.invoiceThankYouTitle||defaults.thankYouTitle,footerNote:doc.invoiceFooterNote||String(doc.notes??defaults.footerNote),companySignatureUrl:String(doc.companySignatureUrl??'')}),[doc,defaults]);
   const editLine=editing?.startsWith('item:')?items.find(row=>String(row.id)===editing.slice(5)):undefined;
   useEffect(()=>{Promise.all([api<Entity[]>('/api/customers?limit=500'),api<Variant[]>('/api/variants?limit=500'),api<{invoiceDefaults:InvoiceDefaults}>('/api/checkout-settings')]).then(([customerRows,variantRows,settings])=>{setCustomers(customerRows);setVariants(variantRows.filter(row=>row.active!==false));setDefaults({...baseInvoiceDefaults,...settings.invoiceDefaults})}).catch(()=>{})},[]);
   useEffect(()=>setForm({reference:String(doc.reference??''),customerId:String(doc.customerId??''),status:String(doc.status??''),subtotal:String(doc.subtotal??0),discount:String(doc.discount??0),taxRate:String(doc.taxRate??0),tax:String(doc.tax??0),total:String(doc.total??0),notes:String(doc.notes??''),validUntil:doc.validUntil?.slice(0,16)??'',paymentMethod:'cash',paymentAmount:String(remaining),invoiceCompanyName:invoiceInfo.companyName,invoiceTagline:invoiceInfo.tagline,invoicePhone:invoiceInfo.phone,invoiceAddress:invoiceInfo.address,invoiceThankYouTitle:invoiceInfo.thankYouTitle,invoiceFooterNote:invoiceInfo.footerNote,addVariantId:'',addQuantity:'1',addUnitPrice:'0',addDiscount:'0'}),[doc,defaults,invoiceInfo,remaining]);
@@ -137,19 +137,101 @@ export default function InvoiceWorkspace(props:Props){
         <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
         <div className="invoice-scroll"><article className="invoice-paper" id="business-document-print">
           <div className="invoice-brand-bar"><img className="invoice-logo-mark" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/><button className={`invoice-brand-details document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><strong>{invoiceInfo.companyName}</strong><small>{invoiceInfo.tagline}</small></button><button className={`invoice-brand-contact document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>{invoiceInfo.phone}<br/>{invoiceInfo.address}</button></div>
-          <div className="invoice-brand-rule"><i/><i/></div>
-          <div className="invoice-title-row"><button className="document-editable" onClick={()=>openEdit('general')}><small>{title}</small><h2>{title}</h2></button><button className="document-editable align-right" onClick={()=>openEdit('general')}><strong>{doc.reference}</strong><span>Émis le {longDate(doc.createdAt)}</span></button></div>
-          <div className="invoice-parties"><button className={`document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><small>ÉMETTEUR</small><strong>{invoiceInfo.companyName}</strong><span>{invoiceInfo.address}</span><span>{invoiceInfo.phone}</span></button><button className="document-editable" onClick={()=>openEdit('client')}><small>{props.kind==='delivery'?'DESTINATAIRE':'CLIENT'}</small><strong>{String(customer.name??'Client comptoir')}</strong><span>{String(customer.phone??customer.email??'')}</span><span>{String(customer.address??'')}</span></button><button className="document-editable" onClick={()=>openEdit(props.kind==='invoice'?'payment':'details')}><small>{props.kind==='invoice'?'RÈGLEMENT':props.kind==='quote'?'VALIDITÉ':'LIVRAISON'}</small><strong>{status}</strong>{props.kind==='invoice'&&<span>{remaining?`Reste : ${money(remaining)}`:'Solde réglé'}</span>}{props.kind==='invoice'&&methodsUsed&&<span>{methodsUsed}</span>}{props.kind==='quote'&&<span>{doc.validUntil?`Jusqu’au ${longDate(doc.validUntil)}`:'Sans échéance'}</span>}{props.kind==='delivery'&&<span>Facture : {String(linkedInvoice?.reference??doc.saleId??'—')}</span>}</button></div>
+          {/* En-tête : logo, coordonnées, cartouche du document. Chaque bloc
+              reste une zone modifiable — c'est ce qui permet de corriger la
+              pièce sans quitter la fiche. */}
+          <header className="doc-head">
+            <img className="doc-logo" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/>
+            <button className={`doc-company document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>
+              <strong>{invoiceInfo.companyName.toUpperCase()}</strong>
+              <ul>{[invoiceInfo.address,invoiceInfo.phone,invoiceInfo.email,invoiceInfo.website].filter(Boolean).map(row=><li key={row}>{row}</li>)}</ul>
+            </button>
+            <button className="doc-meta document-editable" onClick={()=>openEdit('general')}>
+              <h2>{title}</h2>
+              <span className="doc-number"><i>N°</i><b>{String(doc.reference)}</b></span>
+              <dl>
+                <div><dt>Date :</dt><dd>{longDate(doc.createdAt)}</dd></div>
+                {props.kind==='invoice'&&<>
+                  <div><dt>Règlement :</dt><dd>{remaining?`Reste ${money(remaining)}`:'Soldée'}</dd></div>
+                  {methodsUsed&&<div><dt>Mode :</dt><dd>{methodsUsed}</dd></div>}
+                </>}
+                {props.kind==='quote'&&<div><dt>Validité :</dt><dd>{doc.validUntil?`Jusqu’au ${longDate(doc.validUntil)}`:'Sans échéance'}</dd></div>}
+                {props.kind==='delivery'&&<div><dt>Facture :</dt><dd>{String(linkedInvoice?.reference??doc.saleId??'—')}</dd></div>}
+              </dl>
+            </button>
+          </header>
+
+          <section className="doc-parties">
+            <button className="doc-party document-editable" onClick={()=>openEdit('client')}>
+              <span className="doc-pill">{props.kind==='delivery'?'LIVRER À :':props.kind==='quote'?'DEVIS POUR :':'FACTURÉ À :'}</span>
+              <strong>{String(customer.name??'Client comptoir')}</strong>
+              <span>{String(customer.phone??customer.email??'')}</span>
+              <span>{String(customer.address??'')}</span>
+            </button>
+            <button className="doc-party doc-party-state document-editable" onClick={()=>openEdit(props.kind==='invoice'?'payment':'details')}>
+              <span className="doc-pill alt">{props.kind==='invoice'?'RÈGLEMENT':props.kind==='quote'?'VALIDITÉ':'LIVRAISON'}</span>
+              <strong>{status}</strong>
+              {props.kind==='invoice'&&<span>{remaining?`Reste ${money(remaining)} à encaisser`:'Solde réglé'}</span>}
+            </button>
+          </section>
+
+          {/* Les liens entre pièces — devis converti, bon de livraison — se
+              trouvent sous les parties : c'est là qu'on les cherche quand on
+              remonte une commande. */}
           <DocumentLinks doc={doc} kind={props.kind} linkedInvoice={linkedInvoice} onOpenInvoice={props.onOpenInvoice} onOpenQuote={props.onOpenQuote} onOpenDelivery={props.onOpenDelivery}/>
-          <table className="invoice-table"><thead><tr><th>Description</th><th>Qté</th>{props.kind!=='delivery'&&<><th>Prix unitaire</th><th>Remise</th><th>Montant</th></>}</tr></thead><tbody>{items.map(item=><tr key={item.id} className={props.isAdmin?'document-line-clickable':''} onClick={()=>openEdit(`item:${item.id}`)}><td><strong>{lineName(item)}</strong><span>{String(item.variant?.sku??'')}</span></td><td>{item.quantity}</td>{props.kind!=='delivery'&&<><td>{money(item.unitPrice)}</td><td>{Number(item.discount)>0?`− ${money(item.discount)}`:'—'}</td><td><strong>{money(item.total)}</strong></td></>}</tr>)}</tbody></table>
+
+          <table className="doc-table"><thead><tr>
+            <th>#</th><th>Désignation</th><th>Qté</th>
+            {props.kind!=='delivery'&&<><th>Prix unit. (FCFA)</th><th>Remise</th><th>Montant (FCFA)</th></>}
+          </tr></thead><tbody>{items.map((item,index)=><tr key={item.id} className={props.isAdmin?'document-line-clickable':''} onClick={()=>openEdit(`item:${item.id}`)}>
+            <td>{index+1}</td>
+            <td className="doc-designation"><strong>{lineName(item)}</strong><span>{String(item.variant?.sku??'')}</span></td>
+            <td>{item.quantity}</td>
+            {props.kind!=='delivery'&&<>
+              <td>{money(item.unitPrice)}</td>
+              <td>{Number(item.discount)>0?`− ${money(item.discount)}`:'—'}</td>
+              <td><strong>{money(item.total)}</strong></td>
+            </>}
+          </tr>)}</tbody></table>
           {props.isAdmin&&!locked&&<button className="invoice-add-product" onClick={()=>openEdit('add-item')}><PackagePlus/>Ajouter un produit à {pieceLabel}</button>}
-          {props.kind!=='delivery'&&<div className="invoice-bottom"><button className="invoice-note document-editable" onClick={()=>openEdit(props.kind==='invoice'?'content':'details')}><strong>{invoiceInfo.thankYouTitle}</strong><p>{invoiceInfo.footerNote}</p></button><button className="document-totals document-editable" onClick={()=>openEdit('amounts')}><span>Sous-total <b>{money(doc.subtotal)}</b></span>{Number(doc.discount)>0&&<span>Remise <b>− {money(doc.discount)}</b></span>}{Number(doc.tax)>0&&<span>TVA <b>{money(doc.tax)}</b></span>}<strong>Total TTC <b>{money(doc.total)}</b></strong>{props.kind==='invoice'&&<><span>Montant payé <b>{money(doc.paid)}</b></span><span>Reste à payer <b>{money(remaining)}</b></span></>}</button></div>}
-          {props.kind==='invoice'&&activePayments.length>1&&<div className="invoice-payments">
+
+          {props.kind!=='delivery'&&<section className="doc-bottom">
+            <button className="doc-notes document-editable" onClick={()=>openEdit(props.kind==='invoice'?'content':'details')}>
+              {invoiceInfo.paymentTerms&&<div className="doc-note"><i/><span><b>CONDITIONS DE PAIEMENT</b><small>{invoiceInfo.paymentTerms}</small></span></div>}
+              {invoiceInfo.bankDetails&&<div className="doc-note"><i/><span><b>INFORMATIONS BANCAIRES</b><small>{invoiceInfo.bankDetails}</small></span></div>}
+              <strong className="doc-thanks">{invoiceInfo.thankYouTitle}</strong>
+              <p>{invoiceInfo.footerNote}</p>
+            </button>
+            <div className="doc-right">
+              <button className="doc-totals document-editable" onClick={()=>openEdit('amounts')}>
+                <span>Sous-total <b>{money(doc.subtotal)}</b></span>
+                {Number(doc.discount)>0&&<span>Remise <b>− {money(doc.discount)}</b></span>}
+                {Number(doc.tax)>0&&<span>TVA <b>{money(doc.tax)}</b></span>}
+                <strong className="doc-grand">TOTAL TTC <b>{money(doc.total)}</b></strong>
+                {props.kind==='invoice'&&<>
+                  <span>Montant payé <b>{money(doc.paid)}</b></span>
+                  <span>Reste à payer <b>{money(remaining)}</b></span>
+                </>}
+              </button>
+              <button className="doc-stamp document-editable" onClick={()=>openEdit('signatures')}>
+                <small>CACHET &amp; SIGNATURE</small>
+                {invoiceInfo.companySignatureUrl&&<img src={invoiceInfo.companySignatureUrl} alt="Cachet de l’entreprise"/>}
+              </button>
+            </div>
+          </section>}
+
+          {props.kind==='invoice'&&activePayments.length>1&&<div className="doc-payments">
             <small>RÈGLEMENTS REÇUS</small>
             <p>{activePayments.map((row,index)=><span key={String(row.id)}>
               {index>0&&<i/>}{shortDate(row.createdAt)} · {Number(row.amount)<0?'Remboursement ':''}{methodLabel(row.method)} <b>{money(Math.abs(Number(row.amount)))}</b>
             </span>)}</p>
           </div>}
+
+          {legalLine(invoiceInfo)&&<p className="doc-legal">{legalLine(invoiceInfo)}</p>}
+          <p className="doc-generated">Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</p>
+          <footer className="doc-band">
+            <span><i>{invoiceInfo.companyName},</i> votre compagnon de voyage !</span>
+          </footer>
           <footer className="invoice-signatures"><div className="signature-slot"><span>Signature client</span><i/></div><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Pour {invoiceInfo.companyName}</span>{invoiceInfo.companySignatureUrl?<img src={invoiceInfo.companySignatureUrl} alt="Signature entreprise"/>:<i/>}</button>{legalLine(invoiceInfo)&&<b className="invoice-legal">{legalLine(invoiceInfo)}</b>}<small>Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small></footer>
         </article></div>
         {(props.isAdmin||props.canSettle)&&<footer className="invoice-manager-actions"><span>{props.isAdmin?'Cliquez sur le client, le règlement, les montants ou une ligne pour les modifier.':'Cliquez sur le client ou le règlement pour les modifier.'}</span><div>{props.isAdmin&&props.onConvert&&<button className="primary" onClick={props.onConvert} disabled={Boolean(doc.convertedSaleId)}><FileCheck2/>{doc.convertedSaleId?'Déjà converti':'Créer la facture'}</button>}{props.isAdmin&&props.onGenerateDelivery&&<button className="primary" onClick={props.onGenerateDelivery} disabled={Boolean(doc.deliveryNote)}><Truck/>{doc.deliveryNote?'Bon déjà généré':'Générer le bon'}</button>}{props.kind==='invoice'&&remaining>0&&<button className="primary" onClick={()=>openEdit('payment')}><Plus/>Encaisser un règlement</button>}<button onClick={()=>openEdit('general')}><Pencil/>Modifier</button>{props.isAdmin&&<button className="invoice-delete" onClick={props.onDelete}>Supprimer</button>}</div></footer>}

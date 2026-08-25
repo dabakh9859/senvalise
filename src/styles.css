@@ -1340,3 +1340,130 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
 .cash-out{color:var(--danger,#c02626);font-variant-numeric:tabular-nums}
 /* Les lignes de la liste s'ouvrent au clic : le curseur doit le dire. */
 .cash-page .records-table tbody tr{cursor:pointer}
+
+/* Papier à en-tête Sen Valise, à l'écran.
+   ------------------------------------------------------------------------
+   Même document que le PDF : mêmes couleurs, même en-tête, même bandeau de
+   pied. Ce qui change à l'écran, c'est que chaque zone reste un bouton — on
+   clique le client, les montants, une ligne, le cachet pour les corriger.
+   Les règles qui suivent habillent ces boutons sans leur donner l'air de
+   boutons : bordure invisible au repos, révélée au survol. */
+.invoice-paper{--doc-blue:#0b42c5;--doc-yellow:#ffb700;--doc-ink:#151a24;--doc-muted:#687385;--doc-line:#dce3ec;
+  background:#fff;color:var(--doc-ink);padding:0 0 0;position:relative;overflow:hidden}
+
+.doc-head{display:grid;grid-template-columns:auto 1fr 250px;gap:22px;align-items:start;padding:30px 34px 12px}
+.doc-logo{width:110px;height:110px;object-fit:contain;flex:none}
+.doc-company{border-left:2px solid var(--doc-blue);padding:6px 0 0 18px;text-align:left}
+.doc-company strong{display:block;color:var(--doc-blue);font:800 17px Inter,system-ui,sans-serif;letter-spacing:.02em;margin-bottom:9px}
+.doc-company ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.doc-company li{position:relative;padding-left:14px;font-size:12px;color:var(--doc-ink);line-height:1.5}
+.doc-company li:before{content:"•";position:absolute;left:0;color:var(--doc-blue);font-weight:900}
+.doc-meta{text-align:right}
+.doc-meta h2{margin:0;color:var(--doc-blue);font:800 34px Inter,system-ui,sans-serif;letter-spacing:-.03em;line-height:1}
+/* La pastille du numéro : étiquette bleue collée à un champ bordé de jaune.
+   C'est le seul endroit où les deux couleurs se touchent, et c'est ce qui
+   attire l'œil sur la référence. */
+.doc-number{display:flex;align-items:stretch;margin:12px 0 14px;border:2px solid var(--doc-yellow);border-radius:20px;overflow:hidden;background:#fff}
+.doc-number i{background:var(--doc-blue);color:#fff;font-style:normal;font-weight:800;font-size:11px;padding:6px 14px;display:flex;align-items:center;border-radius:18px}
+.doc-number b{flex:1;text-align:center;font-size:13px;padding:6px 10px;font-variant-numeric:tabular-nums}
+.doc-meta dl{margin:0;display:flex;flex-direction:column;gap:4px}
+.doc-meta dl div{display:flex;justify-content:flex-end;gap:10px;font-size:12px}
+.doc-meta dt{color:var(--doc-blue);font-weight:700}
+.doc-meta dd{margin:0;min-width:110px;text-align:left}
+
+.doc-parties{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:8px 34px 20px}
+.doc-party{text-align:left;display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--doc-muted);position:relative}
+.doc-party strong{font:700 14px Inter,system-ui,sans-serif;color:var(--doc-ink);margin-top:6px}
+/* L'étiquette arrondie et le filet qui la prolonge : la signature du modèle. */
+.doc-pill{align-self:flex-start;background:var(--doc-blue);color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;padding:6px 16px;border-radius:14px}
+.doc-pill.alt{background:var(--doc-yellow);color:#3d2c00}
+.doc-party:after{content:"";position:absolute;left:150px;right:0;top:13px;height:1px;background:var(--doc-line)}
+
+.doc-table{width:calc(100% - 68px);margin:0 34px;border-collapse:collapse;font-size:12px}
+.doc-table th{background:var(--doc-blue);color:#fff;text-transform:uppercase;font-size:10px;letter-spacing:.05em;padding:10px 8px;text-align:right}
+.doc-table th:first-child{width:34px;text-align:center;border-radius:0}
+.doc-table th:nth-child(2){text-align:left}
+.doc-table th:nth-child(3){text-align:center;width:56px}
+.doc-table td{padding:11px 8px;text-align:right;border-bottom:1px solid var(--doc-line)}
+.doc-table td:first-child{text-align:center;color:var(--doc-muted)}
+.doc-table td:nth-child(3){text-align:center}
+/* Une ligne sur deux teintée : sur vingt articles, c'est ce qui empêche de
+   lire le prix de la ligne d'à côté. */
+.doc-table tbody tr:nth-child(even){background:#f6f8fb}
+.doc-designation{text-align:left!important}
+.doc-designation strong{display:block;font-weight:700}
+.doc-designation span{display:block;font-size:10px;color:var(--doc-muted);margin-top:2px}
+
+.doc-bottom{display:grid;grid-template-columns:1fr 300px;gap:30px;padding:26px 34px 0;align-items:start}
+.doc-notes{text-align:left;display:flex;flex-direction:column;gap:14px}
+.doc-note{display:flex;gap:11px;align-items:flex-start}
+.doc-note i{width:22px;height:22px;border-radius:6px;background:var(--doc-blue);flex:none}
+.doc-note b{display:block;color:var(--doc-blue);font-size:11px;letter-spacing:.04em}
+.doc-note small{display:block;margin-top:4px;font-size:11.5px;color:var(--doc-ink);line-height:1.55;white-space:pre-line}
+/* Le remerciement et son trait jaune : le seul geste manuscrit du document. */
+.doc-thanks{font:italic 700 19px Georgia,"Times New Roman",serif;color:var(--doc-blue);margin-top:6px;position:relative;align-self:flex-start;padding-bottom:6px}
+.doc-thanks:after{content:"";position:absolute;left:4px;right:-6px;bottom:0;height:3px;background:var(--doc-yellow);transform:rotate(-.6deg);border-radius:2px}
+.doc-notes p{margin:2px 0 0;font-size:11px;color:var(--doc-muted);line-height:1.55}
+
+.doc-right{display:flex;flex-direction:column;gap:14px}
+.doc-totals{display:flex;flex-direction:column;gap:7px;text-align:left}
+.doc-totals span{display:flex;justify-content:space-between;font-size:12px;color:var(--doc-muted)}
+.doc-totals span b{color:var(--doc-ink);font-weight:700}
+.doc-grand{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1.5px solid var(--doc-ink);padding-top:11px;margin-top:4px;color:var(--doc-blue);font:800 14px Inter,system-ui,sans-serif}
+/* Le total dans une pastille jaune : le chiffre que le client cherche doit se
+   trouver sans lire le reste. */
+.doc-grand b{background:var(--doc-yellow);color:#3d2c00;padding:9px 16px;border-radius:8px;font-size:15px;font-variant-numeric:tabular-nums}
+.doc-stamp{border:1.5px solid var(--doc-blue);border-radius:8px;min-height:130px;padding:9px 11px;display:flex;flex-direction:column;align-items:center;text-align:left}
+.doc-stamp small{align-self:flex-start;color:var(--doc-blue);font-size:10px;font-weight:800;letter-spacing:.05em}
+.doc-stamp img{margin:auto;max-height:104px;max-width:90%;object-fit:contain}
+
+.doc-payments{margin:22px 34px 0;padding:11px 14px;border:1px solid var(--doc-line);border-radius:8px;background:#f9fafc}
+.doc-payments small{font-size:9px;letter-spacing:.1em;color:var(--doc-muted);font-weight:800}
+.doc-payments p{margin:6px 0 0;font-size:11.5px;line-height:1.9;color:#4a4f57}
+.doc-payments span{white-space:nowrap}
+.doc-payments b{font-weight:700;color:var(--doc-ink)}
+.doc-payments i{display:inline-block;width:1px;height:10px;margin:0 10px;vertical-align:-1px;background:var(--doc-line)}
+
+.doc-legal{margin:18px 34px 0;padding-top:12px;border-top:1px solid var(--doc-line);text-align:center;font-size:10.5px;font-weight:700;color:#5a6069}
+
+/* Bandeau de pied : deux aplats séparés par une diagonale, exactement comme
+   sur le PDF. C'est ce qui rend les deux documents reconnaissables comme un
+   seul. */
+.doc-band{margin-top:24px;min-height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;color:#fff;
+  background:linear-gradient(101deg,var(--doc-blue) 0 72%,var(--doc-yellow) 72% 100%)}
+.doc-band span{font-size:13px}
+.doc-band i{font:italic 400 16px Georgia,"Times New Roman",serif;font-style:italic}
+.doc-band b{font-size:10px;font-weight:600;opacity:.92;color:#3d2c00}
+
+/* Les zones modifiables : rien ne bouge au repos, tout se révèle au survol. */
+.invoice-paper .document-editable{background:none;border:1px dashed transparent;border-radius:7px;padding:4px 6px;margin:-4px -6px;cursor:pointer;color:inherit;width:auto}
+.invoice-paper .document-editable:hover:not(:disabled),.invoice-paper .document-editable:focus-visible{border-color:var(--doc-blue);background:rgba(11,66,197,.035)}
+.invoice-paper .document-editable.is-static{cursor:default}
+.invoice-paper .document-line-clickable{cursor:pointer}
+.invoice-paper .document-line-clickable:hover td{background:rgba(11,66,197,.06)}
+
+@media(max-width:860px){
+  .doc-head{grid-template-columns:1fr;gap:14px;padding:20px 18px 10px}
+  .doc-company{border-left:0;padding-left:0}
+  .doc-meta{text-align:left}
+  .doc-meta dl div{justify-content:flex-start}
+  .doc-logo{width:78px;height:78px}
+  .doc-parties,.doc-bottom{grid-template-columns:1fr;padding-inline:18px}
+  .doc-party:after{display:none}
+  .doc-table{width:calc(100% - 36px);margin-inline:18px}
+  .doc-table th:nth-child(4),.doc-table td:nth-child(4),.doc-table th:nth-child(5),.doc-table td:nth-child(5){display:none}
+  .doc-payments,.doc-legal{margin-inline:18px}
+  .doc-band{flex-direction:column;align-items:flex-start;gap:4px;padding:12px 18px}
+}
+
+/* Deux corrections d'aplomb sur le papier à en-tête.
+   ------------------------------------------------------------------------
+   Le cadre du cachet disparaissait : la règle qui neutralise la bordure des
+   zones modifiables est plus spécifique et l'emportait. Et la ligne de
+   génération, posée dans le bandeau, tombait sur la diagonale — elle passe
+   au-dessus, en gris. */
+.invoice-paper .doc-stamp.document-editable{border:1.5px solid var(--doc-blue);border-style:solid}
+.invoice-paper .doc-stamp.document-editable:hover{background:rgba(11,66,197,.04)}
+.doc-generated{margin:10px 34px 0;text-align:center;font-size:10px;color:var(--doc-muted)}
+.doc-band{justify-content:flex-start}
+@media(max-width:860px){.doc-generated{margin-inline:18px}}

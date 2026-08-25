@@ -21,137 +21,50 @@
   body.is-printing>#print-root{display:block !important}
   /* Une facture s'imprime en clair, meme si l'ecran est en sombre :
      la palette claire est redeclaree sur la feuille. */
-  #print-root{color-scheme:light;--c0755d8l:#0755d8;--c0755d8s:#0755d8;--c0755d8t:#0755d8;--c111317s:#111317;--c11151es:#11151e;--c121417t:#121417;--c15181ct:#15181c;--c16191dt:#16191d;--c171a1et:#171a1e;--c17724ft:#17724f;--c181b1ft:#181b1f;--c1d2024t:#1d2024;--c1d2025t:#1d2025;--c1f2226t:#1f2226;--c202328t:#202328;--c219668s:#219668;--c222222t:#222;--c22252at:#22252a;--c22262bt:#22262b;--c23805bt:#23805b;--c24272cs:#24272c;--c24272ct:#24272c;--c24282es:#24282e;--c252930t:#252930;--c262a30t:#262a30;--c2768a0t:#2768a0;--c276b9ft:#276b9f;--c27825ft:#27825f;--c282c32s:#282c32;--c292d33l:#292d33;--c292d33s:#292d33;--c292d33t:#292d33;--c2f6ea6t:#2f6ea6;--c30343at:#30343a;--c31343at:#31343a;--c31353bt:#31353b;--c333333l:#333;--c33373ds:#33373d;--c33373dt:#33373d;--c33373et:#33373e;--c34383et:#34383e;--c347451t:#347451;--c3475a6t:#3475a6;--c356a47t:#356a47;--c356f9ft:#356f9f;--c363a40t:#363a40;--c3a714ct:#3a714c;--c3d4147t:#3d4147;--c3d88c5s:#3d88c5;--c3f444at:#3f444a;--c3f6f91t:#3f6f91;--c4b5057t:#4b5057;--c4e535at:#4e535a;--c525963t:#525963;--c53575et:#53575e;--c535860t:#535860;--c555a62s:#555a62;--c585c63t:#585c63;--c5890b9l:#5890b9;--c5f646ct:#5f646c;--c62676ft:#62676f;--c63686ft:#63686f;--c656a71t:#656a71;--c656a72t:#656a72;--c666b72t:#666b72;--c676c73t:#676c73;--c686d74t:#686d74;--c69707at:#69707a;--c6c7179t:#6c7179;--c6e737at:#6e737a;--c6e737bt:#6e737b;--c6f747bt:#6f747b;--c70757dt:#70757d;--c737982t:#737982;--c747a83t:#747a83;--c757a81t:#757a81;--c767b82t:#767b82;--c777777l:#777;--c777777t:#777;--c777b82t:#777b82;--c777c83t:#777c83;--c777c84s:#777c84;--c777c84t:#777c84;--c777c85t:#777c85;--c777d85t:#777d85;--c777d86t:#777d86;--c7a7f86t:#7a7f86;--c7d8289t:#7d8289;--c7d828at:#7d828a;--c7e838at:#7e838a;--c7f848ct:#7f848c;--c83888fl:#83888f;--c838890t:#838890;--c858990t:#858990;--c858a91t:#858a91;--c858a92t:#858a92;--c875f14t:#875f14;--c878c93t:#878c93;--c888888t:#888;--c888c88t:#888c88;--c888d94t:#888d94;--c898e96t:#898e96;--c8a8e95t:#8a8e95;--c8a8f96t:#8a8f96;--c8a8f97t:#8a8f97;--c8b8f96t:#8b8f96;--c8b9097l:#8b9097;--c8b9097t:#8b9097;--c8b9098t:#8b9098;--c8c5c08t:#8c5c08;--c8c9097t:#8c9097;--c8c9198t:#8c9198;--c8d9198t:#8d9198;--c8d9299t:#8d9299;--c8e9298t:#8e9298;--c90949at:#90949a;--c90949bt:#90949b;--c90959ct:#90959c;--c91610dt:#91610d;--c91959bt:#91959b;--c92969ct:#92969c;--c92969dt:#92969d;--c94610bt:#94610b;--c94989et:#94989e;--c95999ft:#95999f;--c9599a0t:#9599a0;--c969aa0t:#969aa0;--c969aa1t:#969aa1;--c983e3et:#983e3e;--c984646t:#984646;--c985555t:#985555;--c98650at:#98650a;--c989ba1t:#989ba1;--c989ca2t:#989ca2;--c999999t:#999;--c999ca2t:#999ca2;--c999da3t:#999da3;--c999da4t:#999da4;--c9a3e3et:#9a3e3e;--c9a9da1t:#9a9da1;--c9a9da3l:#9a9da3;--c9a9da3t:#9a9da3;--c9a9ea4t:#9a9ea4;--c9a9ea5t:#9a9ea5;--c9b3f3ft:#9b3f3f;--c9b6161t:#9b6161;--c9b9fa5t:#9b9fa5;--c9b9fa6t:#9b9fa6;--c9c4141t:#9c4141;--c9c4646t:#9c4646;--c9ca3afl:#9ca3af;--c9e4848t:#9e4848;--ca05252t:#a05252;--ca06324t:#a06324;--ca0a3a8t:#a0a3a8;--ca0a4aat:#a0a4aa;--ca14343t:#a14343;--ca16b0at:#a16b0a;--ca1a5act:#a1a5ac;--ca23d3dt:#a23d3d;--ca24141t:#a24141;--ca2a5aat:#a2a5aa;--ca33c3cs:#a33c3c;--ca33c3ct:#a33c3c;--ca3a7aet:#a3a7ae;--ca43c3ct:#a43c3c;--ca4a7act:#a4a7ac;--ca64b4bt:#a64b4b;--ca6a9aft:#a6a9af;--ca9adb3t:#a9adb3;--ca9adb4l:#a9adb4;--caaaaaat:#aaa;--caaaeb4t:#aaaeb4;--caeb2b8t:#aeb2b8;--caebfdbl:#aebfdb;--cb0b3b8t:#b0b3b8;--cb0b4bat:#b0b4ba;--cb8cef6l:#b8cef6;--cb9bbc0l:#b9bbc0;--cb9c5d8l:#b9c5d8;--cbfc2c7l:#bfc2c7;--cc0603fs:#c0603f;--cc3c6cal:#c3c6ca;--cc6c9cel:#c6c9ce;--cc8ead9l:#c8ead9;--cc9cbd0l:#c9cbd0;--cc9e2f5l:#c9e2f5;--ccddbf2l:#cddbf2;--cced0d4l:#ced0d4;--ccfd1d5l:#cfd1d5;--cd34f4fs:#d34f4f;--cd8daddl:#d8dadd;--cd9dce0l:#d9dce0;--cdcdee1s:#dcdee1;--cdce0e5l:#dce0e5;--cdce5f5l:#dce5f5;--cddddddl:#ddd;--cdddddds:#ddd;--cdddfe2l:#dddfe2;--cdedfe2l:#dedfe2;--cdfe0e3l:#dfe0e3;--cdfe1e4l:#dfe1e4;--cdfe1e4s:#dfe1e4;--cdfe1e5l:#dfe1e5;--cdfe2e6l:#dfe2e6;--ce0e1e3l:#e0e1e3;--ce0e1e4l:#e0e1e4;--ce0e1e5l:#e0e1e5;--ce0e2e5l:#e0e2e5;--ce0e3e7l:#e0e3e7;--ce1e2e5l:#e1e2e5;--ce1e3e6l:#e1e3e6;--ce1e4e8l:#e1e4e8;--ce2e3e5l:#e2e3e5;--ce2e3e6l:#e2e3e6;--ce2e4e7l:#e2e4e7;--ce3e3e6l:#e3e3e6;--ce3e4e6l:#e3e4e6;--ce4a126s:#e4a126;--ce4e5e7s:#e4e5e7;--ce4e5e8l:#e4e5e8;--ce4e8ebs:#e4e8eb;--ce5c1c1l:#e5c1c1;--ce5e5e2s:#e5e5e2;--ce5e6e8l:#e5e6e8;--ce5e6e9l:#e5e6e9;--ce5e7eal:#e5e7ea;--ce5e7ebl:#e5e7eb;--ce5e9e4s:#e5e9e4;--ce5f3ect:#e5f3ec;--ce6bcbcl:#e6bcbc;--ce6e7e9l:#e6e7e9;--ce6f2e9s:#e6f2e9;--ce7e4dfs:#e7e4df;--ce7e8eal:#e7e8ea;--ce7e8ebl:#e7e8eb;--ce8cacal:#e8caca;--ce8e9ebl:#e8e9eb;--ce8e9ebs:#e8e9eb;--ce8eaeel:#e8eaee;--ce8f6efs:#e8f6ef;--ce9e8e3s:#e9e8e3;--ce9ebees:#e9ebee;--ce9f4ecs:#e9f4ec;--ceaf4fcs:#eaf4fc;--cebe6e3s:#ebe6e3;--cebeae7s:#ebeae7;--cebeceel:#ebecee;--cece9e4s:#ece9e4;--cececefl:#ececef;--cececefs:#ececef;--ceceef0l:#eceef0;--ceceef0s:#eceef0;--ceceef1l:#eceef1;--cededeel:#ededee;--cedf5fbs:#edf5fb;--ceeece9s:#eeece9;--ceeeeees:#eee;--ceef4ffs:#eef4ff;--ceef6fcs:#eef6fc;--cefdda7l:#efdda7;--cefeff0l:#efeff0;--cefeff0s:#efeff0;--cefeff1s:#efeff1;--ceff0f1l:#eff0f1;--cf0dc9el:#f0dc9e;--cf0f0f1l:#f0f0f1;--cf0f0f1s:#f0f0f1;--cf0f0f2s:#f0f0f2;--cf0f1f2s:#f0f1f2;--cf1cacal:#f1caca;--cf1f1efs:#f1f1ef;--cf1f1f2s:#f1f1f2;--cf1f1f3s:#f1f1f3;--cf1f2f3l:#f1f2f3;--cf1f2f3s:#f1f2f3;--cf2f2f3l:#f2f2f3;--cf2f2f3s:#f2f2f3;--cf2f2f4s:#f2f2f4;--cf2f3f4s:#f2f3f4;--cf2f6fds:#f2f6fd;--cf3f3f4s:#f3f3f4;--cf3f3f5s:#f3f3f5;--cf4f4f5s:#f4f4f5;--cf4f5f7s:#f4f5f7;--cf4f7fcs:#f4f7fc;--cf5eaeas:#f5eaea;--cf5f5f6s:#f5f5f6;--cf6cf22s:#f6cf22;--cf6cf22t:#f6cf22;--cf6eaeas:#f6eaea;--cf6f6f7s:#f6f6f7;--cf6f9ffs:#f6f9ff;--cf7f7f8s:#f7f7f8;--cf7f8f9s:#f7f8f9;--cf7faffs:#f7faff;--cf8e7e7s:#f8e7e7;--cf8e9e9s:#f8e9e9;--cfaeaeas:#faeaea;--cfafafas:#fafafa;--cfafafbs:#fafafb;--cfbefefs:#fbefef;--cfbfbfcs:#fbfbfc;--cfdeaeas:#fdeaea;--cfdececs:#fdecec;--cfff0f0s:#fff0f0;--cfff1f1s:#fff1f1;--cfff2f2s:#fff2f2;--cfff3d6s:#fff3d6;--cfff4d7s:#fff4d7;--cfff5d9s:#fff5d9;--cfffaf0s:#fffaf0;--cffffffs:#fff;--cfffffft:#fff;}
-  #print-root,#print-root *{
+  #print-root{color-scheme:light;--c0755d8l:#0755d8;--c0755d8s:#0755d8;--c0755d8t:#0755d8;--c111317s:#111317;--c11151es:#11151e;--c121417t:#121417;--c15181ct:#15181c;--c16191dt:#16191d;--c171a1et:#171a1e;--c17724ft:#17724f;--c181b1ft:#181b1f;--c1d2024t:#1d2024;--c1d2025t:#1d2025;--c1f2226t:#1f2226;--c202328t:#202328;--c219668s:#219668;--c222222t:#222;--c22252at:#22252a;--c22262bt:#22262b;--c23805bt:#23805b;--c24272cs:#24272c;--c24272ct:#24272c;--c24282es:#24282e;--c252930t:#252930;--c262a30t:#262a30;--c2768a0t:#2768a0;--c276b9ft:#276b9f;--c27825ft:#27825f;--c282c32s:#282c32;--c292d33l:#292d33;--c292d33s:#292d33;--c292d33t:#292d33;--c2f6ea6t:#2f6ea6;--c30343at:#30343a;--c31343at:#31343a;--c31353bt:#31353b;--c333333l:#333;--c33373ds:#33373d;--c33373dt:#33373d;--c33373et:#33373e;--c34383et:#34383e;--c347451t:#347451;--c3475a6t:#3475a6;--c356a47t:#356a47;--c356f9ft:#356f9f;--c363a40t:#363a40;--c3a714ct:#3a714c;--c3d4147t:#3d4147;--c3d88c5s:#3d88c5;--c3f444at:#3f444a;--c3f6f91t:#3f6f91;--c4b5057t:#4b5057;--c4e535at:#4e535a;--c525963t:#525963;--c53575et:#53575e;--c535860t:#535860;--c555a62s:#555a62;--c585c63t:#585c63;--c5890b9l:#5890b9;--c5f646ct:#5f646c;--c62676ft:#62676f;--c63686ft:#63686f;--c656a71t:#656a71;--c656a72t:#656a72;--c666b72t:#666b72;--c676c73t:#676c73;--c686d74t:#686d74;--c69707at:#69707a;--c6c7179t:#6c7179;--c6e737at:#6e737a;--c6e737bt:#6e737b;--c6f747bt:#6f747b;--c70757dt:#70757d;--c737982t:#737982;--c747a83t:#747a83;--c757a81t:#757a81;--c767b82t:#767b82;--c777777l:#777;--c777777t:#777;--c777b82t:#777b82;--c777c83t:#777c83;--c777c84s:#777c84;--c777c84t:#777c84;--c777c85t:#777c85;--c777d85t:#777d85;--c777d86t:#777d86;--c7a7f86t:#7a7f86;--c7d8289t:#7d8289;--c7d828at:#7d828a;--c7e838at:#7e838a;--c7f848ct:#7f848c;--c83888fl:#83888f;--c838890t:#838890;--c858990t:#858990;--c858a91t:#858a91;--c858a92t:#858a92;--c875f14t:#875f14;--c878c93t:#878c93;--c888888t:#888;--c888c88t:#888c88;--c888d94t:#888d94;--c898e96t:#898e96;--c8a8e95t:#8a8e95;--c8a8f96t:#8a8f96;--c8a8f97t:#8a8f97;--c8b8f96t:#8b8f96;--c8b9097l:#8b9097;--c8b9097t:#8b9097;--c8b9098t:#8b9098;--c8c5c08t:#8c5c08;--c8c9097t:#8c9097;--c8c9198t:#8c9198;--c8d9198t:#8d9198;--c8d9299t:#8d9299;--c8e9298t:#8e9298;--c90949at:#90949a;--c90949bt:#90949b;--c90959ct:#90959c;--c91610dt:#91610d;--c91959bt:#91959b;--c92969ct:#92969c;--c92969dt:#92969d;--c94610bt:#94610b;--c94989et:#94989e;--c95999ft:#95999f;--c9599a0t:#9599a0;--c969aa0t:#969aa0;--c969aa1t:#969aa1;--c983e3et:#983e3e;--c984646t:#984646;--c985555t:#985555;--c98650at:#98650a;--c989ba1t:#989ba1;--c989ca2t:#989ca2;--c999999t:#999;--c999ca2t:#999ca2;--c999da3t:#999da3;--c999da4t:#999da4;--c9a3e3et:#9a3e3e;--c9a9da1t:#9a9da1;--c9a9da3l:#9a9da3;--c9a9da3t:#9a9da3;--c9a9ea4t:#9a9ea4;--c9a9ea5t:#9a9ea5;--c9b3f3ft:#9b3f3f;--c9b6161t:#9b6161;--c9b9fa5t:#9b9fa5;--c9b9fa6t:#9b9fa6;--c9c4141t:#9c4141;--c9c4646t:#9c4646;--c9ca3afl:#9ca3af;--c9e4848t:#9e4848;--ca05252t:#a05252;--ca06324t:#a06324;--ca0a3a8t:#a0a3a8;--ca0a4aat:#a0a4aa;--ca14343t:#a14343;--ca16b0at:#a16b0a;--ca1a5act:#a1a5ac;--ca23d3dt:#a23d3d;--ca24141t:#a24141;--ca2a5aat:#a2a5aa;--ca33c3cs:#a33c3c;--ca33c3ct:#a33c3c;--ca3a7aet:#a3a7ae;--ca43c3ct:#a43c3c;--ca4a7act:#a4a7ac;--ca64b4bt:#a64b4b;--ca6a9aft:#a6a9af;--ca9adb3t:#a9adb3;--ca9adb4l:#a9adb4;--caaaaaat:#aaa;--caaaeb4t:#aaaeb4;--caeb2b8t:#aeb2b8;--caebfdbl:#aebfdb;--cb0b3b8t:#b0b3b8;--cb0b4bat:#b0b4ba;--cb8cef6l:#b8cef6;--cb9bbc0l:#b9bbc0;--cb9c5d8l:#b9c5d8;--cbfc2c7l:#bfc2c7;--cc0603fs:#c0603f;--cc3c6cal:#c3c6ca;--cc6c9cel:#c6c9ce;--cc8ead9l:#c8ead9;--cc9cbd0l:#c9cbd0;--cc9e2f5l:#c9e2f5;--ccddbf2l:#cddbf2;--cced0d4l:#ced0d4;--ccfd1d5l:#cfd1d5;--cd34f4fs:#d34f4f;--cd8daddl:#d8dadd;--cd9dce0l:#d9dce0;--cdcdee1s:#dcdee1;--cdce0e5l:#dce0e5;--cdce5f5l:#dce5f5;--cddddddl:#ddd;--cdddddds:#ddd;--cdddfe2l:#dddfe2;--cdedfe2l:#dedfe2;--cdfe0e3l:#dfe0e3;--cdfe1e4l:#dfe1e4;--cdfe1e4s:#dfe1e4;--cdfe1e5l:#dfe1e5;--cdfe2e6l:#dfe2e6;--ce0e1e3l:#e0e1e3;--ce0e1e4l:#e0e1e4;--ce0e1e5l:#e0e1e5;--ce0e2e5l:#e0e2e5;--ce0e3e7l:#e0e3e7;--ce1e2e5l:#e1e2e5;--ce1e3e6l:#e1e3e6;--ce1e4e8l:#e1e4e8;--ce2e3e5l:#e2e3e5;--ce2e3e6l:#e2e3e6;--ce2e4e7l:#e2e4e7;--ce3e3e6l:#e3e3e6;--ce3e4e6l:#e3e4e6;--ce4a126s:#e4a126;--ce4e5e7s:#e4e5e7;--ce4e5e8l:#e4e5e8;--ce4e8ebs:#e4e8eb;--ce5c1c1l:#e5c1c1;--ce5e5e2s:#e5e5e2;--ce5e6e8l:#e5e6e8;--ce5e6e9l:#e5e6e9;--ce5e7eal:#e5e7ea;--ce5e7ebl:#e5e7eb;--ce5e9e4s:#e5e9e4;--ce5f3ect:#e5f3ec;--ce6bcbcl:#e6bcbc;--ce6e7e9l:#e6e7e9;--ce6f2e9s:#e6f2e9;--ce7e4dfs:#e7e4df;--ce7e8eal:#e7e8ea;--ce7e8ebl:#e7e8eb;--ce8cacal:#e8caca;--ce8e9ebl:#e8e9eb;--ce8e9ebs:#e8e9eb;--ce8eaeel:#e8eaee;--ce8f6efs:#e8f6ef;--ce9e8e3s:#e9e8e3;--ce9ebees:#e9ebee;--ce9f4ecs:#e9f4ec;--ceaf4fcs:#eaf4fc;--cebe6e3s:#ebe6e3;--cebeae7s:#ebeae7;--cebeceel:#ebecee;--cece9e4s:#ece9e4;--cececefl:#ececef;--cececefs:#ececef;--ceceef0l:#eceef0;--ceceef0s:#eceef0;--ceceef1l:#eceef1;--cededeel:#ededee;--cedf5fbs:#edf5fb;--ceeece9s:#eeece9;--ceeeeees:#eee;--ceef4ffs:#eef4ff;--ceef6fcs:#eef6fc;--cefdda7l:#efdda7;--cefeff0l:#efeff0;--cefeff0s:#efeff0;--cefeff1s:#efeff1;--ceff0f1l:#eff0f1;--cf0dc9el:#f0dc9e;--cf0f0f1l:#f0f0f1;--cf0f0f1s:#f0f0f1;--cf0f0f2s:#f0f0f2;--cf0f1f2s:#f0f1f2;--cf1cacal:#f1caca;--cf1f1efs:#f1f1ef;--cf1f1f2s:#f1f1f2;--cf1f1f3s:#f1f1f3;--cf1f2f3l:#f1f2f3;--cf1f2f3s:#f1f2f3;--cf2f2f3l:#f2f2f3;--cf2f2f3s:#f2f2f3;--cf2f2f4s:#f2f2f4;--cf2f3f4s:#f2f3f4;--cf2f6fds:#f2f6fd;--cf3f3f4s:#f3f3f4;--cf3f3f5s:#f3f3f5;--cf4f4f5s:#f4f4f5;--cf4f5f7s:#f4f5f7;--cf4f7fcs:#f4f7fc;--cf5eaeas:#f5eaea;--cf5f5f6s:#f5f5f6;--cf6cf22s:#f6cf22;--cf6cf22t:#f6cf22;--cf6eaeas:#f6eaea;--cf6f6f7s:#f6f6f7;--cf6f9ffs:#f6f9ff;--cf7f7f8s:#f7f7f8;--cf7f8f9s:#f7f8f9;--cf7faffs:#f7faff;--cf8e7e7s:#f8e7e7;--cf8e9e9s:#f8e9e9;--cfaeaeas:#faeaea;--cfafafas:#fafafa;--cfafafbs:#fafafb;--cfbefefs:#fbefef;--cfbfbfcs:#fbfbfc;--cfdeaeas:#fdeaea;--cfdececs:#fdecec;--cfff0f0s:#fff0f0;--cfff1f1s:#fff1f1;--cfff2f2s:#fff2f2;--cfff3d6s:#fff3d6;--cfff4d7s:#fff4d7;--cfff5d9s:#fff5d9;--cfffaf0s:#fffaf0;--cffffffs:#fff;--cfffffft:#fff;}  #print-root,#print-root *{
     -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;
     box-shadow:none !important;text-shadow:none !important;animation:none !important;transition:none !important;
   }
 
-  /* La feuille EST la page A4 : pleine largeur, pleine hauteur. */
+  /* La feuille EST la page A4. Le papier à en-tête se met en page tout seul :
+     les règles .doc-* de styles.css portent déjà la géométrie, les couleurs et
+     le bandeau de pied. Cette feuille ne fait donc plus que trois choses —
+     poser l'A4, retirer ce qui n'a pas de sens sur papier, et empêcher une
+     ligne d'être coupée en deux par un saut de page.
+
+     C'est délibérément peu : l'ancienne version redéclarait chaque bloc, et
+     l'écran et l'imprimante divergeaient dès qu'on touchait à l'un des deux. */
   #print-root .invoice-paper{
     box-sizing:border-box !important;
-    display:flex !important;flex-direction:column !important;
-    width:100% !important;max-width:none !important;min-height:294mm !important;
-    margin:0 !important;padding:0 0 20mm !important;
-    border:0 !important;border-radius:0 !important;background:#fff !important;
-    font:400 10pt/1.5 Inter,system-ui,sans-serif !important;color:#1f2937 !important;
+    width:210mm !important;min-height:297mm !important;margin:0 !important;
+    background:#fff !important;color:#151a24 !important;
+    font:400 10pt/1.5 Inter,Arial,sans-serif !important;
   }
 
-  /* Les affordances d'édition redeviennent du texte. */
-  #print-root button,#print-root .document-editable{
-    all:unset !important;display:block !important;
-    font:inherit !important;color:inherit !important;cursor:default !important;
-  }
-  #print-root .document-links,
+  /* Ce qui appartient à l'écran seul : les zones cliquables ne doivent laisser
+     aucune trace sur le papier. */
   #print-root .invoice-add-product,
-  #print-root [data-print-hide]{display:none !important}
-
-  /* Bandeau de marque, d'un bord à l'autre de la feuille. */
-  #print-root .invoice-brand-bar{
-    display:flex !important;align-items:center !important;gap:5mm !important;
-    min-height:0 !important;margin:0 0 11mm !important;padding:11mm var(--pad) !important;
-    background:#0755d8 !important;color:#fff !important;border-radius:0 !important;
-  }
-  #print-root .invoice-brand-bar strong{font:800 19pt/1.1 Inter,sans-serif !important;color:#fff !important}
-  #print-root .invoice-brand-bar strong span{color:#f6cf22 !important}
-  #print-root .invoice-brand-bar small{display:block !important;margin-top:1mm !important;font-size:9pt !important;color:#dbe6fb !important}
-  #print-root .invoice-brand-bar p,
-  #print-root .invoice-brand-contact{margin:0 0 0 auto !important;text-align:right !important;font-size:9.5pt !important;line-height:1.5 !important;color:#e8f0fe !important}
-  #print-root .invoice-logo-mark{position:relative !important;flex:0 0 auto !important;width:14mm !important;height:14mm !important}
-  #print-root .invoice-logo-mark i{position:absolute !important;width:5mm !important;height:11.5mm !important;border-radius:1.5mm !important;background:#f6cf22 !important;transform:skew(-14deg) !important}
-  #print-root .invoice-logo-mark i:last-child{left:6.5mm !important;top:1.2mm !important;background:#fff !important}
-
-  /* Titre et référence. */
-  #print-root .invoice-title-row{
-    display:flex !important;align-items:flex-start !important;justify-content:space-between !important;
-    gap:12mm !important;padding:0 var(--pad) 9mm !important;
-  }
-  #print-root .invoice-title-row h2{margin:1.5mm 0 0 !important;font:800 30pt/1 Inter,sans-serif !important;color:#0755d8 !important}
-  #print-root .invoice-title-row .align-right,
-  #print-root .invoice-title-row>*:last-child{text-align:right !important}
-  #print-root .invoice-title-row strong{font:700 13pt/1.3 Inter,sans-serif !important;color:#1f2937 !important}
-  #print-root .invoice-title-row span{display:block !important;margin-top:1.5mm !important;font-size:10pt !important;color:#6b7280 !important}
-
-  /* Émetteur, client, règlement. */
-  #print-root .invoice-parties{
-    display:grid !important;grid-template-columns:repeat(3,1fr) !important;
-    gap:8mm !important;padding:0 var(--pad) 10mm !important;
-    break-inside:avoid;page-break-inside:avoid;
-  }
-  #print-root .invoice-parties>*{
-    display:flex !important;flex-direction:column !important;gap:1.2mm !important;
-    font-size:10pt !important;line-height:1.45 !important;color:#4b5563 !important;text-align:left !important;
-  }
-  #print-root .invoice-parties strong{font:700 11.5pt/1.3 Inter,sans-serif !important;color:#1f2937 !important}
-  #print-root .invoice-parties small,
-  #print-root .invoice-title-row small{
-    font-size:8pt !important;font-weight:700 !important;letter-spacing:.11em !important;
-    text-transform:uppercase !important;color:#8b9099 !important;
+  #print-root .invoice-manager-actions,
+  #print-root .document-links{display:none !important}
+  #print-root .document-editable{
+    border-color:transparent !important;background:none !important;
+    padding:0 !important;margin:0 !important;cursor:default !important;
   }
 
-  /* Tableau des lignes : c'est ici que se joue la pagination.
-     thead en table-header-group réimprime l'en-tête de colonnes en
-     haut de chaque page, exactement comme le gabarit d'Odoo. */
-  #print-root .invoice-table{
-    width:calc(100% - 2*var(--pad)) !important;margin:0 var(--pad) !important;
-    border-collapse:collapse !important;font-size:10pt !important;
-  }
-  #print-root .invoice-table thead{display:table-header-group !important}
-  #print-root .invoice-table tfoot{display:table-footer-group !important}
-  #print-root .invoice-table tr{break-inside:avoid;page-break-inside:avoid}
-  #print-root .invoice-table th{
-    padding:4mm 3mm !important;background:#f6cf22 !important;color:#42360a !important;
-    font:700 8.5pt/1.2 Inter,sans-serif !important;letter-spacing:.08em !important;
-    text-transform:uppercase !important;text-align:left !important;border:0 !important;
-  }
-  #print-root .invoice-table td{
-    padding:4.5mm 3mm !important;border:0 !important;border-bottom:.3mm solid #e5e7eb !important;
-    vertical-align:top !important;background:none !important;
-  }
-  #print-root .invoice-table th:not(:first-child),
-  #print-root .invoice-table td:not(:first-child){text-align:right !important;white-space:nowrap !important}
-  #print-root .invoice-table td:first-child strong{font-weight:600 !important;font-size:10.5pt !important;color:#1f2937 !important}
-  #print-root .invoice-table td:first-child span{display:block !important;margin-top:1mm !important;font-size:8.5pt !important;color:#8b9099 !important}
+  /* Un tableau long garde son en-tête sur chaque page, et aucune ligne n'est
+     coupée en deux. */
+  #print-root .doc-table thead{display:table-header-group !important}
+  #print-root .doc-table tr{break-inside:avoid !important;page-break-inside:avoid !important}
+  #print-root .doc-bottom,
+  #print-root .doc-stamp,
+  #print-root .doc-payments,
+  #print-root .doc-band{break-inside:avoid !important;page-break-inside:avoid !important}
 
-  /* Totaux : jamais coupés en deux. */
-  #print-root .invoice-bottom{
-    display:grid !important;grid-template-columns:1fr 76mm !important;gap:12mm !important;
-    margin:10mm var(--pad) 0 !important;padding:0 !important;
-    break-inside:avoid;page-break-inside:avoid;
-  }
-  #print-root .invoice-note{font-size:9.5pt !important;line-height:1.6 !important;color:#5b6470 !important;text-align:left !important}
-  #print-root .invoice-note strong{display:block !important;margin-bottom:2mm !important;font-size:10.5pt !important;color:#0755d8 !important;font-weight:700 !important}
-  #print-root .invoice-bottom dl{margin:0 !important;padding:0 !important}
-  #print-root .invoice-bottom dl div{display:flex !important;justify-content:space-between !important;gap:8mm !important;padding:2mm 0 !important;font-size:10pt !important}
-  #print-root .invoice-bottom dt{color:#6b7280 !important}
-  #print-root .invoice-bottom dd{margin:0 !important;font-weight:600 !important;color:#1f2937 !important;white-space:nowrap !important}
-  #print-root .invoice-total{margin-top:2mm !important;padding-top:3mm !important;border-top:.6mm solid #0755d8 !important;font-size:14pt !important}
-  #print-root .invoice-total dt,
-  #print-root .invoice-total dd{font-weight:800 !important;color:#0755d8 !important}
-
-  /* Signatures : margin-top:auto les colle en bas de la feuille,
-     quel que soit le nombre de lignes au-dessus. */
-  #print-root .invoice-signatures{
-    display:grid !important;grid-template-columns:1fr 1fr !important;gap:18mm !important;
-    margin:auto var(--pad) 0 !important;padding-top:7mm !important;
-    border-top:.3mm solid #e5e7eb !important;
-    break-inside:avoid;page-break-inside:avoid;
-  }
-  #print-root .invoice-signatures>*{
-    display:flex !important;flex-direction:column !important;gap:11mm !important;
-    font-size:9.5pt !important;color:#6b7280 !important;text-align:left !important;
-  }
-  #print-root .invoice-signatures i{display:block !important;height:0 !important;border-bottom:.3mm solid #9ca3af !important}
-  #print-root .invoice-signatures img{max-height:36mm !important;object-fit:contain !important;object-position:left bottom !important}
-  #print-root .invoice-signatures small{grid-column:1/-1 !important;margin-top:6mm !important;text-align:center !important;font-size:8.5pt !important;color:#9ca3af !important}
-
-  /* Pied répété. Le retrait de 8mm tient compte de la zone qu'une
-     imprimante physique ne sait pas atteindre. Chrome et Edge le
-     reprennent page après page ; Firefox ne l'imprime qu'une fois. */
-  #print-root .print-page-footer{
-    position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;
-    margin:0 var(--pad) !important;padding:3mm 0 8mm !important;
-    border-top:.3mm solid #e5e7eb !important;
-    font:400 8.5pt/1.4 Inter,sans-serif !important;color:#9ca3af !important;text-align:center !important;
-  }
+  /* Le bandeau de pied ferme la dernière page, collé au bas de la feuille. */
+  #print-root .doc-band{margin-top:auto !important}
+  #print-root .invoice-paper{display:flex !important;flex-direction:column !important}
+  #print-root .doc-table,
+  #print-root .doc-parties,
+  #print-root .doc-bottom,
+  #print-root .doc-head{flex:none !important}
 }

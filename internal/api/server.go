@@ -738,9 +738,18 @@ type invoiceDefaults struct {
 	// les identifiants de l'entreprise, pas un texte d'emission. S'ils
 	// changent, c'est que l'entreprise a change, et l'ancienne valeur n'a plus
 	// de sens sur aucun document.
-	Ninea            string `json:"ninea"`
-	TradeRegister    string `json:"tradeRegister"`
-	LegalNote        string `json:"legalNote"`
+	Ninea         string `json:"ninea"`
+	TradeRegister string `json:"tradeRegister"`
+	LegalNote     string `json:"legalNote"`
+	// Bas de page du document : les conditions de reglement et les
+	// coordonnees bancaires. Elles etaient absentes, et le client qui voulait
+	// virer le solde devait telephoner pour les demander. Vides, les deux
+	// blocs ne s'affichent pas.
+	PaymentTerms string `json:"paymentTerms"`
+	BankDetails  string `json:"bankDetails"`
+	// Email et site, montres dans l'en-tete a cote du telephone.
+	Email            string `json:"email"`
+	Website          string `json:"website"`
 	ThankYouTitle    string `json:"thankYouTitle"`
 	FooterNote       string `json:"footerNote"`
 	CompanySignature string `json:"companySignatureUrl"`
@@ -822,6 +831,10 @@ func (s *Server) updateCheckoutSettings(c *fiber.Ctx) error {
 	in.InvoiceDefaults.Ninea = strings.TrimSpace(in.InvoiceDefaults.Ninea)
 	in.InvoiceDefaults.TradeRegister = strings.TrimSpace(in.InvoiceDefaults.TradeRegister)
 	in.InvoiceDefaults.LegalNote = strings.TrimSpace(in.InvoiceDefaults.LegalNote)
+	in.InvoiceDefaults.PaymentTerms = strings.TrimSpace(in.InvoiceDefaults.PaymentTerms)
+	in.InvoiceDefaults.BankDetails = strings.TrimSpace(in.InvoiceDefaults.BankDetails)
+	in.InvoiceDefaults.Email = strings.TrimSpace(in.InvoiceDefaults.Email)
+	in.InvoiceDefaults.Website = strings.TrimSpace(in.InvoiceDefaults.Website)
 	if in.InvoiceDefaults.CompanyName == "" || in.InvoiceDefaults.FooterNote == "" {
 		return fiber.NewError(422, "Le nom de l’entreprise et le texte de pied de facture sont requis")
 	}

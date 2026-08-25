@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -91,6 +92,9 @@ type pdfDocument struct {
 	IssuedAt    time.Time
 	Company     invoiceDefaults
 	CustomerRow []string
+	// DeliverTo porte une adresse de livraison differente de celle de
+	// facturation, quand la piece en connait une.
+	DeliverTo   string
 	Meta        []pdfMeta
 	Lines       []pdfLine
 	ShowAmounts bool
@@ -346,298 +350,539 @@ func max64(a, b int64) int64 {
 // renderPDF compose le document. La mise en page reprend celle de l'ecran :
 // bandeau de marque, titre et reference, emetteur / client / etat, tableau des
 // lignes, totaux, mot de remerciement et cartouche de signatures.
+// Couleurs de la marque, telles qu'elles sont posees sur le papier a en-tete.
+// Elles vivent ici et dans styles.css : le PDF et l'ecran doivent rendre le
+// meme document, et une teinte qui derive d'un cote se voit immediatement.
+var (
+	brandBlue   = [3]int{11, 66, 197}
+	brandYellow = [3]int{255, 183, 0}
+	brandInk    = [3]int{21, 26, 36}
+	brandMuted  = [3]int{104, 115, 133}
+	brandLine   = [3]int{220, 227, 236}
+)
+
+func setInk(pdf *fpdf.Fpdf, c [3]int)    { pdf.SetTextColor(c[0], c[1], c[2]) }
+func setFill(pdf *fpdf.Fpdf, c [3]int)   { pdf.SetFillColor(c[0], c[1], c[2]) }
+func setStroke(pdf *fpdf.Fpdf, c [3]int) { pdf.SetDrawColor(c[0], c[1], c[2]) }
+
 func renderPDF(doc pdfDocument) ([]byte, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdfFont, tr := setupFont(pdf)
+	// Times porte l'italique, qu'Inter n'a pas ici : la devise du pied de page
+	// et le remerciement sont en serif penché dans le modèle, et ce sont les
+	// deux seuls endroits où le document quitte sa police.
+	latin := pdf.UnicodeTranslatorFromDescriptor("")
 	pdf.SetTitle(doc.Title+" "+doc.Reference, true)
-	pdf.SetAutoPageBreak(true, 22)
+	// La marge basse laisse la place au bandeau de pied : sans elle, la
+	// derniere ligne du tableau passerait sous le bleu.
+	pdf.SetAutoPageBreak(true, 26)
 	const left, right = 15.0, 195.0
 	width := right - left
 
-	// Pied de page repete : le lecteur d'une facture de plusieurs pages doit
-	// savoir de quelle piece il s'agit sans revenir a la premiere.
+	// Bandeau de pied, repete sur chaque page.
+	//
+	// C'est la signature du papier a en-tete : deux aplats separes par une
+	// diagonale, la devise en italique a gauche, le numero de page a droite.
+	// Il est dessine en polygone plutot qu'en deux rectangles, sinon la coupe
+	// serait verticale et le dessin perdrait ce qui le distingue.
 	pdf.SetFooterFunc(func() {
-		pdf.SetY(-16)
-		pdf.SetFont(pdfFont, "", 7.5)
-		pdf.SetTextColor(130, 130, 130)
-		footer := fmt.Sprintf("%s %s · %s · %s · %s", doc.Title, doc.Reference,
-			doc.Company.CompanyName, doc.Company.Address, doc.Company.Phone)
-		pdf.CellFormat(width-20, 5, tr(footer), "", 0, "L", false, 0, "")
-		pdf.CellFormat(20, 5, fmt.Sprintf("%d/{np}", pdf.PageNo()), "", 0, "R", false, 0, "")
+		const bandTop, bandBottom = 280.0, 297.0
+		setFill(pdf, brandBlue)
+		pdf.Polygon([]fpdf.PointType{{X: 0, Y: bandTop}, {X: 151, Y: bandTop},
+			{X: 145, Y: bandBottom}, {X: 0, Y: bandBottom}}, "F")
+		setFill(pdf, brandYellow)
+		pdf.Polygon([]fpdf.PointType{{X: 151, Y: bandTop}, {X: 210, Y: bandTop},
+			{X: 210, Y: bandBottom}, {X: 145, Y: bandBottom}}, "F")
+
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetXY(left, bandTop+5.5)
+		pdf.SetFont("Times", "I", 12)
+		name := doc.Company.CompanyName
+		pdf.CellFormat(pdf.GetStringWidth(latin(name+","))+1.5, 6, latin(name+","), "", 0, "L", false, 0, "")
+		pdf.SetFont(pdfFont, "", 8)
+		pdf.CellFormat(70, 6, tr("votre compagnon de voyage !"), "", 0, "L", false, 0, "")
+		pdf.SetFont(pdfFont, "B", 8)
+		pdf.SetXY(right-30, bandTop+5.5)
+		pdf.CellFormat(30, 6, fmt.Sprintf("%d / {np}", pdf.PageNo()), "", 0, "R", false, 0, "")
 	})
 	pdf.AliasNbPages("{np}")
+
+	// En-tete complet sur la premiere page, en-tete compact sur les suivantes :
+	// une facture de trois pages ne doit pas repeter le logo en grand, mais on
+	// doit pouvoir dire d'un coup d'oeil de quelle piece vient une feuille
+	// isolee.
+	first := true
+	pdf.SetHeaderFunc(func() {
+		if first {
+			first = false
+			return
+		}
+		pdf.SetY(12)
+		setInk(pdf, brandBlue)
+		pdf.SetFont(pdfFont, "B", 10)
+		pdf.SetX(left)
+		pdf.CellFormat(90, 5, tr(strings.ToUpper(doc.Company.CompanyName)), "", 0, "L", false, 0, "")
+		setInk(pdf, brandInk)
+		pdf.SetFont(pdfFont, "", 8.5)
+		pdf.CellFormat(width-90, 5, tr(strings.ToUpper(doc.Title)+" "+doc.Reference), "", 1, "R", false, 0, "")
+		setStroke(pdf, brandLine)
+		pdf.Line(left, 19, right, 19)
+		pdf.SetY(24)
+	})
 	pdf.AddPage()
 
-	// Bandeau de marque, sur fond blanc.
-	//
-	// Il etait bleu plein : un logo en couleur, dessine pour un fond blanc, s'y
-	// noyait — le bleu du logo disparaissait dans le bleu du bandeau. Le bleu
-	// et le jaune de la marque sont reportes sur un filet sous l'en-tete, sur
-	// l'entete du tableau et sur le total : ils marquent le document sans
-	// jamais passer derriere une image.
-	pdf.SetTextColor(20, 20, 20)
+	drawFullHeader(pdf, pdfFont, tr, doc, left, right)
+	drawParties(pdf, pdfFont, tr, doc, left, right)
+	drawItems(pdf, pdfFont, tr, doc, left, right)
+	drawSummary(pdf, pdfFont, tr, latin, doc, left, right)
+
+	var out bytes.Buffer
+	if err := pdf.Output(&out); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
+// drawFullHeader pose le logo, le bloc entreprise et le cartouche du document.
+func drawFullHeader(pdf *fpdf.Fpdf, font string, tr func(string) string, doc pdfDocument, left, right float64) {
+	const top = 14.0
 	textLeft := left
+
 	if doc.LogoFormat != "" && len(doc.Logo) > 0 {
 		pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: doc.LogoFormat}, bytes.NewReader(doc.Logo))
 		if info := pdf.GetImageInfo("logo"); info != nil && info.Height() > 0 {
-			// Hauteur imposee, largeur deduite : un logo large ne doit pas
-			// deborder sur le telephone affiche a droite du bandeau.
-			height := 12.0
-			logoWidth := height * info.Width() / info.Height()
-			if logoWidth > 46 {
-				logoWidth = 46
-				height = logoWidth * info.Height() / info.Width()
+			// Le logo tient dans un carre de 38 mm, quelle que soit sa forme :
+			// un logo large ne doit pas pousser le bloc entreprise hors de la
+			// page, un logo haut ne doit pas depasser sur les destinataires.
+			box := 38.0
+			w, h := box, box
+			if info.Width() > info.Height() {
+				h = box * info.Height() / info.Width()
+			} else {
+				w = box * info.Width() / info.Height()
 			}
-			pdf.ImageOptions("logo", left, 12+(18-height)/2, logoWidth, height, false, fpdf.ImageOptions{ImageType: doc.LogoFormat}, 0, "")
-			textLeft = left + logoWidth + 6
+			pdf.ImageOptions("logo", left, top+(box-h)/2, w, h, false,
+				fpdf.ImageOptions{ImageType: doc.LogoFormat}, 0, "")
+			textLeft = left + box + 6
 		}
 	}
-	pdf.SetXY(textLeft, 15)
-	pdf.SetFont(pdfFont, "B", 13)
-	pdf.CellFormat(90, 6, tr(doc.Company.CompanyName), "", 0, "L", false, 0, "")
-	pdf.SetFont(pdfFont, "", 8.5)
-	pdf.CellFormat(80, 6, tr(doc.Company.Phone), "", 0, "R", false, 0, "")
-	pdf.SetXY(textLeft, 21)
-	pdf.SetFont(pdfFont, "", 8.5)
-	pdf.SetTextColor(110, 110, 110)
-	pdf.CellFormat(90, 5, tr(doc.Company.Tagline), "", 0, "L", false, 0, "")
-	pdf.CellFormat(80, 5, tr(doc.Company.Address), "", 0, "R", false, 0, "")
 
-	// Filet de marque : deux tiers bleus, un tiers jaune. C'est la seule
-	// couleur pleine de la page haute, et elle ne recouvre rien.
-	pdf.SetFillColor(21, 41, 214)
-	pdf.Rect(left, 32, width*2/3, 1.6, "F")
-	pdf.SetFillColor(246, 207, 34)
-	pdf.Rect(left+width*2/3, 32, width/3, 1.6, "F")
-
-	// Titre et reference.
-	pdf.SetTextColor(20, 20, 20)
-	pdf.SetXY(left, 38)
-	pdf.SetFont(pdfFont, "B", 20)
-	pdf.CellFormat(110, 9, tr(strings.ToUpper(doc.Title)), "", 0, "L", false, 0, "")
-	pdf.SetFont(pdfFont, "B", 12)
-	pdf.CellFormat(width-110, 9, tr(doc.Reference), "", 1, "R", false, 0, "")
-	pdf.SetX(left)
-	pdf.SetFont(pdfFont, "", 9)
-	pdf.SetTextColor(110, 110, 110)
-	pdf.CellFormat(110, 5, "", "", 0, "L", false, 0, "")
-	pdf.CellFormat(width-110, 5, tr("Émis le "+frenchDate(doc.IssuedAt)), "", 1, "R", false, 0, "")
-
-	// Emetteur / destinataire / etat, en trois colonnes de meme largeur.
-	pdf.Ln(4)
-	top := pdf.GetY()
-	column := width / 3
-	recipientTitle := "CLIENT"
-	if doc.Kind == "delivery" {
-		recipientTitle = "DESTINATAIRE"
+	// Filet vertical bleu entre le logo et l'adresse : c'est lui qui tient la
+	// colonne, sans encadrer.
+	if textLeft > left {
+		setStroke(pdf, brandBlue)
+		pdf.SetLineWidth(0.6)
+		pdf.Line(textLeft-4, top+2, textLeft-4, top+34)
+		pdf.SetLineWidth(0.2)
 	}
-	block := func(x float64, title string, lines []string) {
-		pdf.SetXY(x, top)
-		pdf.SetFont(pdfFont, "B", 7)
-		pdf.SetTextColor(130, 130, 130)
-		pdf.CellFormat(column-4, 4, tr(title), "", 2, "L", false, 0, "")
-		pdf.SetTextColor(20, 20, 20)
+
+	pdf.SetXY(textLeft, top+3)
+	setInk(pdf, brandBlue)
+	pdf.SetFont(font, "B", 13)
+	pdf.CellFormat(70, 6, tr(strings.ToUpper(doc.Company.CompanyName)), "", 2, "L", false, 0, "")
+
+	// Coordonnees, une puce par ligne. Les champs vides sautent : une ligne
+	// « ● » suivie de rien fait douter de tout le reste.
+	rows := []string{doc.Company.Address, doc.Company.Phone, doc.Company.Email, doc.Company.Website}
+	pdf.SetFont(font, "", 8.5)
+	y := top + 11
+	for _, row := range rows {
+		if strings.TrimSpace(row) == "" {
+			continue
+		}
+		setInk(pdf, brandBlue)
+		pdf.SetXY(textLeft, y)
+		pdf.CellFormat(3.4, 4.6, "•", "", 0, "L", false, 0, "")
+		setInk(pdf, brandInk)
+		pdf.MultiCell(58, 4.6, tr(row), "", "L", false)
+		y = pdf.GetY() + 0.6
+	}
+
+	// Cartouche du document, cale a droite.
+	const boxWidth = 66.0
+	x := right - boxWidth
+	setInk(pdf, brandBlue)
+	pdf.SetFont(font, "B", 24)
+	pdf.SetXY(x, top+1)
+	pdf.CellFormat(boxWidth, 12, tr(strings.ToUpper(doc.Title)), "", 0, "R", false, 0, "")
+
+	// Pastille du numero : etiquette bleue collee a un champ blanc borde de
+	// jaune. C'est le seul endroit du document ou les deux couleurs se
+	// touchent, et c'est ce qui attire l'oeil sur la reference.
+	numberTop := top + 15
+	setFill(pdf, brandYellow)
+	pdf.RoundedRect(x, numberTop, boxWidth, 9, 4.5, "1234", "F")
+	pdf.SetFillColor(255, 255, 255)
+	pdf.RoundedRect(x+0.7, numberTop+0.7, boxWidth-1.4, 7.6, 3.8, "1234", "F")
+	setFill(pdf, brandBlue)
+	pdf.RoundedRect(x+0.7, numberTop+0.7, 17, 7.6, 3.8, "1234", "F")
+	pdf.SetTextColor(255, 255, 255)
+	pdf.SetFont(font, "B", 8)
+	pdf.SetXY(x+0.7, numberTop+0.7)
+	pdf.CellFormat(17, 7.6, tr("N°"), "", 0, "C", false, 0, "")
+	setInk(pdf, brandInk)
+	pdf.SetFont(font, "B", 9.5)
+	pdf.SetXY(x+19, numberTop+0.7)
+	pdf.CellFormat(boxWidth-20, 7.6, tr(doc.Reference), "", 0, "C", false, 0, "")
+
+	// Date, puis ce que la piece a de particulier : reglement pour une
+	// facture, validite pour un devis, etat pour un bon de livraison.
+	lines := [][2]string{{"Date :", frenchDate(doc.IssuedAt)}}
+	for _, meta := range doc.Meta {
+		lines = append(lines, [2]string{strings.Title(strings.ToLower(meta.Label)) + " :", meta.Value})
+	}
+	y = numberTop + 13
+	for _, line := range lines {
+		setInk(pdf, brandBlue)
+		pdf.SetFont(font, "B", 8.5)
+		pdf.SetXY(x, y)
+		pdf.CellFormat(24, 4.8, tr(line[0]), "", 0, "L", false, 0, "")
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "", 8.5)
+		pdf.MultiCell(boxWidth-24, 4.8, tr(line[1]), "", "L", false)
+		y = pdf.GetY() + 0.4
+	}
+
+	pdf.SetY(maxFloat(y, top+40))
+}
+
+// pill dessine une etiquette arrondie : fond plein, texte contraste.
+func pill(pdf *fpdf.Fpdf, font string, tr func(string) string, x, y, w float64, label string, fill, ink [3]int) {
+	setFill(pdf, fill)
+	pdf.RoundedRect(x, y, w, 7, 3.5, "1234", "F")
+	setInk(pdf, ink)
+	pdf.SetFont(font, "B", 7.5)
+	pdf.SetXY(x, y)
+	pdf.CellFormat(w, 7, tr(label), "", 0, "C", false, 0, "")
+}
+
+// drawParties pose les blocs « facture a » et « livrer a ».
+//
+// Le second n'apparait que si l'on connait une adresse de livraison : un bloc
+// vide sous une etiquette jaune ferait croire a une information perdue.
+func drawParties(pdf *fpdf.Fpdf, font string, tr func(string) string, doc pdfDocument, left, right float64) {
+	top := pdf.GetY() + 4
+	width := right - left
+	column := width/2 - 4
+
+	recipient := "FACTURÉ À :"
+	switch doc.Kind {
+	case "quote":
+		recipient = "DEVIS POUR :"
+	case "delivery":
+		recipient = "LIVRER À :"
+	}
+
+	block := func(x float64, label string, fill, ink [3]int, lines []string) float64 {
+		pill(pdf, font, tr, x, top, 34, label, fill, ink)
+		setStroke(pdf, brandLine)
+		pdf.Line(x+36, top+3.5, x+column, top+3.5)
+		y := top + 10
 		for index, line := range lines {
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			style := ""
-			size := 8.5
+			pdf.SetXY(x, y)
 			if index == 0 {
-				style, size = "B", 10
+				pdf.SetFont(font, "B", 9.5)
+			} else {
+				pdf.SetFont(font, "", 8.5)
 			}
-			pdf.SetFont(pdfFont, style, size)
-			pdf.MultiCell(column-4, 4.6, tr(line), "", "L", false)
-			pdf.SetX(x)
+			setInk(pdf, brandInk)
+			pdf.MultiCell(column, 4.7, tr(line), "", "L", false)
+			y = pdf.GetY()
 		}
+		return y
 	}
-	block(left, "ÉMETTEUR", []string{doc.Company.CompanyName, doc.Company.Address, doc.Company.Phone})
-	block(left+column, recipientTitle, doc.CustomerRow)
-	metaLines := make([]string, 0, 4)
-	for index, meta := range doc.Meta {
-		if index == 0 {
-			metaLines = append(metaLines, meta.Value)
-			continue
-		}
-		metaLines = append(metaLines, meta.Label+" : "+meta.Value)
-	}
-	metaTitle := "ÉTAT"
-	if len(doc.Meta) > 0 {
-		metaTitle = doc.Meta[0].Label
-	}
-	block(left+2*column, metaTitle, metaLines)
 
-	// Tableau des lignes.
-	pdf.SetY(maxFloat(pdf.GetY(), top+26))
-	pdf.SetX(left)
-	pdf.Ln(2)
-	headers := []struct {
+	bottom := block(left, recipient, brandBlue, [3]int{255, 255, 255}, doc.CustomerRow)
+	// Le modele prevoit un second bloc « livrer a ». Il n'est pose que si une
+	// adresse de livraison distincte existe : l'application n'en tient pas de
+	// separee, et recopier l'adresse de facturation sous une autre etiquette
+	// ferait croire a deux lieux differents.
+	if extra := strings.TrimSpace(doc.DeliverTo); extra != "" {
+		delivery := block(left+column+8, "LIVRER À :", brandYellow, brandInk,
+			[]string{doc.CustomerRow[0], extra})
+		bottom = maxFloat(bottom, delivery)
+	}
+	pdf.SetY(bottom + 6)
+}
+
+// drawItems rend le tableau des lignes.
+func drawItems(pdf *fpdf.Fpdf, font string, tr func(string) string, doc pdfDocument, left, right float64) {
+	width := right - left
+	type column struct {
 		label string
-		width float64
+		w     float64
 		align string
-	}{{"DÉSIGNATION", 0, "L"}, {"QTÉ", 16, "C"}}
+	}
+	columns := []column{{"#", 9, "C"}, {"DÉSIGNATION", 0, "L"}, {"QTÉ", 16, "C"}}
 	if doc.ShowAmounts {
-		headers = append(headers,
-			struct {
-				label string
-				width float64
-				align string
-			}{"PRIX UNITAIRE", 30, "R"},
-			struct {
-				label string
-				width float64
-				align string
-			}{"REMISE", 24, "R"},
-			struct {
-				label string
-				width float64
-				align string
-			}{"MONTANT", 30, "R"})
+		columns = append(columns,
+			column{"PRIX UNIT. (FCFA)", 32, "R"},
+			column{"REMISE", 22, "R"},
+			column{"MONTANT (FCFA)", 34, "R"})
 	}
 	fixed := 0.0
-	for _, header := range headers {
-		fixed += header.width
+	for _, c := range columns {
+		fixed += c.w
 	}
-	headers[0].width = width - fixed
+	columns[1].w = width - fixed
 
-	pdf.SetFillColor(246, 207, 34)
-	pdf.SetTextColor(60, 48, 8)
-	pdf.SetFont(pdfFont, "B", 7.5)
-	for _, header := range headers {
-		pdf.CellFormat(header.width, 7, tr(header.label), "", 0, header.align, true, 0, "")
+	header := func() {
+		setFill(pdf, brandBlue)
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetFont(font, "B", 7.2)
+		pdf.SetX(left)
+		for _, c := range columns {
+			pdf.CellFormat(c.w, 8, tr(c.label), "", 0, c.align, true, 0, "")
+		}
+		pdf.Ln(-1)
 	}
-	pdf.Ln(-1)
+	header()
 
-	pdf.SetTextColor(20, 20, 20)
-	for _, line := range doc.Lines {
-		// Hauteur de ligne calculee sur la designation : une intitule long ne
-		// doit pas deborder sur la ligne suivante.
-		pdf.SetFont(pdfFont, "", 9)
+	for index, line := range doc.Lines {
+		pdf.SetFont(font, "", 8.7)
 		label := line.Description
 		if line.Reference != "" {
 			label += "\n" + line.Reference
 		}
-		height := 5.0 * float64(len(pdf.SplitLines([]byte(tr(label)), headers[0].width-3)))
-		if height < 8 {
-			height = 8
-		}
-		if pdf.GetY()+height > 262 {
-			pdf.AddPage()
-		}
-		x, y := left, pdf.GetY()
-		pdf.SetXY(x, y+1)
-		pdf.SetFont(pdfFont, "B", 9)
-		pdf.MultiCell(headers[0].width-3, 4.6, tr(line.Description), "", "L", false)
+		height := 4.8*float64(len(pdf.SplitLines([]byte(tr(line.Description)), columns[1].w-4))) + 3
 		if line.Reference != "" {
-			pdf.SetX(x)
-			pdf.SetFont(pdfFont, "", 7.5)
-			pdf.SetTextColor(130, 130, 130)
-			pdf.MultiCell(headers[0].width-3, 4, tr(line.Reference), "", "L", false)
-			pdf.SetTextColor(20, 20, 20)
+			height += 3.6
 		}
-		bottom := pdf.GetY()
-		pdf.SetXY(x+headers[0].width, y+1)
-		pdf.SetFont(pdfFont, "", 9)
-		pdf.CellFormat(headers[1].width, 6, fmt.Sprintf("%d", line.Quantity), "", 0, "C", false, 0, "")
+		if height < 9 {
+			height = 9
+		}
+		// Une ligne coupee en deux par un saut de page est illisible : on
+		// pousse la ligne entiere sur la page suivante, et on y redessine
+		// l'en-tete du tableau.
+		if pdf.GetY()+height > 268 {
+			pdf.AddPage()
+			header()
+		}
+		y := pdf.GetY()
+		// Une ligne sur deux est teintee : sur une facture de vingt articles,
+		// c'est ce qui empeche de lire le prix de la ligne d'a cote.
+		if index%2 == 1 {
+			pdf.SetFillColor(246, 248, 251)
+			pdf.Rect(left, y, width, height, "F")
+		}
+
+		setInk(pdf, brandMuted)
+		pdf.SetXY(left, y)
+		pdf.SetFont(font, "", 8)
+		pdf.CellFormat(columns[0].w, height, strconv.Itoa(index+1), "", 0, "C", false, 0, "")
+
+		setInk(pdf, brandInk)
+		pdf.SetXY(left+columns[0].w+2, y+1.6)
+		pdf.SetFont(font, "B", 8.7)
+		pdf.MultiCell(columns[1].w-4, 4.6, tr(line.Description), "", "L", false)
+		if line.Reference != "" {
+			pdf.SetX(left + columns[0].w + 2)
+			pdf.SetFont(font, "", 7.2)
+			setInk(pdf, brandMuted)
+			pdf.MultiCell(columns[1].w-4, 3.6, tr(line.Reference), "", "L", false)
+		}
+
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "", 8.7)
+		pdf.SetXY(left+columns[0].w+columns[1].w, y)
+		pdf.CellFormat(columns[2].w, height, strconv.FormatInt(line.Quantity, 10), "", 0, "C", false, 0, "")
 		if doc.ShowAmounts {
 			discount := "—"
 			if line.Discount > 0 {
 				discount = "- " + messaging.Money(line.Discount)
 			}
-			pdf.CellFormat(headers[2].width, 6, tr(messaging.Money(line.UnitPrice)), "", 0, "R", false, 0, "")
-			pdf.CellFormat(headers[3].width, 6, tr(discount), "", 0, "R", false, 0, "")
-			pdf.SetFont(pdfFont, "B", 9)
-			pdf.CellFormat(headers[4].width, 6, tr(messaging.Money(line.Total)), "", 0, "R", false, 0, "")
+			pdf.CellFormat(columns[3].w, height, tr(plainMoney(line.UnitPrice)), "", 0, "R", false, 0, "")
+			pdf.CellFormat(columns[4].w, height, tr(discount), "", 0, "R", false, 0, "")
+			pdf.SetFont(font, "B", 8.7)
+			pdf.CellFormat(columns[5].w, height, tr(plainMoney(line.Total)), "", 0, "R", false, 0, "")
 		}
-		pdf.SetY(maxFloat(bottom, y+8))
-		pdf.SetDrawColor(232, 234, 240)
-		pdf.Line(left, pdf.GetY(), right, pdf.GetY())
-		pdf.SetX(left)
-	}
 
-	// Totaux et mot de remerciement.
+		setStroke(pdf, brandLine)
+		pdf.Line(left, y+height, right, y+height)
+		pdf.SetXY(left, y+height)
+	}
+}
+
+// plainMoney rend le montant sans son unite : la colonne la porte deja dans
+// son titre, et la repeter vingt fois alourdit le tableau.
+func plainMoney(amount int64) string {
+	return strings.TrimSuffix(messaging.Money(amount), " F")
+}
+
+// drawSummary pose le bas du document : notes a gauche, totaux et cachet a
+// droite.
+func drawSummary(pdf *fpdf.Fpdf, font string, tr, latin func(string) string, doc pdfDocument, left, right float64) {
+	width := right - left
+	// Le bas de page occupe une hauteur connue : s'il ne tient pas sous la
+	// derniere ligne, il part entier sur une page neuve plutot que d'etre
+	// coupe en deux.
+	needed := 90.0
+	if doc.Kind == "invoice" && len(doc.Payments) > 1 {
+		needed += 11
+	}
+	if pdf.GetY()+needed > 272 {
+		pdf.AddPage()
+	}
+	// Le bas de page se dessine d'un bloc, saut automatique desactive : les
+	// deux dernieres lignes — reglements, mentions legales — ne doivent jamais
+	// ouvrir une page pour elles seules, et la place a ete reservee au-dessus.
+	pdf.SetAutoPageBreak(false, 0)
+	defer pdf.SetAutoPageBreak(true, 26)
+	top := pdf.GetY() + 5
+	columnWidth := width/2 - 6
+	rightX := left + columnWidth + 12
+
+	// ---- Colonne de droite : totaux, cachet.
+	y := top
 	if doc.ShowAmounts {
-		pdf.Ln(3)
-		totalsTop := pdf.GetY()
-		totals := []struct {
+		rows := []struct {
 			label string
 			value int64
-			bold  bool
-		}{{"Sous-total", doc.Subtotal, false}}
+		}{{"Sous-total", doc.Subtotal}}
 		if doc.Discount > 0 {
-			totals = append(totals, struct {
+			rows = append(rows, struct {
 				label string
 				value int64
-				bold  bool
-			}{"Remise", -doc.Discount, false})
+			}{"Remise", -doc.Discount})
 		}
 		if doc.Tax > 0 {
-			totals = append(totals, struct {
+			rows = append(rows, struct {
 				label string
 				value int64
-				bold  bool
-			}{"TVA", doc.Tax, false})
+			}{"TVA", doc.Tax})
 		}
-		totals = append(totals, struct {
-			label string
-			value int64
-			bold  bool
-		}{"Total TTC", doc.Total, true})
+		for _, row := range rows {
+			pdf.SetXY(rightX, y)
+			setInk(pdf, brandMuted)
+			pdf.SetFont(font, "", 9)
+			pdf.CellFormat(columnWidth-38, 6, tr(row.label), "", 0, "L", false, 0, "")
+			setInk(pdf, brandInk)
+			pdf.SetFont(font, "B", 9)
+			pdf.CellFormat(38, 6, tr(messaging.Money(row.value)), "", 1, "R", false, 0, "")
+			y = pdf.GetY() + 1
+		}
+		setStroke(pdf, brandInk)
+		pdf.Line(rightX, y+1, right, y+1)
+		y += 4
+
+		// Le total dans une pastille jaune : c'est le chiffre que le client
+		// cherche, et il doit se trouver sans lire le reste.
+		setInk(pdf, brandBlue)
+		pdf.SetFont(font, "B", 11)
+		pdf.SetXY(rightX, y)
+		pdf.CellFormat(columnWidth-44, 10, tr("TOTAL TTC"), "", 0, "L", false, 0, "")
+		setFill(pdf, brandYellow)
+		pdf.RoundedRect(right-44, y, 44, 10, 3, "1234", "F")
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "B", 11)
+		pdf.SetXY(right-44, y)
+		pdf.CellFormat(44, 10, tr(messaging.Money(doc.Total)), "", 0, "C", false, 0, "")
+		y += 13
+
 		if doc.Kind == "invoice" {
-			totals = append(totals,
-				struct {
-					label string
-					value int64
-					bold  bool
-				}{"Montant payé", doc.Paid, false},
-				struct {
-					label string
-					value int64
-					bold  bool
-				}{"Reste à payer", doc.Remaining, true})
-		}
-		for _, row := range totals {
-			pdf.SetX(right - 75)
-			style := ""
-			if row.bold {
-				style = "B"
+			for _, row := range [][2]string{{"Montant payé", messaging.Money(doc.Paid)},
+				{"Reste à payer", messaging.Money(doc.Remaining)}} {
+				pdf.SetXY(rightX, y)
+				setInk(pdf, brandMuted)
+				pdf.SetFont(font, "", 8.5)
+				pdf.CellFormat(columnWidth-38, 5, tr(row[0]), "", 0, "L", false, 0, "")
+				setInk(pdf, brandInk)
+				pdf.SetFont(font, "B", 8.5)
+				pdf.CellFormat(38, 5, tr(row[1]), "", 1, "R", false, 0, "")
+				y = pdf.GetY()
 			}
-			pdf.SetFont(pdfFont, style, 9.5)
-			if row.label == "Total TTC" {
-				pdf.SetTextColor(21, 41, 214)
-				pdf.SetFont(pdfFont, "B", 11)
-			}
-			pdf.CellFormat(40, 6, tr(row.label), "", 0, "L", false, 0, "")
-			pdf.CellFormat(35, 6, tr(messaging.Money(row.value)), "", 1, "R", false, 0, "")
-			pdf.SetTextColor(20, 20, 20)
+			y += 3
 		}
-		totalsEnd := pdf.GetY()
-		// Mot de remerciement, cale a gauche en face des totaux.
-		pdf.SetXY(left, totalsTop)
-		pdf.SetFont(pdfFont, "B", 9.5)
-		pdf.MultiCell(width-85, 5, tr(doc.Company.ThankYouTitle), "", "L", false)
-		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "", 8.5)
-		pdf.SetTextColor(110, 110, 110)
-		pdf.MultiCell(width-85, 4.4, tr(doc.Company.FooterNote), "", "L", false)
-		pdf.SetTextColor(20, 20, 20)
-		// Les deux colonnes se terminent a des hauteurs differentes : la suite
-		// du document part de la plus basse, sinon elle chevauche l'autre.
-		pdf.SetY(maxFloat(pdf.GetY(), totalsEnd))
 	}
 
-	// Detail des reglements.
-	//
-	// Une seule ligne, quel qu'en soit le nombre : « 23 août · Espèces
-	// 10 000 F  |  24 août · Wave 8 000 F ». Un tableau aurait pris six lignes
-	// pour trois versements et repousse la signature en deuxieme page. Quand
-	// un seul reglement existe, il est deja dit en haut de la piece : on ne le
-	// repete pas.
-	if doc.Kind == "invoice" && len(doc.Payments) > 1 {
-		pdf.Ln(3)
+	// Cachet et signature. Le cadre est dessine meme sans image : une facture
+	// se signe aussi a la main, sur le papier.
+	stampTop := y + 2
+	stampHeight := 34.0
+	setStroke(pdf, brandBlue)
+	pdf.RoundedRect(rightX, stampTop, columnWidth, stampHeight, 2.5, "1234", "D")
+	setInk(pdf, brandBlue)
+	pdf.SetFont(font, "B", 7.5)
+	pdf.SetXY(rightX+3, stampTop+1.5)
+	pdf.CellFormat(columnWidth-6, 5, tr("CACHET & SIGNATURE"), "", 0, "L", false, 0, "")
+	if doc.SignatureFormat != "" && len(doc.Signature) > 0 {
+		pdf.RegisterImageOptionsReader("signature", fpdf.ImageOptions{ImageType: doc.SignatureFormat}, bytes.NewReader(doc.Signature))
+		if info := pdf.GetImageInfo("signature"); info != nil && info.Height() > 0 {
+			// Le cachet remplit la hauteur du cadre, et n'est ramene que s'il
+			// deborde en largeur : rond, il est aussi haut que large, et le
+			// borner par la largeur le rendrait illisible.
+			h := stampHeight - 7
+			w := h * info.Width() / info.Height()
+			if w > columnWidth-8 {
+				w = columnWidth - 8
+				h = w * info.Height() / info.Width()
+			}
+			pdf.ImageOptions("signature", rightX+(columnWidth-w)/2, stampTop+6.5+(stampHeight-6.5-h)/2, w, h,
+				false, fpdf.ImageOptions{ImageType: doc.SignatureFormat}, 0, "")
+		}
+	}
+	rightBottom := stampTop + stampHeight
+
+	// ---- Colonne de gauche : conditions, banque, remerciement.
+	y = top
+	note := func(title, body string) {
+		if strings.TrimSpace(body) == "" {
+			return
+		}
+		setFill(pdf, brandBlue)
+		pdf.RoundedRect(left, y, 7, 7, 2, "1234", "F")
+		setInk(pdf, brandBlue)
+		pdf.SetFont(font, "B", 8.5)
+		pdf.SetXY(left+10, y)
+		pdf.CellFormat(columnWidth-10, 7, tr(strings.ToUpper(title)), "", 1, "L", false, 0, "")
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "", 8.2)
+		pdf.SetX(left + 10)
+		pdf.MultiCell(columnWidth-10, 4.4, tr(body), "", "L", false)
+		y = pdf.GetY() + 5
+	}
+	note("Conditions de paiement", doc.Company.PaymentTerms)
+	note("Informations bancaires", doc.Company.BankDetails)
+
+	if title := strings.TrimSpace(doc.Company.ThankYouTitle); title != "" {
+		setInk(pdf, brandBlue)
+		pdf.SetFont("Times", "BI", 15)
+		pdf.SetXY(left, y)
+		pdf.CellFormat(columnWidth, 7, latin(title), "", 1, "L", false, 0, "")
+		// Le trait jaune sous le remerciement, legerement en biais : c'est le
+		// seul geste manuscrit du document.
+		setStroke(pdf, brandYellow)
+		pdf.SetLineWidth(1.1)
+		pdf.Line(left+2, y+8.6, left+2+pdf.GetStringWidth(latin(title))*0.92, y+7.4)
+		pdf.SetLineWidth(0.2)
+		y += 11
+	}
+	if note := strings.TrimSpace(doc.Company.FooterNote); note != "" {
+		setInk(pdf, brandMuted)
+		pdf.SetFont(font, "", 7.6)
+		pdf.SetXY(left, y)
+		pdf.MultiCell(columnWidth, 3.9, tr(note), "", "L", false)
+		y = pdf.GetY() + 2
+	}
+	if strings.TrimSpace(doc.Notes) != "" {
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "", 8)
 		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "B", 7)
-		pdf.SetTextColor(130, 130, 130)
+		pdf.MultiCell(columnWidth, 4.2, tr(doc.Notes), "", "L", false)
+		y = pdf.GetY() + 2
+	}
+
+	bottom := maxFloat(y, rightBottom)
+
+	// Detail des reglements, sur toute la largeur : une cliente qui a paye en
+	// trois fois doit retrouver ses trois versements.
+	if doc.Kind == "invoice" && len(doc.Payments) > 1 {
+		pdf.SetXY(left, bottom+3)
+		setInk(pdf, brandMuted)
+		pdf.SetFont(font, "B", 7)
 		pdf.CellFormat(width, 4, tr("RÈGLEMENTS REÇUS"), "", 1, "L", false, 0, "")
 		parts := make([]string, 0, len(doc.Payments))
 		for _, payment := range doc.Payments {
@@ -649,85 +894,28 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 				messaging.Money(abs64(payment.Amount))))
 		}
 		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "", 8)
-		pdf.SetTextColor(20, 20, 20)
-		pdf.MultiCell(width, 4.4, tr(strings.Join(parts, "   |   ")), "", "L", false)
+		setInk(pdf, brandInk)
+		pdf.SetFont(font, "", 7.8)
+		pdf.MultiCell(width, 4.2, tr(strings.Join(parts, "   |   ")), "", "L", false)
+		bottom = pdf.GetY()
 	}
 
-	if strings.TrimSpace(doc.Notes) != "" {
-		pdf.Ln(4)
-		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "B", 8)
-		pdf.CellFormat(width, 5, tr("NOTE"), "", 1, "L", false, 0, "")
-		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "", 8.5)
-		pdf.MultiCell(width, 4.4, tr(doc.Notes), "", "L", false)
-	}
-
-	// Cartouche de signatures.
-	pdf.Ln(8)
-	signatureTop := pdf.GetY()
-	// Le cartouche est plus haut qu'avant : le seuil de saut de page descend
-	// d'autant, sinon la signature part sous le pied de page.
-	if signatureTop > 205 {
-		pdf.AddPage()
-		signatureTop = pdf.GetY()
-	}
-	pdf.SetDrawColor(200, 202, 210)
-	for index, label := range []string{"Signature client", "Pour " + doc.Company.CompanyName} {
-		x := left + float64(index)*(width/2)
-		boxWidth := width/2 - 8
-		pdf.SetXY(x, signatureTop)
-		pdf.SetFont(pdfFont, "", 8)
-		pdf.SetTextColor(110, 110, 110)
-		pdf.CellFormat(boxWidth, 5, tr(label), "", 2, "L", false, 0, "")
-		pdf.Rect(x, signatureTop+6, boxWidth, 46, "D")
-		// La signature de l'entreprise s'incruste dans son cadre, a l'echelle,
-		// sans jamais le deborder : une image trop haute recouvrirait le pied de
-		// page, une image trop large mordrait sur le cadre du client.
-		if index == 1 && doc.SignatureFormat != "" && len(doc.Signature) > 0 {
-			pdf.RegisterImageOptionsReader("signature", fpdf.ImageOptions{ImageType: doc.SignatureFormat}, bytes.NewReader(doc.Signature))
-			if info := pdf.GetImageInfo("signature"); info != nil && info.Height() > 0 {
-				// Un cachet rond est aussi haut que large : borne par sa
-				// hauteur, il n'occupait qu'un tiers d'un cadre large et se
-				// lisait a peine. Il remplit desormais le cadre en hauteur, et
-				// n'est ramene que s'il deborde en largeur.
-				height := 42.0
-				imageWidth := height * info.Width() / info.Height()
-				if imageWidth > boxWidth-6 {
-					imageWidth = boxWidth - 6
-					height = imageWidth * info.Height() / info.Width()
-				}
-				pdf.ImageOptions("signature", x+3, signatureTop+6+(46-height)/2, imageWidth, height, false,
-					fpdf.ImageOptions{ImageType: doc.SignatureFormat}, 0, "")
-			}
-		}
-	}
-	pdf.SetXY(left, signatureTop+55)
-	pdf.SetFont(pdfFont, "", 7.5)
-	pdf.SetTextColor(130, 130, 130)
-	seller := doc.Seller
-	if seller == "" {
-		seller = doc.Company.CompanyName
-	}
-	// Mentions legales d'abord, en gras : c'est ce que l'administration et le
-	// comptable du client viennent chercher. La ligne de generation, elle, ne
-	// sert qu'a la boutique.
+	// Mentions legales : NINEA, registre de commerce. C'est ce que le
+	// comptable du client et l'administration viennent chercher.
 	if legal := doc.Company.legalLine(); legal != "" {
-		pdf.SetFont(pdfFont, "B", 7.5)
-		pdf.SetTextColor(90, 90, 90)
+		// Si le calcul de place a ete pris de court — une note longue, un
+		// remerciement sur deux lignes — la mention se cale juste au-dessus du
+		// bandeau plutot que d'ouvrir une page pour elle seule.
+		if bottom+7 > 272 {
+			bottom = 265
+		}
+		pdf.SetXY(left, bottom+3)
+		setStroke(pdf, brandLine)
+		pdf.Line(left, bottom+2, right, bottom+2)
+		setInk(pdf, brandMuted)
+		pdf.SetFont(font, "B", 7.2)
 		pdf.CellFormat(width, 4, tr(legal), "", 1, "C", false, 0, "")
-		pdf.SetX(left)
-		pdf.SetFont(pdfFont, "", 7.5)
-		pdf.SetTextColor(130, 130, 130)
 	}
-	pdf.CellFormat(width, 4, tr("Document généré le "+frenchDate(time.Now())+" · Vendeur : "+seller), "", 0, "C", false, 0, "")
-
-	var out bytes.Buffer
-	if err := pdf.Output(&out); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
 }
 
 func maxFloat(a, b float64) float64 {

@@ -172,6 +172,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Get("/returns/lines/:id", s.returnableLines)
 	a.Get("/cash/current", s.currentCash)
 	a.Post("/cash/open", s.openCash)
+	a.Get("/cash/:id", s.cashDetail)
 	a.Post("/cash/:id/close", s.closeCash)
 	a.Post("/vaults/:id/deposit", s.depositVault)
 	a.Post("/products/:id/images", auth.Manager, s.uploadProductImage)

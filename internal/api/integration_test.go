@@ -665,3 +665,73 @@ func TestInvoicePDFCarriesLegalsAndPayments(t *testing.T) {
 		t.Fatalf("PDF de %d octets : rendu vide", len(pdf))
 	}
 }
+
+// Un produit sans histoire commerciale doit pouvoir etre supprime.
+//
+// Sa declinaison bloquait la suppression et demandait qu'on la retire d'abord.
+// C'etait tenable du temps ou l'ecran permettait de gerer les declinaisons ;
+// depuis qu'elles n'y sont plus, le refus etait sans issue et le produit
+// devenait indestructible.
+func TestDeletingAProductRemovesItsVariants(t *testing.T) {
+	h := newHarness(t)
+
+	status, created := h.call(http.MethodPost, "/api/products", fiber.Map{
+		"name": "Produit jetable", "price": 5000, "stock": 3, "active": true,
+	})
+	if status >= 400 {
+		t.Fatalf("création du produit refusée : %v", created)
+	}
+	productID := uint(created["id"].(float64))
+
+	var variants int64
+	h.db.Table("product_variants").Where("product_id = ?", productID).Count(&variants)
+	if variants == 0 {
+		t.Fatal("le produit créé n'a aucune déclinaison : le test ne prouverait rien")
+	}
+
+	if status, body := h.call(http.MethodDelete, fmt.Sprintf("/api/products/%d", productID), nil); status >= 400 {
+		t.Fatalf("suppression refusée (%d) : %v", status, body)
+	}
+	h.db.Table("product_variants").Where("product_id = ?", productID).Count(&variants)
+	if variants != 0 {
+		t.Fatalf("%d déclinaison(s) survivent au produit supprimé", variants)
+	}
+	var moves int64
+	h.db.Table("stock_movements").
+		Where("variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)", productID).Count(&moves)
+	if moves != 0 {
+		t.Fatalf("%d mouvement(s) de stock pointent vers une déclinaison disparue", moves)
+	}
+}
+
+// Un produit deja vendu, lui, ne se supprime pas : sa facture deviendrait
+// illisible. Le refus doit parler du produit, pas de la declinaison — ce mot
+// n'existe plus dans l'ecran.
+func TestDeletingASoldProductIsRefused(t *testing.T) {
+	h := newHarness(t)
+	variant := h.variantWithStock(5, 10000)
+
+	status, sale := h.call(http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 10000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 1, "unitPrice": 10000}},
+	})
+	if status >= 400 {
+		t.Fatalf("vente de référence refusée : %v", sale)
+	}
+
+	status, body := h.call(http.MethodDelete, fmt.Sprintf("/api/products/%d", variant.ProductID), nil)
+	if status < 400 {
+		t.Fatalf("un produit figurant sur une facture a été supprimé (%d)", status)
+	}
+	message, _ := body["error"].(string)
+	if !strings.Contains(message, "factures") {
+		t.Fatalf("le refus ne parle pas des factures : %q", message)
+	}
+	if strings.Contains(strings.ToLower(message), "déclinaison") {
+		t.Fatalf("le refus parle de déclinaisons, mot absent de l'écran : %q", message)
+	}
+	// La marchandise n'a pas bouge : un refus ne doit rien laisser derriere.
+	if got := h.stockOf(variant.ID); got != 4 {
+		t.Fatalf("stock %d au lieu de 4 après un refus de suppression", got)
+	}
+}

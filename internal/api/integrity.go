@@ -167,8 +167,13 @@ var deleteChildren = map[string][]relation{
 	"vaults":         {{"vault_deposits", "vault_id"}},
 	"cash-sessions":  {{"cash_movements", "cash_session_id"}},
 	"customers":      {{"customer_addresses", "customer_id"}},
-	"products":       {{"product_specs", "product_id"}, {"product_colorways", "product_id"}, {"product_images", "product_id"}},
-	"variants":       {{"stock_movements", "variant_id"}},
+	// Les declinaisons partent avec leur produit. Elles etaient un obstacle a
+	// sa suppression, du temps ou l'ecran permettait de les gerer une a une ;
+	// depuis qu'elles n'y sont plus, ce refus etait sans issue — le produit
+	// devenait indestructible. Leur histoire commerciale reste protegee : voir
+	// productVariantBlockers.
+	"products": {{"product_specs", "product_id"}, {"product_colorways", "product_id"}, {"product_images", "product_id"}},
+	"variants": {{"stock_movements", "variant_id"}},
 }
 
 // deleteBlockers liste ce qui interdit la suppression : des données qui ont
@@ -193,9 +198,7 @@ var deleteBlockers = map[string][]blocker{
 		{relation{"arrival_items", "variant_id"}, "Cette déclinaison figure sur des arrivages. Désactivez-la."},
 		{relation{"order_items", "variant_id"}, "Cette déclinaison figure sur des commandes en ligne. Désactivez-la."},
 	},
-	"products": {
-		{relation{"product_variants", "product_id"}, "Ce produit a des déclinaisons. Supprimez-les d’abord, ou désactivez le produit."},
-	},
+	"products": {},
 	"categories": {
 		{relation{"products", "category_id"}, "Des produits utilisent cette catégorie. Reclassez-les avant de la supprimer."},
 	},
@@ -294,8 +297,18 @@ func (s *Server) deleteWithChildren(name, id string, userID uint) error {
 			return fiber.NewError(409, b.message)
 		}
 	}
+	if name == "products" {
+		if e := checkProductVariants(s.DB, id); e != nil {
+			return e
+		}
+	}
 	out := modelFor(name)
 	return s.DB.Transaction(func(tx *gorm.DB) error {
+		if name == "products" {
+			if e := deleteProductVariants(tx, id); e != nil {
+				return e
+			}
+		}
 		// Le stock est rendu avant que les lignes ne disparaissent : c'est la
 		// meme transaction, donc un echec ici laisse la piece intacte.
 		if e := s.reverseStock(tx, name, id, userID); e != nil {
@@ -376,4 +389,61 @@ func applySearch(db *gorm.DB, name, q string) *gorm.DB {
 		args = append(args, "%"+q+"%")
 	}
 	return db.Where("("+clause+")", args...)
+}
+
+// productVariantBlockers protege l'histoire commerciale d'un produit.
+//
+// Les declinaisons ne bloquent plus la suppression du produit — elles partent
+// avec lui. Mais ce qu'elles portent, lui, doit rester : une declinaison citee
+// sur une facture ne peut pas s'effacer sans rendre cette facture illisible.
+//
+// Le refus est formule au niveau du produit, pas de la declinaison. Le mot
+// « declinaison » n'existe plus dans l'ecran : renvoyer « cette declinaison
+// figure sur des factures » a quelqu'un qui essaie de supprimer un produit ne
+// lui dirait rien de ce qu'il doit faire.
+var productVariantBlockers = []struct {
+	table, message string
+}{
+	{"sale_items", "Ce produit figure sur des factures. Désactivez-le plutôt que de le supprimer : son historique de ventes doit être conservé."},
+	{"quote_items", "Ce produit figure sur des devis. Désactivez-le plutôt que de le supprimer."},
+	{"delivery_note_items", "Ce produit figure sur des bons de livraison. Désactivez-le plutôt que de le supprimer."},
+	{"return_items", "Ce produit figure sur des retours client. Désactivez-le plutôt que de le supprimer."},
+	{"arrival_items", "Ce produit figure sur des arrivages. Désactivez-le plutôt que de le supprimer."},
+	{"order_items", "Ce produit figure sur des commandes en ligne. Désactivez-le plutôt que de le supprimer."},
+}
+
+// checkProductVariants refuse la suppression d'un produit dont une declinaison
+// est citee sur une piece commerciale.
+func checkProductVariants(db *gorm.DB, id string) error {
+	for _, guard := range productVariantBlockers {
+		var count int64
+		e := db.Table(guard.table).
+			Where(guard.table+".variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)", id).
+			Count(&count).Error
+		if e != nil {
+			return dbError(e, "vérification avant suppression")
+		}
+		if count > 0 {
+			return fiber.NewError(409, guard.message)
+		}
+	}
+	return nil
+}
+
+// deleteProductVariants retire les declinaisons d'un produit et le journal de
+// stock qui leur est attache.
+//
+// Le journal part avec elles : il ne designe plus rien une fois la declinaison
+// disparue, et le garder ferait echouer la contrainte de cle etrangere. Les
+// mouvements lies a une piece commerciale ne sont jamais concernes — un
+// produit qui en porte a deja ete refuse plus haut.
+func deleteProductVariants(tx *gorm.DB, id string) error {
+	if e := tx.Exec(`DELETE FROM stock_movements
+	    WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)`, id).Error; e != nil {
+		return dbError(e, "suppression du journal de stock")
+	}
+	if e := tx.Exec("DELETE FROM product_variants WHERE product_id = ?", id).Error; e != nil {
+		return dbError(e, "suppression des déclinaisons")
+	}
+	return nil
 }

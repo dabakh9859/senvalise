@@ -1321,3 +1321,22 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
    maintenant sa hauteur, et n'est ramené que s'il déborde en largeur. */
 .invoice-signatures>button img{width:auto!important;height:110px!important;max-width:230px!important;object-position:left center!important}
 @media(max-width:700px){.invoice-signatures>button img{height:80px!important;max-width:170px!important}}
+
+/* Détail d'une session de caisse.
+   ------------------------------------------------------------------------
+   La liste ne donnait que trois montants ; quand l'écart tombait à moins mille
+   francs, rien ne permettait de chercher d'où il venait. Le résumé par motif
+   répond d'abord — « d'où vient l'argent » sans additionner trente lignes — et
+   le détail complet vient dessous. */
+.cash-sheet{display:flex;flex-direction:column;gap:18px}
+.cash-sheet-head{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.cash-sheet-head>div{padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:var(--page)}
+.cash-sheet-head small{display:block;font-size:10px;letter-spacing:.07em;color:var(--muted)}
+.cash-sheet-head strong{display:block;font-size:20px;margin-top:4px;font-variant-numeric:tabular-nums}
+.cash-sheet-gap{border-color:var(--danger,#c02626)!important}
+.cash-sheet-gap strong{color:var(--danger,#c02626)}
+.cash-sheet h3{margin:0 0 8px;font-size:13px;letter-spacing:.02em}
+.cash-detail em{font-style:normal;font-size:11px;opacity:.75}
+.cash-out{color:var(--danger,#c02626);font-variant-numeric:tabular-nums}
+/* Les lignes de la liste s'ouvrent au clic : le curseur doit le dire. */
+.cash-page .records-table tbody tr{cursor:pointer}

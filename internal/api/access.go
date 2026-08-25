@@ -78,3 +78,22 @@ func scrubCosts(node any) any {
 	}
 	return node
 }
+
+// vendorMayDelete ouvre la suppression au vendeur, ressource par ressource.
+//
+// Elle etait refusee a tout le monde sauf au gerant, pour toutes les
+// ressources d'un bloc. C'est trop large pour qui tient le comptoir : un
+// produit saisi de travers ou une facture ouverte par erreur doivent se
+// corriger sans aller chercher la gerante.
+//
+// La liste est deliberement courte, et ne couvre que le catalogue et les
+// factures. Les fournisseurs, les coffres, les comptes, les reglages et le
+// journal d'audit restent hors de portee : ce qu'ils portent ne se recree pas,
+// et personne au comptoir n'a de raison d'y toucher.
+//
+// Les garde-fous d'integrite s'appliquent toujours : un produit deja vendu, un
+// client qui a des factures ou un devis converti restent indestructibles,
+// quel que soit le role.
+var vendorMayDelete = map[string]bool{
+	"products": true, "variants": true, "product-images": true, "sales": true,
+}

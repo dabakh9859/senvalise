@@ -143,7 +143,11 @@ func (s *Server) Register(app *fiber.App) {
 			a.Post("/"+r, func(c *fiber.Ctx) error { return s.create(c, r) })
 			a.Put("/"+r+"/:id", func(c *fiber.Ctx) error { return s.update(c, r) })
 		}
-		a.Delete("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, r) })
+		if vendorMayDelete[r] {
+			a.Delete("/"+r+"/:id", func(c *fiber.Ctx) error { return s.remove(c, r) })
+		} else {
+			a.Delete("/"+r+"/:id", auth.Manager, func(c *fiber.Ctx) error { return s.remove(c, r) })
+		}
 	}
 	a.Get("/stock/movements", func(c *fiber.Ctx) error { return s.list(c, "stock-movements") })
 	a.Get("/stock/movements/:id", func(c *fiber.Ctx) error { return s.show(c, "stock-movements") })
@@ -153,15 +157,17 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/stock/inventory", s.inventory)
 	a.Post("/sales/checkout", s.checkout)
 	a.Post("/sales/:id/payments", s.addSalePayment)
-	a.Post("/sales/:id/payments/cancel-all", auth.Manager, s.cancelAllSalePayments)
-	a.Post("/sales/:id/payments/:paymentId/cancel", auth.Manager, s.cancelSalePayment)
-	a.Put("/sales/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "sales") })
-	a.Post("/sales/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "sales") })
+	a.Post("/sales/:id/payments/cancel-all", s.cancelAllSalePayments)
+	a.Post("/sales/:id/payments/:paymentId/cancel", s.cancelSalePayment)
+	a.Put("/sales/:id/items/:itemId", func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "sales") })
+	a.Post("/sales/:id/items", func(c *fiber.Ctx) error { return s.addBusinessLine(c, "sales") })
 	a.Put("/quotes/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "quotes") })
 	a.Post("/quotes/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "quotes") })
 	a.Put("/delivery-notes/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.updateBusinessLine(c, "delivery-notes") })
 	a.Post("/delivery-notes/:id/items", auth.Manager, func(c *fiber.Ctx) error { return s.addBusinessLine(c, "delivery-notes") })
-	for _, signable := range []string{"sales", "quotes", "delivery-notes"} {
+	a.Post("/sales/:id/signatures/:kind", func(c *fiber.Ctx) error { return s.uploadDocumentSignature(c, "sales") })
+	a.Delete("/sales/:id/items/:itemId", func(c *fiber.Ctx) error { return s.removeBusinessLine(c, "sales") })
+	for _, signable := range []string{"quotes", "delivery-notes"} {
 		r := signable
 		a.Post("/"+r+"/:id/signatures/:kind", auth.Manager, func(c *fiber.Ctx) error { return s.uploadDocumentSignature(c, r) })
 		a.Delete("/"+r+"/:id/items/:itemId", auth.Manager, func(c *fiber.Ctx) error { return s.removeBusinessLine(c, r) })
@@ -175,7 +181,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Get("/cash/:id", s.cashDetail)
 	a.Post("/cash/:id/close", s.closeCash)
 	a.Post("/vaults/:id/deposit", s.depositVault)
-	a.Post("/products/:id/images", auth.Manager, s.uploadProductImage)
+	a.Post("/products/:id/images", s.uploadProductImage)
 	a.Get("/duplicates/customers", auth.Manager, s.duplicates)
 	a.Get("/labels/:variantId", s.label)
 	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)

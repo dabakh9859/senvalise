@@ -107,6 +107,26 @@ func joinTables(tables []string) string {
 
 // call joue une requete authentifiee et rend le code et le corps decode.
 func (h *harness) call(method, path string, body any) (int, map[string]any) {
+	return h.callAs(h.token, method, path, body)
+}
+
+// asVendor rend un jeton de vendeur. Les regles d'acces ne se verifient pas
+// depuis le compte du gerant : c'est precisement ce que le vendeur peut faire
+// qui est en jeu.
+func (h *harness) asVendor() string {
+	h.t.Helper()
+	var user models.User
+	if h.db.Where("role = ?", "vendor").First(&user).Error != nil {
+		user = models.User{Name: "Vendeur de test", Email: "vendeur-test@senvalise.local", Role: "vendor", Active: true}
+		if e := h.db.Create(&user).Error; e != nil {
+			h.t.Fatalf("création du vendeur de test : %v", e)
+		}
+	}
+	token, _ := auth.Sign(user.ID, "vendor")
+	return token
+}
+
+func (h *harness) callAs(token, method, path string, body any) (int, map[string]any) {
 	h.t.Helper()
 	var reader *bytes.Reader
 	if body != nil {
@@ -117,7 +137,7 @@ func (h *harness) call(method, path string, body any) (int, map[string]any) {
 	}
 	request, _ := http.NewRequest(method, path, reader)
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "Bearer "+h.token)
+	request.Header.Set("Authorization", "Bearer "+token)
 	response, err := h.app.Test(request, 10000)
 	if err != nil {
 		h.t.Fatalf("%s %s : %v", method, path, err)
@@ -733,5 +753,68 @@ func TestDeletingASoldProductIsRefused(t *testing.T) {
 	// La marchandise n'a pas bouge : un refus ne doit rien laisser derriere.
 	if got := h.stockOf(variant.ID); got != 4 {
 		t.Fatalf("stock %d au lieu de 4 après un refus de suppression", got)
+	}
+}
+
+// Le vendeur tient le comptoir : il doit pouvoir corriger une facture et un
+// produit sans aller chercher la gerante.
+//
+// Tout etait reserve au gerant — les lignes d'une facture, l'annulation d'un
+// reglement, la photo d'un produit, la suppression d'une saisie de travers.
+// Ce test fixe la frontiere : ce que le vendeur peut faire, et ce qui reste
+// hors de sa portee.
+func TestVendorMayEditProductsAndInvoices(t *testing.T) {
+	h := newHarness(t)
+	vendor := h.asVendor()
+	variant := h.variantWithStock(10, 15000)
+
+	status, sale := h.callAs(vendor, http.MethodPost, "/api/sales/checkout", fiber.Map{
+		"paymentMethod": "cash", "paid": 15000,
+		"items": []fiber.Map{{"variantId": variant.ID, "quantity": 1, "unitPrice": 15000}},
+	})
+	if status >= 400 {
+		t.Fatalf("le vendeur ne peut pas vendre : %v", sale)
+	}
+	saleID := uint(sale["id"].(float64))
+	itemID := uint(sale["items"].([]any)[0].(map[string]any)["id"].(float64))
+
+	allowed := []struct {
+		name, method, path string
+		body               fiber.Map
+	}{
+		{"modifier une ligne", http.MethodPut, fmt.Sprintf("/api/sales/%d/items/%d", saleID, itemID),
+			fiber.Map{"quantity": 2, "unitPrice": 15000, "discount": 0}},
+		{"encaisser un règlement", http.MethodPost, fmt.Sprintf("/api/sales/%d/payments", saleID),
+			fiber.Map{"method": "wave", "amount": 5000}},
+		{"corriger le produit", http.MethodPut, fmt.Sprintf("/api/products/%d", variant.ProductID),
+			fiber.Map{"name": "Renommé par le vendeur", "active": true}},
+	}
+	for _, action := range allowed {
+		if status, body := h.callAs(vendor, action.method, action.path, action.body); status >= 400 {
+			t.Fatalf("le vendeur ne peut pas %s (%d) : %v", action.name, status, body)
+		}
+	}
+
+	// La suppression de la facture lui est ouverte, et rend la marchandise.
+	if status, body := h.callAs(vendor, http.MethodDelete, fmt.Sprintf("/api/sales/%d", saleID), nil); status >= 400 {
+		t.Fatalf("le vendeur ne peut pas supprimer une facture (%d) : %v", status, body)
+	}
+	if got := h.stockOf(variant.ID); got != 10 {
+		t.Fatalf("stock %d au lieu de 10 : la facture supprimée n'a pas rendu la marchandise", got)
+	}
+
+	// Ce qui reste hors de sa portee. La liste compte autant que la
+	// precedente : elle dit ou s'arrete le comptoir.
+	refused := []struct{ name, method, path string }{
+		{"lire les comptes", http.MethodGet, "/api/users"},
+		{"créer un compte", http.MethodPost, "/api/users"},
+		{"lire les réglages", http.MethodGet, "/api/settings"},
+		{"lire les fournisseurs", http.MethodGet, "/api/suppliers"},
+		{"lire le journal d'audit", http.MethodGet, "/api/activity-logs"},
+	}
+	for _, action := range refused {
+		if status, _ := h.callAs(vendor, action.method, action.path, fiber.Map{}); status != 403 {
+			t.Fatalf("le vendeur peut %s : %d au lieu de 403", action.name, status)
+		}
 	}
 }

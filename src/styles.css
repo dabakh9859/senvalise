@@ -1467,3 +1467,31 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
 .doc-generated{margin:10px 34px 0;text-align:center;font-size:10px;color:var(--doc-muted)}
 .doc-band{justify-content:flex-start}
 @media(max-width:860px){.doc-generated{margin-inline:18px}}
+
+/* Pavé de coupures, dans le panier.
+   ------------------------------------------------------------------------
+   Le montant encaissé se tapait chiffre par chiffre pendant que la cliente
+   tend ses billets. On compte maintenant comme on compte l'argent : deux fois
+   10 000, une fois 5 000, une fois 1 000 font 26 000.
+   Quatre colonnes plutôt que cinq : « 100 000 » et « 500 000 » doivent tenir
+   sans être coupés, et une cible large se vise mieux du doigt sur tablette. */
+.denominations{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line,#e0e2e5)}
+.denominations-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.denominations-head span{font-size:11px;color:var(--muted,#777c84);font-weight:600}
+.denominations-head button{border:0;background:none;padding:2px 4px;font-size:11px;font-weight:700;color:var(--muted,#777c84);cursor:pointer;text-decoration:underline}
+.denominations-head button:hover{color:var(--danger,#c02626)}
+.denominations-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px}
+.denominations-grid button{
+  height:36px;border:1px solid var(--line,#e0e2e5);border-radius:8px;background:var(--panel,#fff);
+  font:700 12.5px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:inherit;cursor:pointer;
+}
+.denominations-grid button:hover{border-color:var(--accent,#0755d8);color:var(--accent,#0755d8)}
+/* Le retour visuel compte : au comptoir on empile vite, et il faut voir que le
+   clic a été pris sans quitter le montant des yeux. */
+.denominations-grid button:active{background:var(--accent,#0755d8);border-color:var(--accent,#0755d8);color:#fff;transform:translateY(1px)}
+/* Avec un règlement partagé, la ligne que le pavé alimente se distingue. */
+.payment-line.is-active{outline:2px solid var(--accent,#0755d8);outline-offset:2px;border-radius:8px}
+
+/* Les montants portent une espace insécable fine (U+202F) : ils ne se coupent
+   pas d'eux-mêmes. La règle est là pour les navigateurs qui l'ignorent. */
+.denominations-grid button{white-space:nowrap;padding:0 4px}

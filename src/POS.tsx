@@ -12,6 +12,17 @@ const imageFor=(variant:Variant)=>{const images=variant.product?.images??[];retu
 type Sold={id:number;reference:string;total:number;paid:number};
 type PosProps={onOpenInvoice?:(id:number)=>void};
 
+// Les coupures du pavé de saisie.
+//
+// Le montant encaissé se tapait chiffre par chiffre, au clavier, pendant que
+// la cliente tend ses billets. On compte maintenant comme on compte l'argent :
+// deux fois 10 000, une fois 5 000, une fois 1 000 font 26 000. Les cinq
+// premières valeurs sont les billets qui circulent réellement ; les suivantes
+// sont des raccourcis, pour ne pas cliquer cent fois sur 10 000 quand la
+// facture atteint le million.
+const denominations=[500,1000,2000,5000,10000,25000,50000,100000,500000,1000000];
+const denominationLabel=(value:number)=>value>=1000000?'1 M':new Intl.NumberFormat('fr-FR').format(value);
+
 export default function POS({onOpenInvoice}:PosProps){
   const[items,setItems]=useState<Variant[]>([]);const[known,setKnown]=useState<Variant[]>([]);const[customers,setCustomers]=useState<Customer[]>([]);const[config,setConfig]=useState<CheckoutConfig|null>(null);const[cart,setCart]=useState<CartLine[]>([]);const[query,setQuery]=useState('');const[scanNote,setScanNote]=useState<{text:string;ok:boolean}|null>(null);const[payments,setPayments]=useState<{method:string;amount:string}[]>([]);const[touched,setTouched]=useState(false);const[customerId,setCustomerId]=useState('');const[customerSearch,setCustomerSearch]=useState('');const[customerOpen,setCustomerOpen]=useState(false);const[customerModal,setCustomerModal]=useState(false);const[preview,setPreview]=useState<Variant|null>(null);const[applyTax,setApplyTax]=useState(false);const[globalDiscount,setGlobalDiscount]=useState(0);const[message,setMessage]=useState('');
   // Vente qui vient d'etre encaissee. Le message de reussite ne suffisait pas :
@@ -55,7 +66,24 @@ export default function POS({onOpenInvoice}:PosProps){
   // total : le cas courant — un seul moyen, tout réglé — ne demande aucune
   // saisie.
   useEffect(()=>{if(!touched&&payments.length===1)setPayments(current=>current.length===1?[{...current[0],amount:total?String(total):''}]:current)},[total,touched,payments.length]);
+  const[activeLine,setActiveLine]=useState(0);
   const setLine=(index:number,patch:Partial<{method:string;amount:string}>)=>{setTouched(true);setPayments(current=>current.map((line,position)=>position===index?{...line,...patch}:line))};
+  // Empiler une coupure sur le montant en cours.
+  //
+  // Le champ arrive pré-rempli avec le total à payer : compter les billets
+  // par-dessus donnerait 36 000 F pour un premier billet de 10 000. Le premier
+  // clic repart donc de zéro tant que le vendeur n'a rien saisi lui-même —
+  // c'est le geste attendu, on compte ce que la cliente tend.
+  //
+  // Le montant n'est pas borné par le total : tendre 30 000 F pour une facture
+  // de 26 000 F est le cas normal au comptoir, et la monnaie à rendre est
+  // calculée juste en dessous.
+  const addDenomination=(value:number)=>{
+    const index=Math.min(activeLine,payments.length-1);
+    const base=touched?Number(payments[index]?.amount)||0:0;
+    setLine(index,{amount:String(base+value)});
+  };
+  const clearAmount=()=>setLine(Math.min(activeLine,payments.length-1),{amount:''});
   const addLine=()=>{setTouched(true);setPayments(current=>{
     const used=new Set(current.map(line=>line.method));
     const next=activeMethods.find(item=>!used.has(item.id))?.id??activeMethods[0]?.id??'';
@@ -110,14 +138,28 @@ export default function POS({onOpenInvoice}:PosProps){
     <div className="cart-lines">{cart.length===0?<div className="empty-mini"><ShoppingCart/><p>Choisissez un modèle pour commencer</p></div>:cart.map(line=>{const maxDiscount=line.unitPrice*line.quantity;return <div className="cart-line-enhanced" key={line.variant.id}><div className="cart-line-photo">{imageFor(line.variant)?<img src={imageFor(line.variant)} alt=""/>:<ImageOff/>}</div><div className="cart-line-main"><div><strong>{line.variant.product?.name??line.variant.sku}</strong><button title="Retirer" onClick={()=>setCart(current=>current.filter(item=>item.variant.id!==line.variant.id))}><Trash2/></button></div><small>{line.variant.color} · {line.variant.size}</small><div className="line-controls"><div className="qty"><button onClick={()=>line.quantity===1?setCart(current=>current.filter(item=>item.variant.id!==line.variant.id)):update(line.variant.id,{quantity:line.quantity-1,discount:Math.min(line.discount,line.unitPrice*(line.quantity-1))})}><Minus/></button><span>{line.quantity}</span><button disabled={line.quantity>=line.variant.stock} onClick={()=>add(line.variant)}><Plus/></button></div><label>Prix unitaire<input type="number" min="0" value={line.unitPrice} onChange={event=>update(line.variant.id,{unitPrice:Math.max(0,Number(event.target.value)),discount:0})}/></label><label>Remise ligne<input type="number" min="0" max={maxDiscount} value={line.discount} onChange={event=>update(line.variant.id,{discount:Math.min(maxDiscount,Math.max(0,Number(event.target.value)))})}/></label></div><div className="line-total"><span>{line.discount>0?`${money(line.discount)} de remise`:line.variant.sku}</span><strong>{money(maxDiscount-line.discount)}</strong></div></div></div>})}</div>
     <div className="cart-bottom enhanced-cart-bottom"><div className="discount-tax-row"><label><Percent/>Remise totale<input type="number" min="0" max={maxGlobal} value={globalDiscount} onChange={event=>setGlobalDiscount(Math.min(maxGlobal,Math.max(0,Number(event.target.value))))}/></label><label className="tax-toggle"><input type="checkbox" checked={applyTax} onChange={event=>setApplyTax(event.target.checked)}/><span>TVA {config?.taxRate??0}%</span></label></div><div className="checkout-summary"><div><span>Sous-total</span><b>{money(subtotal)}</b></div>{lineDiscount+appliedGlobal>0&&<div className="discount"><span>Remises</span><b>− {money(lineDiscount+appliedGlobal)}</b></div>}{applyTax&&<div><span>TVA ({config?.taxRate??0}%)</span><b>+ {money(tax)}</b></div>}<div className="grand-total"><span>Total à payer</span><strong>{money(total)}</strong></div></div><div className="payment-split">
       <div className="payment-split-head"><span>Règlement</span>{payments.length<activeMethods.length&&<button type="button" onClick={addLine}><Plus/>Ajouter un moyen</button>}</div>
-      {payments.map((line,index)=><div className="payment-line" key={index}>
+      {payments.map((line,index)=><div className={`payment-line${payments.length>1&&index===Math.min(activeLine,payments.length-1)?' is-active':''}`} key={index} onClick={()=>setActiveLine(index)}>
         <select value={line.method} onChange={event=>setLine(index,{method:event.target.value})} aria-label={`Moyen de paiement ${index+1}`}>
           {activeMethods.map(item=><option value={item.id} key={item.id}>{item.label}</option>)}
         </select>
         <input type="number" min="0" value={line.amount} placeholder="0" aria-label={`Montant ${methodLabel(line.method)}`}
+          onFocus={()=>setActiveLine(index)}
           onChange={event=>setLine(index,{amount:event.target.value})}/>
         {payments.length>1&&<button type="button" className="drop-line" onClick={()=>removeLine(index)} aria-label="Retirer ce moyen"><X/></button>}
       </div>)}
+      {/* Pavé de coupures : on empile les billets comme on les compte. Deux
+          fois 10 000, une fois 5 000, une fois 1 000 font 26 000, sans passer
+          par le clavier pendant que la cliente attend. */}
+      <div className="denominations">
+        <div className="denominations-head">
+          <span>Ajouter au montant{payments.length>1?` · ${methodLabel(payments[Math.min(activeLine,payments.length-1)]?.method)}`:''}</span>
+          <button type="button" onClick={clearAmount}>Effacer</button>
+        </div>
+        <div className="denominations-grid">
+          {denominations.map(value=><button type="button" key={value} onClick={()=>addDenomination(value)}
+            aria-label={`Ajouter ${new Intl.NumberFormat('fr-FR').format(value)} francs`}>{denominationLabel(value)}</button>)}
+        </div>
+      </div>
       {payments.length>1&&<div className="payment-recap"><span>Réglé</span><b>{money(applied)}</b></div>}
       {remaining>0&&<div className="payment-recap warn"><span>Reste à payer</span><b>{money(remaining)}</b></div>}
       {change>0&&!overpaidWithoutCash&&<div className="payment-recap change"><span>Monnaie à rendre</span><b>{money(change)}</b></div>}

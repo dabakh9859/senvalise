@@ -26,6 +26,27 @@ type Config struct {
 	SMS       SMSConfig       `json:"sms"`
 	Throttle  ThrottleConfig  `json:"throttle"`
 	Reminders RemindersConfig `json:"reminders"`
+	// StockAlert previent le responsable quand la marchandise manque. Le stock
+	// bas ne se decouvre pas en ouvrant l'application : c'est la boutique qui
+	// doit prevenir, pas le gerant qui doit penser a regarder.
+	StockAlert StockAlertConfig `json:"stockAlert"`
+}
+
+// StockAlertConfig decrit l'alerte de rupture.
+//
+// Le numero est distinct de celui de la boutique : celui qui reapprovisionne
+// n'est pas forcement celui qui repond aux clients, et une alerte de gestion
+// n'a rien a faire sur la ligne du comptoir.
+type StockAlertConfig struct {
+	Enabled bool   `json:"enabled"`
+	Phone   string `json:"phone"`
+	Channel string `json:"channel"`
+	// Hour est l'heure d'envoi, en heure locale du serveur. Une alerte a trois
+	// heures du matin ne serait lue que le lendemain, et sonnerait pour rien.
+	Hour int `json:"hour"`
+	// OnlyWhenNeeded evite le message quotidien « tout va bien », qui finit par
+	// ne plus etre lu — et fait rater celui qui compte.
+	OnlyWhenNeeded bool `json:"onlyWhenNeeded"`
 }
 
 type WhatsAppConfig struct {
@@ -79,7 +100,8 @@ func DefaultConfig() Config {
 			TokenURL: "https://api.orange.com/oauth/v3/token",
 			BaseURL:  "https://api.orange.com/smsmessaging/v1/outbound",
 		},
-		Throttle: ThrottleConfig{PerMinute: 12, MinDelaySeconds: 4},
+		Throttle:   ThrottleConfig{PerMinute: 12, MinDelaySeconds: 4},
+		StockAlert: StockAlertConfig{Channel: "whatsapp", Hour: 8, OnlyWhenNeeded: true},
 		Reminders: RemindersConfig{
 			Channel: "whatsapp", MinAmount: 5000, AfterDays: 7, CooldownDays: 3,
 			Body: "Bonjour {{nom}}, votre facture {{reference}} présente un solde de {{reste}}. " +
@@ -114,6 +136,15 @@ func (c *Config) Normalise() {
 	}
 	if c.Throttle.MinDelaySeconds < 1 || c.Throttle.MinDelaySeconds > 120 {
 		c.Throttle.MinDelaySeconds = base.Throttle.MinDelaySeconds
+	}
+	c.StockAlert.Phone = strings.TrimSpace(c.StockAlert.Phone)
+	if c.StockAlert.Channel != "sms" {
+		c.StockAlert.Channel = "whatsapp"
+	}
+	// Une heure hors de la journee ferait sonner l'alerte quand personne ne la
+	// lit, et une valeur absente vaudrait minuit.
+	if c.StockAlert.Hour < 0 || c.StockAlert.Hour > 23 {
+		c.StockAlert.Hour = base.StockAlert.Hour
 	}
 	if c.Reminders.Channel != "sms" {
 		c.Reminders.Channel = "whatsapp"

@@ -1,6 +1,6 @@
 import {FormEvent,useCallback,useEffect,useRef,useState} from 'react';
-import {LogOut,MessageCircle,Play,QrCode,RefreshCw,Save,Send,Smartphone,Square,TriangleAlert} from 'lucide-react';
-import {api} from './api';
+import {FileText,LogOut,MessageCircle,Play,QrCode,RefreshCw,Save,Send,Smartphone,Square,TriangleAlert} from 'lucide-react';
+import {api,openFile} from './api';
 
 // Paramétrage des deux canaux sortants : WhatsApp via la passerelle WAHA, et
 // SMS via l'API d'Orange Sénégal.
@@ -17,6 +17,7 @@ type Config={
   publicUrl:string;whatsapp:WhatsAppConfig;sms:SmsConfig;
   throttle:{perMinute:number;minDelaySeconds:number};
   reminders:{enabled:boolean;channel:string;minAmount:number;afterDays:number;cooldownDays:number;body:string};
+  stockAlert:{enabled:boolean;phone:string;channel:string;hour:number;onlyWhenNeeded:boolean};
   hasApiKey:boolean;hasClientSecret:boolean;placeholders:string[];
 };
 type Status={
@@ -71,6 +72,16 @@ export default function Messaging(){
     return()=>{stop=true;clearInterval(timer)};
   },[status?.whatsapp.status]);
 
+  const[stockBusy,setStockBusy]=useState(false);
+  const[stockNote,setStockNote]=useState('');
+  // L'envoi immédiat part même si rien ne manque : c'est le seul moyen de
+  // vérifier que le numéro est le bon avant d'attendre la première rupture.
+  const sendStockAlert=async()=>{
+    setStockBusy(true);setStockNote('');
+    try{const result=await api<{note:string}>('/api/stock-alert/send',{method:'POST'});setStockNote(result.note)}
+    catch(problem){setStockNote((problem as Error).message)}
+    finally{setStockBusy(false)}
+  };
   const patch=(change:Partial<Config>)=>setConfig(current=>current?{...current,...change}:current);
   const patchWhatsApp=(change:Partial<WhatsAppConfig>)=>setConfig(current=>current?{...current,whatsapp:{...current.whatsapp,...change}}:current);
   const patchSms=(change:Partial<SmsConfig>)=>setConfig(current=>current?{...current,sms:{...current.sms,...change}}:current);
@@ -177,6 +188,22 @@ export default function Messaging(){
         <label>Messages par minute<input type="number" min="1" max="60" value={config.throttle.perMinute} onChange={event=>patch({throttle:{...config.throttle,perMinute:Number(event.target.value)}})}/></label>
         <label>Délai minimum entre deux envois (s)<input type="number" min="1" max="120" value={config.throttle.minDelaySeconds} onChange={event=>patch({throttle:{...config.throttle,minDelaySeconds:Number(event.target.value)}})}/></label>
         <label className="field-wide">Adresse publique du site<input value={config.publicUrl} onChange={event=>patch({publicUrl:event.target.value})} placeholder="https://senvalise.online"/><small>Sert à fabriquer les liens de documents envoyés par SMS.</small></label>
+      </div>
+    </section>
+
+    <section className="settings-section">
+      <div><h3>Alerte de rupture de stock</h3><p>Un message par jour sur le numéro du responsable, avec l’état du stock en pièce jointe. La rupture se découvre au comptoir, devant la cliente : c’est la boutique qui doit prévenir.</p></div>
+      <div className="settings-fields">
+        <label className="setting-switch"><input type="checkbox" checked={config.stockAlert?.enabled??false} onChange={event=>patch({stockAlert:{...config.stockAlert,enabled:event.target.checked}})}/><span><b>Alerte activée</b><small>Un passage par jour, à l’heure choisie.</small></span></label>
+        <label>Numéro du responsable<input value={config.stockAlert?.phone??''} onChange={event=>patch({stockAlert:{...config.stockAlert,phone:event.target.value}})} placeholder="+221 77 000 00 00"/><small>Différent du numéro de la boutique si vous le souhaitez.</small></label>
+        <label>Canal<select value={config.stockAlert?.channel??'whatsapp'} onChange={event=>patch({stockAlert:{...config.stockAlert,channel:event.target.value}})}><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select><small>Le document ne peut être joint qu’en WhatsApp.</small></label>
+        <label>Heure d’envoi<input type="number" min="0" max="23" value={config.stockAlert?.hour??8} onChange={event=>patch({stockAlert:{...config.stockAlert,hour:Number(event.target.value)}})}/></label>
+        <label className="setting-switch"><input type="checkbox" checked={config.stockAlert?.onlyWhenNeeded??true} onChange={event=>patch({stockAlert:{...config.stockAlert,onlyWhenNeeded:event.target.checked}})}/><span><b>Seulement s’il y a quelque chose à signaler</b><small>Un message quotidien « tout va bien » finit par ne plus être lu.</small></span></label>
+        <div className="stock-alert-actions field-wide">
+          <button type="button" onClick={()=>void openFile('/api/stock-alert/preview')}><FileText/>Voir le document</button>
+          <button type="button" className="primary" disabled={stockBusy} onClick={()=>void sendStockAlert()}><Send/>{stockBusy?'Envoi…':'Envoyer maintenant'}</button>
+          {stockNote&&<span>{stockNote}</span>}
+        </div>
       </div>
     </section>
 

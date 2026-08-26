@@ -109,6 +109,9 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
 	// Les dépenses portent les salaires et le solde de la journée. Le module
 	// entier relève du gérant.
+	a.Get("/stock-alert", auth.Manager, s.stockAlertSummary)
+	a.Get("/stock-alert/preview", auth.Manager, s.stockAlertPreview)
+	a.Post("/stock-alert/send", auth.Manager, s.sendStockAlertNow)
 	a.Get("/expense-types", s.listExpenseTypes)
 	a.Post("/expense-types", s.createExpenseType)
 	a.Put("/expense-types/:id", s.updateExpenseType)
@@ -182,6 +185,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/cash/:id/close", s.closeCash)
 	a.Post("/vaults/:id/deposit", s.depositVault)
 	a.Post("/products/:id/images", s.uploadProductImage)
+	a.Post("/products/:id/duplicate", s.duplicateProduct)
 	a.Get("/duplicates/customers", auth.Manager, s.duplicates)
 	a.Get("/labels/:variantId", s.label)
 	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)
@@ -2567,4 +2571,62 @@ func (s *Server) deleteExpense(c *fiber.Ctx) error {
 	}
 	s.log(c, "delete", "expenses", expense.ID, expense.Reference+" — "+expense.Label)
 	return c.SendStatus(204)
+}
+
+// duplicateProduct recopie une fiche produit, sans son stock ni son histoire.
+//
+// Saisir dix valises qui ne different que par la taille demandait dix fois la
+// meme frappe : le nom, la categorie, la marque, la description, les mesures,
+// le prix. La copie reprend tout cela et laisse au vendeur la seule chose qui
+// change vraiment.
+//
+// Ce qui ne se copie pas est aussi important que ce qui se copie. Le stock
+// part a zero — la copie n'a pas de marchandise en rayon — et le journal des
+// mouvements, les photos et les ventes restent attaches a l'original : ce sont
+// des faits, ils appartiennent au produit qui les a vecus.
+func (s *Server) duplicateProduct(c *fiber.Ctx) error {
+	var source models.Product
+	if s.DB.Preload("Variants").First(&source, c.Params("id")).Error != nil {
+		return fiber.ErrNotFound
+	}
+	copyName := strings.TrimSpace(source.Name) + " (copie)"
+	product := source
+	product.ID = 0
+	product.CreatedAt, product.UpdatedAt = time.Time{}, time.Time{}
+	product.Name = copyName
+	product.Slug = ""
+	product.Variants = nil
+	product.Images = nil
+	// La copie n'est pas mise en vitrine : elle est incomplete par nature, et
+	// une fiche a moitie remplie sur la boutique en ligne se voit.
+	product.Online, product.Featured = false, false
+
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		product.Slug = uniqueSlug(tx, slugify(product.Name))
+		if e := tx.Create(&product).Error; e != nil {
+			return e
+		}
+		// Le prix suit, le stock non. Le code-barres non plus : il designe un
+		// article physique precis, et deux fiches ne peuvent pas le partager.
+		price := int64(0)
+		if len(source.Variants) > 0 {
+			price = source.Variants[0].Price
+		}
+		variant := models.ProductVariant{
+			ProductID: product.ID, SKU: uniqueSKU(tx, "SV-"+product.Slug),
+			Price: price, Active: true,
+		}
+		if len(source.Variants) > 0 {
+			variant.Cost = source.Variants[0].Cost
+			variant.AlertAt = source.Variants[0].AlertAt
+			variant.Color, variant.Size = source.Variants[0].Color, source.Variants[0].Size
+		}
+		return tx.Create(&variant).Error
+	})
+	if err != nil {
+		return dbError(err, "duplication du produit")
+	}
+	s.log(c, "duplicate", "products", product.ID, "copie de "+source.Name)
+	_ = preload(s.DB, "products").First(&product, product.ID).Error
+	return c.Status(201).JSON(product)
 }

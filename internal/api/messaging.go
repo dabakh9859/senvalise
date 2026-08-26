@@ -199,6 +199,16 @@ func (s *Server) deliver(config messaging.Config, message *models.Message) (stri
 		client := messaging.NewWAHA(config.WhatsApp)
 		// Une piece jointe part comme document, avec le texte en legende :
 		// deux messages separes arriveraient dans le desordre.
+		// L'etat du stock n'est pas une piece enregistree : il est compose au
+		// moment de l'envoi, comme les factures le sont, pour que le document
+		// recu decrive le stock de l'instant et non celui de la mise en file.
+		if message.DocKind == stockAlertDocKind {
+			raw, err := s.stockAlertPDF(s.stockReport())
+			if err != nil {
+				return "", err
+			}
+			return client.SendFile(chat, "Etat-du-stock.pdf", "application/pdf", raw, message.Body)
+		}
 		if message.DocKind != "" && message.DocID != 0 {
 			raw, filename, _, err := s.documentPDF(message.DocKind, message.DocID)
 			if err != nil {
@@ -223,6 +233,7 @@ func (s *Server) StartOutbox() {
 		for {
 			s.drainOutbox()
 			s.runDueReminders()
+			s.runStockAlert()
 			time.Sleep(10 * time.Second)
 		}
 	}()

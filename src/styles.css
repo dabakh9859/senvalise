@@ -1671,3 +1671,105 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
 }
 .connection-lost svg{width:19px;height:19px;flex:none}
 .connection-lost b{font-weight:700}
+
+/* Téléphone et tablette : corrections d'affichage.
+   ------------------------------------------------------------------------
+   Vérifiées en rendant l'application réelle à 390 px et 820 px, pas sur
+   maquette. Chaque règle répond à un défaut constaté. */
+
+/* Une photo de carte produit est décorative — le nom est juste dessous. Quand
+   elle tarde ou manque, son texte de remplacement débordait par-dessus le
+   badge et le nom de la carte voisine. */
+.pos-product-image,.product-card-media,.detail-cover{overflow:hidden}
+.pos-product-image img,.product-card-media img{width:100%;height:100%;object-fit:cover}
+
+/* « 45 000 F » se coupait en deux lignes dans une carte étroite. */
+.pos-product-info b,.pos-product-info span b,.product-card-price{white-space:nowrap}
+
+/* La barre d'outils de la caisse s'empile proprement au lieu de comprimer ses
+   éléments jusqu'à les plier. */
+.pos-tools{flex-wrap:wrap;row-gap:9px}
+.pos-quick{white-space:nowrap}
+
+@media(max-width:1000px){
+  /* Pas de clavier : le rappel des raccourcis n'a rien à faire là. */
+  .pos-shortcuts{display:none}
+}
+
+@media(max-width:760px){
+  /* Le rail vertical mangeait 72 px sur 390 : la barre du haut porte déjà le
+     menu, la marque et le profil. */
+  .sidebar.compact-rail{display:none}
+  /* La grille repasse à une seule colonne, sinon la place du rail resterait
+     réservée et l'écran serait décalé. */
+  .app-shell,.app-shell.rail-layout{grid-template-columns:minmax(0,1fr)}
+
+  /* L'en-tête « ESPACE DE TRAVAIL / Produits » répétait le titre déjà écrit
+     dans la barre du haut, au prix de 90 px de hauteur utile. */
+  .page-header{display:none}
+  .page-content{padding:14px}
+
+  /* Les cartes produit passent en une colonne lisible plutôt que deux
+     colonnes où plus rien ne tient. */
+  .pos-product-grid{grid-template-columns:1fr}
+  .pos-tools .search{width:100%}
+  .pos-tools>span{font-size:12px}
+}
+
+@media(max-width:760px){
+  /* La barre d'outils se plie au lieu de comprimer la recherche jusqu'à
+     l'illisible : recherche pleine largeur, boutons dessous. */
+  .toolbar{flex-wrap:wrap;gap:9px}
+  .toolbar .search{flex:1 1 100%}
+  .toolbar>button{flex:1 1 auto;justify-content:center}
+
+  /* La photo d'un produit occupait un carré plein écran : on n'en voyait
+     qu'un à la fois. Le rapport est aplati — la fiche reste reconnaissable,
+     et trois tiennent maintenant sur un écran. */
+  .product-library-image{aspect-ratio:2.1}
+  .product-grid{grid-template-columns:1fr}
+
+  /* Quatre compteurs côte à côte devenaient illisibles ; deux tiennent. */
+  .stat-grid,.product-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+/* Barre de panier, sur téléphone et tablette.
+   ------------------------------------------------------------------------
+   Sous cette largeur, le panier passe sous la grille des produits : il faut
+   faire défiler tout le catalogue pour l'atteindre, alors que c'est
+   l'élément central de l'écran. La barre reste collée en bas, dit ce que le
+   panier contient et y mène d'un geste. Elle disparaît dès que les deux
+   colonnes tiennent côte à côte, où le panier est déjà sous les yeux. */
+.cart-jump{display:none}
+@media(max-width:850px){
+  .cart-jump{
+    position:fixed;left:12px;right:12px;bottom:12px;z-index:55;
+    display:flex;align-items:center;gap:12px;padding:12px 16px;border:0;border-radius:12px;
+    background:var(--accent,#0755d8);color:#fff;box-shadow:0 10px 26px rgba(7,85,216,.35);cursor:pointer;
+  }
+  .cart-jump svg{width:20px;height:20px;flex:none}
+  .cart-jump span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.25}
+  .cart-jump b{font-size:14px}
+  .cart-jump small{font-size:11px;opacity:.85}
+  .cart-jump em{margin-left:auto;font-style:normal;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+  /* La barre flotte au-dessus du contenu : on lui réserve sa place, sinon
+     elle masque le bouton « Encaisser » du panier. */
+  .enhanced-cart{padding-bottom:78px}
+}
+
+@media(max-width:760px){
+  /* Les états vides gardaient la hauteur prévue pour un grand tableau : sur
+     téléphone, un « aucune dépense » de 260 px de haut occupe un tiers de
+     l'écran pour une phrase. */
+  .expense-list .empty,.table-panel .empty,.panel>.empty{min-height:0;padding:20px 0}
+
+  /* Un tableau ne se comprime pas : « Adji Sarr » se coupait en deux lignes et
+     la dernière colonne sortait de l'écran sans qu'on sache qu'elle existe. Il
+     garde des colonnes lisibles et défile latéralement, avec une ombre au bord
+     droit pour dire qu'il y a une suite. */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;
+    background:linear-gradient(to left,rgba(0,0,0,.06),transparent 22px);border-radius:8px}
+  .records-table{min-width:560px}
+  .records-table td,.records-table th{white-space:nowrap}
+
+}

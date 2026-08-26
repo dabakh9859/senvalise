@@ -2,6 +2,7 @@ import {FormEvent,KeyboardEvent,useEffect,useMemo,useState} from 'react';
 import {ArrowDownToLine,CheckCircle2,ChevronDown,Eye,FileText,ImageOff,Minus,Package,Percent,Plus,Printer,Search,ShoppingCart,Trash2,UserRound,X} from 'lucide-react';
 import {api,Entity,money,openFile,printFile} from './api';
 import Modal from './Modal';
+import DenominationPad from './DenominationPad';
 import type {CheckoutConfig} from './CheckoutSettings';
 
 type ProductImage={url:string;alt?:string;primary?:boolean;position?:number};type Product={name:string;description?:string;images?:ProductImage[]};
@@ -11,17 +12,6 @@ const imageFor=(variant:Variant)=>{const images=variant.product?.images??[];retu
 
 type Sold={id:number;reference:string;total:number;paid:number};
 type PosProps={onOpenInvoice?:(id:number)=>void};
-
-// Les coupures du pavé de saisie.
-//
-// Le montant encaissé se tapait chiffre par chiffre, au clavier, pendant que
-// la cliente tend ses billets. On compte maintenant comme on compte l'argent :
-// deux fois 10 000, une fois 5 000, une fois 1 000 font 26 000. Les cinq
-// premières valeurs sont les billets qui circulent réellement ; les suivantes
-// sont des raccourcis, pour ne pas cliquer cent fois sur 10 000 quand la
-// facture atteint le million.
-const denominations=[500,1000,2000,5000,10000,25000,50000,100000,500000,1000000];
-const denominationLabel=(value:number)=>value>=1000000?'1 M':new Intl.NumberFormat('fr-FR').format(value);
 
 export default function POS({onOpenInvoice}:PosProps){
   const[items,setItems]=useState<Variant[]>([]);const[known,setKnown]=useState<Variant[]>([]);const[customers,setCustomers]=useState<Customer[]>([]);const[config,setConfig]=useState<CheckoutConfig|null>(null);const[cart,setCart]=useState<CartLine[]>([]);const[query,setQuery]=useState('');const[scanNote,setScanNote]=useState<{text:string;ok:boolean}|null>(null);const[payments,setPayments]=useState<{method:string;amount:string}[]>([]);const[touched,setTouched]=useState(false);const[customerId,setCustomerId]=useState('');const[customerSearch,setCustomerSearch]=useState('');const[customerOpen,setCustomerOpen]=useState(false);const[customerModal,setCustomerModal]=useState(false);const[preview,setPreview]=useState<Variant|null>(null);const[applyTax,setApplyTax]=useState(false);const[globalDiscount,setGlobalDiscount]=useState(0);const[message,setMessage]=useState('');
@@ -68,22 +58,6 @@ export default function POS({onOpenInvoice}:PosProps){
   useEffect(()=>{if(!touched&&payments.length===1)setPayments(current=>current.length===1?[{...current[0],amount:total?String(total):''}]:current)},[total,touched,payments.length]);
   const[activeLine,setActiveLine]=useState(0);
   const setLine=(index:number,patch:Partial<{method:string;amount:string}>)=>{setTouched(true);setPayments(current=>current.map((line,position)=>position===index?{...line,...patch}:line))};
-  // Empiler une coupure sur le montant en cours.
-  //
-  // Le champ arrive pré-rempli avec le total à payer : compter les billets
-  // par-dessus donnerait 36 000 F pour un premier billet de 10 000. Le premier
-  // clic repart donc de zéro tant que le vendeur n'a rien saisi lui-même —
-  // c'est le geste attendu, on compte ce que la cliente tend.
-  //
-  // Le montant n'est pas borné par le total : tendre 30 000 F pour une facture
-  // de 26 000 F est le cas normal au comptoir, et la monnaie à rendre est
-  // calculée juste en dessous.
-  const addDenomination=(value:number)=>{
-    const index=Math.min(activeLine,payments.length-1);
-    const base=touched?Number(payments[index]?.amount)||0:0;
-    setLine(index,{amount:String(base+value)});
-  };
-  const clearAmount=()=>setLine(Math.min(activeLine,payments.length-1),{amount:''});
   const addLine=()=>{setTouched(true);setPayments(current=>{
     const used=new Set(current.map(line=>line.method));
     const next=activeMethods.find(item=>!used.has(item.id))?.id??activeMethods[0]?.id??'';
@@ -150,16 +124,11 @@ export default function POS({onOpenInvoice}:PosProps){
       {/* Pavé de coupures : on empile les billets comme on les compte. Deux
           fois 10 000, une fois 5 000, une fois 1 000 font 26 000, sans passer
           par le clavier pendant que la cliente attend. */}
-      <div className="denominations">
-        <div className="denominations-head">
-          <span>Ajouter au montant{payments.length>1?` · ${methodLabel(payments[Math.min(activeLine,payments.length-1)]?.method)}`:''}</span>
-          <button type="button" onClick={clearAmount}>Effacer</button>
-        </div>
-        <div className="denominations-grid">
-          {denominations.map(value=><button type="button" key={value} onClick={()=>addDenomination(value)}
-            aria-label={`Ajouter ${new Intl.NumberFormat('fr-FR').format(value)} francs`}>{denominationLabel(value)}</button>)}
-        </div>
-      </div>
+      <DenominationPad
+        label={`Ajouter au montant${payments.length>1?` · ${methodLabel(payments[Math.min(activeLine,payments.length-1)]?.method)}`:''}`}
+        fromZero={!touched}
+        value={payments[Math.min(activeLine,payments.length-1)]?.amount??''}
+        onChange={amount=>setLine(Math.min(activeLine,payments.length-1),{amount})}/>
       {payments.length>1&&<div className="payment-recap"><span>Réglé</span><b>{money(applied)}</b></div>}
       {remaining>0&&<div className="payment-recap warn"><span>Reste à payer</span><b>{money(remaining)}</b></div>}
       {change>0&&!overpaidWithoutCash&&<div className="payment-recap change"><span>Monnaie à rendre</span><b>{money(change)}</b></div>}

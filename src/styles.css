@@ -1495,3 +1495,12 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
 /* Les montants portent une espace insécable fine (U+202F) : ils ne se coupent
    pas d'eux-mêmes. La règle est là pour les navigateurs qui l'ignorent. */
 .denominations-grid button{white-space:nowrap;padding:0 4px}
+
+/* Le pavé de coupures dans un formulaire.
+   ------------------------------------------------------------------------
+   La grille du formulaire est à deux colonnes : le pavé les occupe toutes les
+   deux, juste sous le champ qu'il alimente. Posé dans une seule colonne, il
+   se serait retrouvé à côté d'un autre champ, et on n'aurait plus su quel
+   montant il compose. */
+.form-grid .denominations{grid-column:1/-1;margin-top:0;padding-top:10px}
+.form-grid .denominations-grid button{height:34px;font-size:12px}

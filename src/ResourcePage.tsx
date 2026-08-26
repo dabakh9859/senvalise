@@ -1,9 +1,10 @@
-import {FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
+import {Fragment,FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
 import {ArrowDownToLine,ArrowUpFromLine,Boxes,Check,ChevronDown,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
 import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
 import Modal from './Modal';
+import DenominationPad from './DenominationPad';
 import ReturnForm from './ReturnForm';
 
 type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>void};
@@ -56,6 +57,7 @@ const advancedFields:Record<string,string[]>={
 // ouvert, parce que c'est lui qui tient le comptoir.
 const managerOnlyResources=new Set(['brands','suppliers','arrivals','orders','vaults','home-blocks','settings','delivery-zones','users']);
 
+const priceFields=new Set(['price','cost','amount','openingAmount','unitPrice']);
 const creationOnlyFields:Record<string,string[]>={products:['stock']};
 
 // Valeurs de depart d'une creation. Un produit cree decoche n'apparait nulle
@@ -530,6 +532,7 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
   const acceptsPhotos=resource==='products';
   const[photos,setPhotos]=useState<File[]>([]);
   const[advanced,setAdvanced]=useState(false);
+  const[pricedTouched,setPricedTouched]=useState<Set<string>>(()=>new Set());
   // Stock des déclinaisons du produit. Le stock ne vit pas sur la fiche
   // produit mais sur ses déclinaisons : on le corrige ici parce que c'est là
   // qu'on l'attend, et la correction part en mouvement pour rester traçable.
@@ -589,7 +592,13 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
     }catch(reason){setError((reason as Error).message)}
     finally{setSaving(false)}
   };
-  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div>{resource==='sales'&&<div className="form-help"><CircleAlert/><span>Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.</span></div>}<div className="form-grid">{mainFields.map(field=><Field key={field} name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>)}</div>
+  return <div className="overlay" onMouseDown={onClose}><form className="modal edit-modal" role="dialog" aria-modal="true" onSubmit={submit} onMouseDown={event=>event.stopPropagation()}><div className="modal-head"><div><small>{mode==='edit'?(resource==='sales'?'MODIFICATION DE FACTURE':'MODIFICATION'):'NOUVEL ENREGISTREMENT'}</small><h2>{mode==='edit'?recordTitle(row!):`Ajouter · ${title}`}</h2>{mode==='edit'&&<p>{resource==='sales'?'Vous modifiez la facture affichée.':`#${row?.id}`}</p>}</div><button type="button" className="icon" onClick={onClose} aria-label="Fermer"><X/></button></div>{resource==='sales'&&<div className="form-help"><CircleAlert/><span>Les montants ci-dessous sont ceux imprimés, exportés et envoyés au client.</span></div>}<div className="form-grid">{mainFields.map(field=><Fragment key={field}>
+      <Field name={field} value={form[field]} options={relationOptions[field]??choicesFor(field,resource)} onChange={value=>setForm(current=>({...current,[field]:value}))}/>
+      {priceFields.has(field)&&<DenominationPad label={`Ajouter au ${(labels[field]??field).toLowerCase()}`}
+        fromZero={!pricedTouched.has(field)}
+        value={String(form[field]??'')}
+        onChange={value=>{setPricedTouched(current=>new Set(current).add(field));setForm(current=>({...current,[field]:value}))}}/>}
+    </Fragment>)}</div>
     {editsStock&&stockRows.length>0&&<div className="form-stock">
       <h3>Stock</h3>
       <p>Saisissez la quantité réelle : l’écart part au journal des mouvements avec son motif.</p>

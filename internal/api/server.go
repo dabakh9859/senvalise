@@ -109,6 +109,11 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/invoice-assets", auth.Manager, s.uploadInvoiceAsset)
 	// Les dépenses portent les salaires et le solde de la journée. Le module
 	// entier relève du gérant.
+	a.Get("/vendor-home", s.vendorHome)
+	a.Get("/documents/:kind/:id/receipt", s.receiptHandler)
+	a.Get("/customers/:id/brief", s.customerBrief)
+	a.Get("/stock/thresholds", s.stockThresholdState)
+	a.Post("/stock/thresholds", s.setStockThresholds)
 	a.Get("/stock-alert", auth.Manager, s.stockAlertSummary)
 	a.Get("/stock-alert/preview", auth.Manager, s.stockAlertPreview)
 	a.Post("/stock-alert/send", auth.Manager, s.sendStockAlertNow)
@@ -186,6 +191,7 @@ func (s *Server) Register(app *fiber.App) {
 	a.Post("/vaults/:id/deposit", s.depositVault)
 	a.Post("/products/:id/images", s.uploadProductImage)
 	a.Post("/products/:id/duplicate", s.duplicateProduct)
+	a.Post("/products/quick", s.quickProduct)
 	a.Get("/duplicates/customers", auth.Manager, s.duplicates)
 	a.Get("/labels/:variantId", s.label)
 	a.Post("/quotes/:id/convert", auth.Manager, s.convertQuote)
@@ -484,6 +490,11 @@ func (s *Server) createProduct(c *fiber.Ctx, product *models.Product) error {
 	var extra struct {
 		Price int64 `json:"price"`
 		Stock int64 `json:"stock"`
+		Cost  int64 `json:"cost"`
+		// AlertAt pose le seuil de reappro des la creation. Sans lui, l'alerte
+		// de rupture ne remonte que les stocks a zero, c'est-a-dire des ventes
+		// deja perdues ; et personne ne revient poser le seuil apres coup.
+		AlertAt int64 `json:"alertAt"`
 	}
 	_ = c.BodyParser(&extra)
 	if extra.Stock < 0 || extra.Price < 0 {
@@ -501,12 +512,12 @@ func (s *Server) createProduct(c *fiber.Ctx, product *models.Product) error {
 		if e := tx.Create(product).Error; e != nil {
 			return e
 		}
-		if extra.Price <= 0 && extra.Stock <= 0 {
+		if extra.Price <= 0 && extra.Stock <= 0 && extra.Cost <= 0 && extra.AlertAt <= 0 {
 			return nil
 		}
 		variant := models.ProductVariant{
 			ProductID: product.ID, SKU: uniqueSKU(tx, "SV-"+product.Slug),
-			Price: extra.Price, Active: true,
+			Price: extra.Price, Cost: extra.Cost, AlertAt: extra.AlertAt, Active: true,
 		}
 		if e := tx.Create(&variant).Error; e != nil {
 			return e

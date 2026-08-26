@@ -1,17 +1,18 @@
 import {Fragment,FormEvent,useCallback,useEffect,useMemo,useState} from 'react';
-import {ArrowDownToLine,Camera,ArrowUpFromLine,Boxes,Check,ChevronDown,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
+import {ArrowDownToLine,BellRing,Camera,ArrowUpFromLine,Boxes,Check,ChevronDown,CircleAlert,CircleCheck,CircleDollarSign,Clock3,Copy,ExternalLink,Eye,Globe2,ImagePlus,Layers3,Mail,MapPin,MessageCircle,MessageSquare,Package,Pencil,Phone,Plus,RotateCcw,Search,Settings,ShoppingCart,Tags,Trash2,Truck,UserRound,Users,WalletCards,X,XCircle} from 'lucide-react';
 import {api,apiForm,apiPage,Entity,money} from './api';
 import type {User} from './Sidebar';
 import DocumentWorkspace from './InvoiceWorkspace';
 import Modal from './Modal';
 import DenominationPad from './DenominationPad';
 import ReturnForm from './ReturnForm';
+import StockThresholds from './StockThresholds';
 
 type Props={title:string;resource:string;user:User;openId?:number;onOpened?:()=>void};
 type Dialog={mode:'detail'|'create'|'edit';row?:Entity;resource?:string;parent?:Entity}|null;
 
 const labels:Record<string,string>={
-  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Quantité en stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix de vente',cost:'Coût',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
+  id:'Identifiant',createdAt:'Créé le',updatedAt:'Modifié le',name:'Nom',email:'E-mail',phone:'Téléphone',address:'Adresse',zone:'Zone',status:'Statut',reference:'Référence',total:'Total',subtotal:'Sous-total',discount:'Remise',taxRate:'Taux de TVA (%)',tax:'Montant TVA',paid:'Payé',stock:'Quantité en stock',stockBefore:'Stock avant',stockAfter:'Stock après',quantity:'Quantité',price:'Prix de vente',cost:'Prix d’achat',unitPrice:'Prix unitaire',unitCost:'Coût unitaire',landedCost:'Coût rendu',sku:'SKU',barcode:'Code-barres',color:'Couleur',size:'Taille',role:'Rôle',channel:'Canal',subject:'Sujet',body:'Contenu',description:'Description',notes:'Notes',note:'Note',balance:'Solde',goal:'Objectif',fee:'Tarif',delay:'Délai',type:'Type',reason:'Motif',paymentMethod:'Mode de paiement',refundMethod:'Mode de remboursement',amount:'Montant',currency:'Devise',exchangeRate:'Taux de change',shipping:'Transport',customs:'Douane',otherFees:'Autres frais',deliveryFee:'Frais de livraison',deliveryZone:'Zone de livraison',recipient:'Destinataire',error:'Erreur',slug:'Slug',blurb:'Accroche',tag:'Étiquette',flag:'Bandeau',cabin:'Format cabine',volume:'Volume (L)',weight:'Poids (kg)',area:'Secteur',lat:'Latitude',lon:'Longitude',goalRef:'Référence de l’objectif',story:'Descriptif long',active:'Actif',online:'En ligne',featured:'Mis en avant',primary:'Principale',restock:'Remettre en stock',whatsAppConsent:'Accord WhatsApp',secret:'Secret',position:'Position',imageUrl:'Image',link:'Lien',productId:'Produit',variantId:'Variante',categoryId:'Catégorie',brandId:'Marque',customerId:'Client',supplierId:'Fournisseur',userId:'Utilisateur',saleId:'Facture liée',convertedSaleId:'Facture créée',validUntil:'Valable jusqu’au',parentId:'Document parent',cashSessionId:'Session de caisse',openingAmount:'Fond initial',expectedAmount:'Montant attendu',closingAmount:'Montant clôturé',openedAt:'Ouverte le',closedAt:'Clôturée le',receivedAt:'Reçu le',dueAt:'Échéance',sentAt:'Envoyé le',items:'Lignes',variants:'Variantes',images:'Images',deposits:'Dépôts',movements:'Mouvements',alertAt:'Seuil d’alerte',alt:'Texte alternatif',url:'Adresse de l’image',title:'Titre',kind:'Type de bloc',key:'Clé',value:'Valeur',direction:'Sens',category:'Catégorie',method:'Moyen',productName:'Produit',quoteId:'Devis lié',arrivalId:'Arrivage',orderId:'Commande',vaultId:'Coffre',deliveryNoteId:'Bon de livraison',saleReturnId:'Retour',whatsappConsent:'Accord WhatsApp',payments:'Paiements',product:'Produit',customer:'Client',user:'Utilisateur',supplier:'Fournisseur',sale:'Facture',quote:'Devis',deliveryNote:'Bon de livraison',convertedSale:'Facture créée'
 };
 
 const configuredFields:Record<string,string[]>={
@@ -19,7 +20,7 @@ const configuredFields:Record<string,string[]>={
   suppliers:['name','phone','email','address'],
   categories:['name','slug','description'],
   brands:['name','slug'],
-  products:['name','categoryId','price','stock','active','brandId','description','blurb','tag','online'],
+  products:['name','categoryId','price','stock','active','cost','alertAt','brandId','description','blurb','tag','online'],
   variants:['productId','sku','barcode','color','size','cost','price','stock','alertAt','active'],
   'stock/movements':['variantId','userId','type','reason','quantity','stockBefore','stockAfter','reference','note'],
   arrivals:['reference','supplierId','status','currency','exchangeRate','shipping','customs','otherFees','receivedAt'],
@@ -45,7 +46,7 @@ const PAGE_SIZE=100;
 // noyait les trois ou quatre valeurs qu'on vient reellement changer — le nom,
 // le prix, la mise en ligne. Ils restent accessibles, repliés.
 const advancedFields:Record<string,string[]>={
-  products:['brandId','description','blurb','tag','online','slug','flag','cabin','volume','weight','position','featured'],
+  products:['cost','alertAt','brandId','description','blurb','tag','online','slug','flag','cabin','volume','weight','position','featured'],
 };
 
 // Champs qui n'existent qu'a la creation. Le prix et la quantite vivent en
@@ -57,6 +58,8 @@ const advancedFields:Record<string,string[]>={
 // ouvert, parce que c'est lui qui tient le comptoir.
 const managerOnlyResources=new Set(['brands','suppliers','arrivals','orders','vaults','home-blocks','settings','delivery-zones','users']);
 
+// Champs de la fiche produit qui vivent en réalité sur sa déclinaison.
+const variantFields=new Set(['price','cost','alertAt']);
 const priceFields=new Set(['price','cost','amount','openingAmount','unitPrice']);
 const creationOnlyFields:Record<string,string[]>={products:['stock']};
 
@@ -152,6 +155,7 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   const[loadingMore,setLoadingMore]=useState(false);
   const[dialog,setDialog]=useState<Dialog>(null);
   const[returning,setReturning]=useState(false);
+  const[thresholds,setThresholds]=useState(false);
   const[adjusting,setAdjusting]=useState<Entity|null>(null);
   const[error,setError]=useState('');
   const isAdmin=user.role==='manager';
@@ -213,7 +217,7 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
   },[load]);
   const remove=async(row:Entity,resourceName=resource)=>{const note=stockWarning[resourceName];if(!confirm(`Supprimer définitivement « ${recordTitle(row)} » ?${note?`\n\n${note}`:''}`))return;try{await api(endpoint(resourceName,row.id),{method:'DELETE'});if(dialog?.row?.id===row.id)setDialog(null);load()}catch(reason){setError((reason as Error).message)}};
   return <>
-    <div className="toolbar"><div className="search"><Search/><input placeholder={resource==='sales'?'Rechercher une facture, un client…':resource==='quotes'?'Rechercher un devis, un client…':resource==='delivery-notes'?'Rechercher un bon de livraison…':`Rechercher dans ${title.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/></div>{canWrite&&!['sales','delivery-notes'].includes(resource)&&<button className="primary compact" onClick={()=>resource==='returns'?setReturning(true):setDialog({mode:'create'})}><Plus/>{resource==='returns'?'Nouveau retour':'Nouveau'}</button>}</div>
+    <div className="toolbar"><div className="search"><Search/><input placeholder={resource==='sales'?'Rechercher une facture, un client…':resource==='quotes'?'Rechercher un devis, un client…':resource==='delivery-notes'?'Rechercher un bon de livraison…':`Rechercher dans ${title.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/></div>{resource==='products'&&canWrite&&<button className="compact" onClick={()=>setThresholds(true)}><BellRing/>Seuils d’alerte</button>}{canWrite&&!['sales','delivery-notes'].includes(resource)&&<button className="primary compact" onClick={()=>resource==='returns'?setReturning(true):setDialog({mode:'create'})}><Plus/>{resource==='returns'?'Nouveau retour':'Nouveau'}</button>}</div>
     <Legend resource={resource}/>
     {error&&<div className="error resource-error">{error}</div>}
     {resource==='products'?<ProductLibrary rows={shown} loading={loading} isAdmin={canWrite} onOpen={openDetail} onEdit={row=>setDialog({mode:'edit',row})} onDuplicate={duplicate} onDelete={remove} onReload={load}/>:<div className="panel table-panel">{loading?<Loading/>:shown.length===0?<Empty title={title}/>:<div className="table-wrap"><table className="records-table"><thead><tr>{columns.map(column=><th key={column}>{labels[column]??column}</th>)}<th className="actions-heading">Actions</th></tr></thead><tbody>{shown.map(row=><tr key={row.id} tabIndex={0} onClick={()=>void openDetail(row)} onKeyDown={event=>{if(event.key==='Enter')void openDetail(row)}}>{columns.map(column=><td key={column}><SemanticValue field={column} value={row[column]} row={row}/></td>)}<td className="row-actions" onClick={event=>event.stopPropagation()}><button className="action-button" title="Voir la fiche" aria-label={`Voir ${recordTitle(row)}`} onClick={()=>void openDetail(row)}><Eye/><span>Voir</span></button>{canWrite&&<><button className="action-button" title="Modifier cet enregistrement" aria-label={`Modifier ${recordTitle(row)}`} onClick={()=>setDialog({mode:'edit',row})}><Pencil/><span>Modifier</span></button><button className="action-button danger" title="Supprimer cet enregistrement" aria-label={`Supprimer ${recordTitle(row)}`} onClick={()=>void remove(row)}><Trash2/><span>Supprimer</span></button></>}</td></tr>)}</tbody></table></div>}</div>}
@@ -224,6 +228,7 @@ export default function ResourcePage({title,resource,user,openId,onOpened}:Props
     {(dialog?.mode==='create'||dialog?.mode==='edit')&&<RecordForm title={dialog.resource==='variants'?'Déclinaison':title} resource={dialog.resource??resource} row={dialog.row} mode={dialog.mode} onClose={()=>{const parent=dialog.parent;setDialog(parent?{mode:'detail',row:parent}:null)}} onDone={()=>{const parent=dialog.parent;if(parent)void openDetail(parent);else setDialog(null);load()}}/>}
     {adjusting&&<StockAdjust variant={adjusting} onClose={()=>setAdjusting(null)} onDone={()=>{const parent=dialog?.row;setAdjusting(null);if(parent)void openDetail(parent);load()}}/>}
     {returning&&<ReturnForm onClose={()=>setReturning(false)} onSaved={load}/>}
+    {thresholds&&<StockThresholds onClose={()=>setThresholds(false)} onDone={load}/>}
   </>;
 }
 
@@ -252,6 +257,7 @@ function ProductLibrary({rows,loading,isAdmin,onOpen,onEdit,onDuplicate,onDelete
   </section>;
 }
 
+type Brief={invoices:number;units:number;spent:number;paid:number;due:number;firstAt:string|null;lastAt:string|null;vault:number;recent:{id:number;reference:string;createdAt:string;total:number;paid:number}[];favourites:{name:string;units:number}[]};
 type DetailProps={title:string;resource:string;row:Entity;isAdmin:boolean;onClose:()=>void;onEdit:()=>void;onDelete:()=>void;onAdjustStock?:(variant:Entity)=>void};
 type Metric={label:string;value:string;tone?:Tone;field?:string};
 type Contact={field:string;label:string;href:string;icon:typeof Phone};
@@ -514,6 +520,7 @@ function DetailDialog({title,resource,row,isAdmin,onClose,onEdit,onDelete,onAdju
         </section>}
         {collections.map(([key,rows])=><DetailCollection key={key} name={key} rows={rows} parent={row} relation={relation}/>)}
       </div>
+      {resource==='customers'&&<CustomerBrief id={Number(row.id)}/>}
       <footer className="detail-actions">
         <button type="button" onClick={onClose}>Fermer</button>
         {isAdmin&&<><button type="button" className="secondary-action" onClick={onEdit}><Pencil/>Modifier</button>
@@ -527,7 +534,7 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
   const formFields=useMemo(()=>{const configured=configuredFields[resource]??[];if(mode==='create')return configured.length?configured:['name','status'];const actual=Object.keys(row??{}).filter(key=>!readonly.has(key)&&typeof row?.[key]!=='object');return [...new Set([...configured,...actual])]},[mode,resource,row]);
   const initial=useMemo(()=>Object.fromEntries(formFields.map(field=>{
     if(mode==='create'&&(creationDefaults[resource]??{})[field]!==undefined)return [field,(creationDefaults[resource] as Record<string,string|boolean>)[field]];
-    if(mode==='edit'&&resource==='products'&&field==='price')return [field,String(((row?.variants??[]) as Entity[])[0]?.price??0)];
+    if(mode==='edit'&&resource==='products'&&variantFields.has(field))return [field,String((((row?.variants??[]) as Entity[])[0]?.[field] as number)??0)];
     return [field,toInputValue(field,row?.[field])];
   })),[formFields,row,mode,resource]);
   const hiddenFields=useMemo(()=>advancedFields[resource]??[],[resource]);
@@ -583,9 +590,12 @@ function RecordForm({title,resource,row,mode,onClose,onDone}:{title:string;resou
       }
       if(mode==='edit'&&resource==='products'){
         const first=((row?.variants??[]) as Entity[])[0];
-        const wanted=Number(form.price)||0;
-        if(first&&wanted!==Number(first.price??0)){
-          await api(`/api/variants/${first.id}`,{method:'PUT',body:JSON.stringify({...first,price:wanted})});
+        // Prix de vente, prix d'achat et seuil d'alerte vivent sur la
+        // déclinaison. Ils partent ensemble, et seulement si l'un a bougé.
+        const wanted=Object.fromEntries([...variantFields].map(field=>[field,Number(form[field])||0]));
+        const changed=first&&[...variantFields].some(field=>wanted[field]!==Number(first[field]??0));
+        if(changed){
+          await api(`/api/variants/${first.id}`,{method:'PUT',body:JSON.stringify({...first,...wanted})});
         }
       }
       // Les corrections de stock partent après l'enregistrement de la fiche :
@@ -700,4 +710,38 @@ function StockAdjust({variant,onClose,onDone}:{variant:Entity;onClose:()=>void;o
     </div>
     {error&&<div className="error">{error}</div>}
   </Modal>;
+}
+
+// Ce que le client a fait, sous sa fiche.
+//
+// La fiche ne portait que le nom, le téléphone et l'adresse. Or la question
+// qu'on se pose en l'ouvrant — souvent avec lui au téléphone — est autre : que
+// m'a-t-il acheté, que me doit-il, depuis quand n'est-il pas venu. Il fallait
+// aller chercher dans les factures et faire l'addition de tête.
+function CustomerBrief({id}:{id:number}){
+  const[brief,setBrief]=useState<Brief|null>(null);
+  useEffect(()=>{let alive=true;
+    api<Brief>(`/api/customers/${id}/brief`).then(data=>{if(alive)setBrief(data)}).catch(()=>{});
+    return()=>{alive=false}},[id]);
+  if(!brief)return null;
+  if(!brief.invoices)return <section className="detail-brief"><p className="empty">Ce client n’a encore rien acheté.</p></section>;
+  const day=(value?:string|null)=>value?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',year:'numeric'}).format(new Date(value)):'—';
+  // « Depuis combien de temps » se lit mieux qu'une date : c'est ce qui dit
+  // s'il faut reprendre contact.
+  const since=brief.lastAt?Math.floor((Date.now()-new Date(brief.lastAt).getTime())/86400000):0;
+  return <section className="detail-brief">
+    <h3>Ce client chez vous</h3>
+    <div className="brief-figures">
+      <div><small>A DÉPENSÉ</small><strong>{money(brief.spent)}</strong><span>{brief.invoices} facture{brief.invoices>1?'s':''} · {brief.units} article{brief.units>1?'s':''}</span></div>
+      <div className={brief.due?'brief-due':''}><small>RESTE À PAYER</small><strong>{money(brief.due)}</strong><span>{brief.due?'à relancer':'rien à réclamer'}</span></div>
+      <div><small>DERNIÈRE VISITE</small><strong>{since===0?'aujourd’hui':since===1?'hier':`il y a ${since} j`}</strong><span>{day(brief.lastAt)}</span></div>
+      {brief.vault>0&&<div><small>DANS SON COFFRE</small><strong>{money(brief.vault)}</strong><span>argent que vous lui devez</span></div>}
+    </div>
+    {brief.favourites.length>0&&<p className="brief-favourites">Achète surtout : {brief.favourites.map(row=>`${row.name} (${row.units})`).join(' · ')}</p>}
+    {brief.recent.length>0&&<ul className="brief-recent">{brief.recent.map(row=><li key={row.id}>
+      <b>{row.reference}</b><span>{day(row.createdAt)}</span>
+      <em>{money(row.total)}</em>
+      {row.total>row.paid&&<i>reste {money(row.total-row.paid)}</i>}
+    </li>)}</ul>}
+  </section>;
 }

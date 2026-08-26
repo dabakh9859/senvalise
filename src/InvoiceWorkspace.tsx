@@ -1,8 +1,8 @@
 import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
-import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
+import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,Receipt,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
 import type {InvoiceDefaults} from './CheckoutSettings';
-import {api,apiForm,Entity,money,openFile} from './api';
+import {api,apiForm,Entity,money,openFile,printFile} from './api';
 
 type Kind='invoice'|'quote'|'delivery';
 type Payment=Entity&{method?:string;amount?:number;status?:string;reference?:string};
@@ -134,7 +134,7 @@ export default function InvoiceWorkspace(props:Props){
   return <div className="overlay invoice-overlay" onMouseDown={props.onClose}>
     <section className={`invoice-dialog business-dialog ${editing?'with-editor':''}`} role="dialog" aria-modal="true" onMouseDown={event=>event.stopPropagation()}>
       <div className="business-main">
-        <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
+        <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={()=>void printFile(`/api/documents/${props.kind}/${doc.id}/receipt`).catch(refreshError)} title="Imprimer un ticket 80 mm sur l’imprimante de caisse"><Receipt/>Reçu</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
         <div className="invoice-scroll"><article className="invoice-paper" id="business-document-print">
           <div className="invoice-brand-bar"><img className="invoice-logo-mark" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/><button className={`invoice-brand-details document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><strong>{invoiceInfo.companyName}</strong><small>{invoiceInfo.tagline}</small></button><button className={`invoice-brand-contact document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>{invoiceInfo.phone}<br/>{invoiceInfo.address}</button></div>
           {/* En-tête : logo, coordonnées, cartouche du document. Chaque bloc

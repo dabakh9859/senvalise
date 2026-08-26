@@ -1,7 +1,44 @@
 const base=import.meta.env.VITE_API_URL??'';
 export type Entity=Record<string,unknown>&{id:number;createdAt?:string};
 export const token=()=>localStorage.getItem('sv_token');
-export async function api<T=unknown>(path:string,init:RequestInit={}):Promise<T>{const r=await fetch(base+path,{...init,headers:{'Content-Type':'application/json',...(token()?{Authorization:`Bearer ${token()}`}:{...{}}),...init.headers}});if(r.status===204)return undefined as T;const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error??`Erreur ${r.status}`);return data}
+// Réseau instable : on réessaie avant d'abandonner.
+//
+// Une coupure de quelques secondes — un passage de la 4G au wifi, une antenne
+// saturée — faisait échouer l'appel et perdre le geste en cours. Les lectures
+// sont rejouées deux fois, à une seconde puis trois : c'est sans danger, elles
+// ne changent rien.
+//
+// Les écritures ne sont PAS rejouées automatiquement. Une vente renvoyée deux
+// fois serait encaissée deux fois, et le stock sorti deux fois : mieux vaut un
+// message clair et un second clic du vendeur qu'une facture fantôme dont
+// personne ne comprendra l'origine.
+const retryable=(method?:string)=>!method||method.toUpperCase()==='GET';
+const wait=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+// offlineMessage dit ce qui se passe, en français, plutôt que « Failed to
+// fetch » — qui n'apprend rien à personne et inquiète tout le monde.
+export const offlineMessage='Connexion perdue. Vérifiez le réseau puis réessayez : rien n’a été enregistré.';
+
+export async function api<T=unknown>(path:string,init:RequestInit={}):Promise<T>{
+  const attempts=retryable(init.method)?3:1;
+  let lastError:unknown;
+  for(let attempt=0;attempt<attempts;attempt++){
+    if(attempt>0)await wait(attempt===1?1000:3000);
+    try{
+      const r=await fetch(base+path,{...init,headers:{'Content-Type':'application/json',...(token()?{Authorization:`Bearer ${token()}`}:{...{}}),...init.headers}});
+      if(r.status===204)return undefined as T;
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(data.error??`Erreur ${r.status}`);
+      return data;
+    }catch(problem){
+      // Seule une panne de réseau se rejoue. Un refus du serveur — 403, 422 —
+      // est une réponse, et la rejouer donnerait le même refus trois fois.
+      if(problem instanceof TypeError){lastError=new Error(offlineMessage);continue}
+      throw problem;
+    }
+  }
+  throw lastError;
+}
 export async function apiForm<T=unknown>(path:string,body:FormData):Promise<T>{const r=await fetch(base+path,{method:'POST',body,headers:{...(token()?{Authorization:`Bearer ${token()}`}:{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error??`Erreur ${r.status}`);return data}
 export const money=(n:unknown)=>new Intl.NumberFormat('fr-FR').format(Number(n??0))+' F';
 

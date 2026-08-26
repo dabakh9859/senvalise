@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-pdf/fpdf"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"senvalise/internal/messaging"
 	"senvalise/internal/models"
@@ -369,3 +370,209 @@ func (s *Server) stockAlertSummary(c *fiber.Ctx) error {
 		"outCount": len(report.Out), "lowCount": len(report.Low),
 	})
 }
+
+// ---------- seuils d'alerte ----------
+
+// Le seuil d'alerte dit a partir de quand un article doit etre rachete.
+//
+// Sans lui, l'alerte de rupture ne remonte que les stocks a zero — c'est-a-dire
+// des ventes deja perdues. Le poser article par article decourage : sur un
+// catalogue de cinquante references, personne ne le fait. On le regle donc par
+// lot, sur une categorie ou sur tout le catalogue.
+
+type thresholdInput struct {
+	// CategoryID limite la portee. Zero vaut « tout le catalogue ».
+	CategoryID uint  `json:"categoryId"`
+	AlertAt    int64 `json:"alertAt"`
+	// OnlyMissing epargne les seuils deja regles a la main : un reglage de
+	// masse ne doit pas ecraser une decision prise article par article.
+	OnlyMissing bool `json:"onlyMissing"`
+}
+
+func (s *Server) setStockThresholds(c *fiber.Ctx) error {
+	var in thresholdInput
+	if c.BodyParser(&in) != nil {
+		return fiber.ErrBadRequest
+	}
+	if in.AlertAt < 0 || in.AlertAt > 100000 {
+		return fiber.NewError(422, "Seuil invalide.")
+	}
+	query := s.DB.Model(&models.ProductVariant{}).Where("active")
+	if in.CategoryID != 0 {
+		query = query.Where("product_id IN (SELECT id FROM products WHERE category_id = ?)", in.CategoryID)
+	}
+	if in.OnlyMissing {
+		query = query.Where("coalesce(alert_at,0) = 0")
+	}
+	result := query.Update("alert_at", in.AlertAt)
+	if result.Error != nil {
+		return dbError(result.Error, "réglage des seuils")
+	}
+	s.log(c, "thresholds", "variants", 0,
+		fmt.Sprintf("seuil %d appliqué à %d article(s)", in.AlertAt, result.RowsAffected))
+	return c.JSON(fiber.Map{"updated": result.RowsAffected})
+}
+
+// stockThresholdState dit ou en est le catalogue, par categorie. C'est ce qui
+// permet a l'ecran d'annoncer « 32 articles sans seuil » plutot que de laisser
+// deviner.
+func (s *Server) stockThresholdState(c *fiber.Ctx) error {
+	type row struct {
+		CategoryID uint   `json:"categoryId"`
+		Category   string `json:"category"`
+		Total      int64  `json:"total"`
+		Missing    int64  `json:"missing"`
+	}
+	rows := []row{}
+	s.DB.Raw(`select coalesce(p.category_id,0) category_id,
+	                 coalesce(c.name,'Sans catégorie') category,
+	                 count(*) total,
+	                 count(*) filter (where coalesce(v.alert_at,0) = 0) missing
+	    from product_variants v
+	    left join products p on p.id = v.product_id
+	    left join categories c on c.id = p.category_id
+	   where v.active
+	   group by 1,2 order by 2`).Scan(&rows)
+	var total, missing int64
+	for _, r := range rows {
+		total += r.Total
+		missing += r.Missing
+	}
+	return c.JSON(fiber.Map{"categories": rows, "total": total, "missing": missing})
+}
+
+// ---------- fiche client ----------
+
+// customerBrief rend ce qu'on veut savoir en ouvrant la fiche d'un client.
+//
+// Elle ne portait que le nom, le telephone et l'adresse. Or la question qu'on
+// se pose en l'ouvrant — souvent avec le client au telephone — est autre : que
+// m'a-t-il achete, que me doit-il, depuis quand n'est-il pas venu. Il fallait
+// aller chercher dans les factures et faire l'addition de tete.
+func (s *Server) customerBrief(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var totals struct {
+		Invoices, Units int64
+		Spent, Paid     int64
+		Due             int64
+		FirstAt, LastAt *time.Time
+	}
+	s.DB.Raw(`select
+		count(*) invoices,
+		coalesce(sum(total),0) spent,
+		coalesce(sum(paid),0) paid,
+		coalesce(sum(greatest(total - paid,0)),0) due,
+		min(created_at) first_at,
+		max(created_at) last_at,
+		coalesce((select sum(si.quantity) from sale_items si join sales s2 on s2.id = si.sale_id
+		           where s2.customer_id = @id and s2.status <> 'cancelled'),0) units
+	  from sales where customer_id = @id and status <> 'cancelled'`,
+		map[string]any{"id": id}).Scan(&totals)
+
+	type recent struct {
+		ID        uint      `json:"id"`
+		Reference string    `json:"reference"`
+		CreatedAt time.Time `json:"createdAt"`
+		Total     int64     `json:"total"`
+		Paid      int64     `json:"paid"`
+	}
+	invoices := []recent{}
+	s.DB.Raw(`select id, reference, created_at, total, paid from sales
+	   where customer_id = ? and status <> 'cancelled' order by created_at desc limit 6`, id).Scan(&invoices)
+
+	type favourite struct {
+		Name  string `json:"name"`
+		Units int64  `json:"units"`
+	}
+	favourites := []favourite{}
+	s.DB.Raw(`select coalesce(nullif(p.name,''), v.sku, 'Article') name, sum(si.quantity) units
+	    from sale_items si
+	    join sales s on s.id = si.sale_id
+	    left join product_variants v on v.id = si.variant_id
+	    left join products p on p.id = v.product_id
+	   where s.customer_id = ? and s.status <> 'cancelled'
+	   group by 1 order by units desc limit 3`, id).Scan(&favourites)
+
+	// Le coffre est de l'argent du au client : il n'a rien a voir avec ce
+	// qu'il doit, et les confondre serait une faute.
+	var vault int64
+	s.DB.Raw(`select coalesce(sum(balance),0) from vaults where customer_id = ?`, id).Scan(&vault)
+
+	return c.JSON(fiber.Map{
+		"invoices": totals.Invoices, "units": totals.Units,
+		"spent": totals.Spent, "paid": totals.Paid, "due": totals.Due,
+		"firstAt": totals.FirstAt, "lastAt": totals.LastAt,
+		"vault": vault, "recent": invoices, "favourites": favourites,
+	})
+}
+
+// ---------- article hors catalogue ----------
+
+// quickProduct cree une fiche minimale, au comptoir, pendant la vente.
+//
+// Vendre un sac recu la veille et pas encore saisi etait impossible : il
+// fallait quitter la caisse, remplir une fiche complete, puis revenir — devant
+// la cliente qui attend.
+//
+// La fiche est creee pour de vrai plutot que d'inventer une ligne sans
+// produit. Une vente sans declinaison casserait tout ce qui suit : le journal
+// de stock, les retours, la marge, les rapports. Et la boutique se retrouve
+// avec l'article qu'elle vient de vendre reellement au catalogue, a completer
+// plus tard.
+//
+// Elle n'est pas mise en vitrine : une fiche sans photo ni description n'a
+// rien a faire sur la boutique en ligne.
+func (s *Server) quickProduct(c *fiber.Ctx) error {
+	var in struct {
+		Name     string `json:"name"`
+		Price    int64  `json:"price"`
+		Quantity int64  `json:"quantity"`
+	}
+	if c.BodyParser(&in) != nil {
+		return fiber.ErrBadRequest
+	}
+	in.Name = strings.TrimSpace(in.Name)
+	if in.Name == "" {
+		return fiber.NewError(422, "Donnez un nom à l’article.")
+	}
+	if in.Price < 0 || in.Quantity <= 0 {
+		return fiber.NewError(422, "Prix ou quantité invalide.")
+	}
+	userID, _ := c.Locals("userID").(uint)
+
+	product := models.Product{Name: in.Name, Active: true, Online: false}
+	var variant models.ProductVariant
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		product.Slug = uniqueSlug(tx, slugify(product.Name))
+		if e := tx.Create(&product).Error; e != nil {
+			return e
+		}
+		variant = models.ProductVariant{ProductID: product.ID, SKU: uniqueSKU(tx, "SV-"+product.Slug),
+			Price: in.Price, Active: true}
+		if e := tx.Create(&variant).Error; e != nil {
+			return e
+		}
+		// La quantite entre par un mouvement, comme toute entree de stock :
+		// une piece qui apparait sans ligne au journal est une piece que
+		// personne ne peut expliquer — surtout celle-ci, creee a la hate.
+		return s.adjustWithNote(tx, variant.ID, in.Quantity, userID, "initial", s.ref("STK"),
+			"article créé au comptoir pendant une vente")
+	})
+	if err != nil {
+		return dbError(err, "création rapide")
+	}
+	s.log(c, "quick-product", "products", product.ID, in.Name+" créé au comptoir")
+	// La declinaison est relue apres la transaction : le mouvement de stock a
+	// ecrit la quantite en base, l'objet garde en memoire porte encore zero.
+	// Rendue telle quelle, la caisse aurait refuse l'article qu'elle vient de
+	// creer, au motif qu'il est en rupture.
+	var out models.ProductVariant
+	if e := s.DB.First(&out, variant.ID).Error; e != nil {
+		return dbError(e, "relecture de l’article")
+	}
+	out.Product = &product
+	return c.Status(201).JSON(out)
+}
+
+// moneyText met en forme un montant comme le reste de l'application.
+func moneyText(amount int64) string { return messaging.Money(amount) }

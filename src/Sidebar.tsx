@@ -8,10 +8,15 @@ import {useState} from 'react';
 import {applyTheme,storedTheme,type Theme} from './theme';
 
 export type User={id:number;name:string;email:string;role:string};
-export type NavItem={id:string;label:string;resource?:string;icon:typeof Package;manager?:boolean};
+// vendor marque l'inverse de manager : une entrée réservée au vendeur, que le
+// gérant ne voit pas — il a la sienne.
+export type NavItem={id:string;label:string;resource?:string;icon:typeof Package;manager?:boolean;vendor?:boolean};
 export type NavGroup={id:string;label:string;icon:typeof Package;items:NavItem[]};
 
 export const dashboardItem:NavItem={id:'dashboard',label:'Tableau de bord',icon:LayoutDashboard,manager:true};
+// L'accueil du vendeur. Il ne s'affiche que pour lui : le gérant a son tableau
+// de bord, et deux entrées d'accueil dans le même menu prêteraient à confusion.
+export const vendorHomeItem:NavItem={id:'vendor-home',label:'Accueil',icon:LayoutDashboard,vendor:true};
 export const journalItem:NavItem={id:'journal',label:'Ce qui s’est passé',icon:History,manager:true};
 export const groups:NavGroup[]=[
   {id:'stock',label:'Stock',icon:Boxes,items:[
@@ -58,7 +63,7 @@ export const groups:NavGroup[]=[
   ]},
 ];
 
-export const allNav=[dashboardItem,journalItem,...groups.flatMap(group=>group.items)];
+export const allNav=[dashboardItem,vendorHomeItem,journalItem,...groups.flatMap(group=>group.items)];
 
 type Props={user:User;onPage:(id:string)=>void;onLogout:()=>void;brand?:Brand};
 

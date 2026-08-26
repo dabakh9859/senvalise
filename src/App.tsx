@@ -4,6 +4,7 @@ import {api} from './api';
 import Sidebar,{allNav,type Brand,User} from './Sidebar';
 import ResourcePage from './ResourcePage';
 import TopNavigation from './TopNavigation';
+import Connection from './Connection';
 import EnhancedPOS from './POS';
 import CheckoutSettings from './CheckoutSettings';
 
@@ -21,6 +22,7 @@ const Debts=lazy(()=>import('./Debts'));
 const Vaults=lazy(()=>import('./Vaults'));
 const Branding=lazy(()=>import('./Branding'));
 const Journal=lazy(()=>import('./Journal'));
+const VendorHome=lazy(()=>import('./VendorHome'));
 const Cash=lazy(()=>import('./Cash'));
 
 
@@ -65,11 +67,12 @@ export default function App(){
   useEffect(()=>{api<Brand>('/api/public/branding').then(setBrand).catch(()=>{})},[]);
   useEffect(()=>{if(localStorage.getItem('sv_token'))api<User>('/api/me').then(setUser).catch(()=>localStorage.removeItem('sv_token'))},[]);
   const manager=user?.role==='manager';
-  const home=manager?'dashboard':'pos';
+  const home=manager?'dashboard':'vendor-home';
   const requested=allNav.find(item=>item.id===page)??allNav.find(item=>item.id===home)??allNav[0];
   // Filet côté écran : une page réservée ne s'ouvre pas, même si son
   // identifiant est forcé. L'API refuse déjà les données correspondantes.
-  const current=requested.manager&&!manager?allNav.find(item=>item.id===home)??allNav[0]:requested;
+  const forbidden=(requested.manager&&!manager)||(requested.vendor&&manager);
+  const current=forbidden?allNav.find(item=>item.id===home)??allNav[0]:requested;
   const view=current.id;
   // L'adresse suit l'écran réellement affiché. Deux cas la font diverger :
   // arriver sur « / », et un vendeur qui force une adresse réservée au gérant.
@@ -88,7 +91,8 @@ export default function App(){
     <main className="main-area">
       <TopNavigation user={user} page={page} onPage={setPage}/>
       {view!=='dashboard'&&<header className="page-header"><div><small>ESPACE DE TRAVAIL</small><h1>{current.label}</h1></div>{view==='pos'&&<button className="header-action" onClick={()=>setPage('sales')}><FileText/>Voir les factures</button>}<time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date())}</time></header>}
-      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS onOpenInvoice={id=>{setOpenDocument({resource:'sales',id});setPage('sales')}}/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:view==='messaging'?<Messaging/>:view==='campaigns'?<Campaigns/>:view==='debts'?<Debts/>:view==='vaults'?<Vaults/>:view==='branding'?<Branding/>:view==='journal'?<Journal onPage={setPage}/>:view==='cash-sessions'?<Cash user={user}/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user} openId={openDocument?.resource===current.resource?openDocument.id:undefined} onOpened={()=>setOpenDocument(null)}/>:null}</Suspense></section>
+      <Connection/>
+      <section className={view==='dashboard'?'dashboard-content':'page-content'}><Suspense fallback={<Loading/>}>{view==='dashboard'?<Dashboard/>:view==='pos'?<EnhancedPOS onOpenInvoice={id=>{setOpenDocument({resource:'sales',id});setPage('sales')}}/>:view==='expenses'?<Expenses user={user}/>:view==='checkout-settings'?<CheckoutSettings/>:view==='reports'?<Reports/>:view==='shop-overview'?<ShopOverview onPage={setPage}/>:view==='shop-orders'?<ShopOrders/>:view==='shop-catalog'?<ShopCatalog/>:view==='shop-customers'?<ShopCustomers/>:view==='shop-delivery'?<ShopDelivery/>:view==='messaging'?<Messaging/>:view==='campaigns'?<Campaigns/>:view==='debts'?<Debts/>:view==='vaults'?<Vaults/>:view==='branding'?<Branding/>:view==='journal'?<Journal onPage={setPage}/>:view==='vendor-home'?<VendorHome user={user} onPage={setPage}/>:view==='cash-sessions'?<Cash user={user}/>:current.resource?<ResourcePage title={current.label} resource={current.resource} user={user} openId={openDocument?.resource===current.resource?openDocument.id:undefined} onOpened={()=>setOpenDocument(null)}/>:null}</Suspense></section>
     </main>
   </div>;
 }

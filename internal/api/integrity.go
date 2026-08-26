@@ -375,9 +375,32 @@ var searchColumns = map[string][]string{
 	"product-images":    {"url", "alt"},
 }
 
+// searchCustomer liste les pieces qu'on cherche par le nom de leur client.
+//
+// La recherche ne portait que sur le numero et le statut : taper « Adji » dans
+// les factures ne rendait rien, et il fallait connaitre la reference par coeur
+// pour retrouver une piece. C'est pourtant le geste le plus frequent de la
+// journee — on cherche la facture de quelqu'un, pas le numero 00048.
+var searchCustomer = map[string]bool{
+	"sales": true, "quotes": true, "delivery-notes": true, "orders": true,
+}
+
 // applySearch ajoute la clause de recherche. La casse et les accents sont
 // ignorés côté SQL pour que « Fatou » trouve « fatou » et « FATOU ».
 func applySearch(db *gorm.DB, name, q string) *gorm.DB {
+	// Une piece se cherche aussi par son client. La sous-requete evite une
+	// jointure : le compteur de resultats et la pagination continuent de
+	// porter sur les pieces, pas sur des lignes dupliquees.
+	if searchCustomer[name] {
+		like := "%" + q + "%"
+		clause := "CAST(id AS TEXT) LIKE ? OR customer_id IN (SELECT id FROM customers WHERE name ILIKE ? OR phone ILIKE ?)"
+		args := []any{like, like, like}
+		for _, column := range searchColumns[name] {
+			clause += " OR " + column + " ILIKE ?"
+			args = append(args, like)
+		}
+		return db.Where("("+clause+")", args...)
+	}
 	columns := searchColumns[name]
 	if len(columns) == 0 {
 		return db.Where("CAST(id AS TEXT) LIKE ?", "%"+q+"%")

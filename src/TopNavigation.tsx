@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {ChevronDown,Menu,ShoppingBag,X} from 'lucide-react';
-import {allNav,dashboardItem,groups,journalItem,NavGroup,NavItem,User} from './Sidebar';
+import {allNav,dashboardItem,groups,journalItem,NavGroup,NavItem,User,vendorHomeItem} from './Sidebar';
 
 type Props={user:User;page:string;onPage:(id:string)=>void};
 
@@ -8,7 +8,9 @@ export default function TopNavigation({user,page,onPage}:Props){
   const[open,setOpen]=useState<string|null>(null);
   const[mobileOpen,setMobileOpen]=useState(false);
   const root=useRef<HTMLElement>(null);
-  const visible=(item:NavItem)=>!item.manager||user.role==='manager';
+  // Une entrée marquée manager n'apparaît que pour le gérant, une entrée
+  // marquée vendor que pour le vendeur : chacun a son accueil.
+  const visible=(item:NavItem)=>(!item.manager||user.role==='manager')&&(!item.vendor||user.role!=='manager');
   // Un groupe dont toutes les entrées sont réservées au gérant ne s'affiche
   // pas du tout : un menu vide donne l'impression d'un écran cassé.
   const filled=(group:NavGroup)=>group.items.some(visible);
@@ -30,7 +32,7 @@ export default function TopNavigation({user,page,onPage}:Props){
   return <header className="top-navigation" ref={root}>
     <div className="top-nav-context"><current.icon/><span>{current.label}</span></div>
     <nav className="top-nav-links" aria-label="Navigation principale">
-      {visible(dashboardItem)&&<button className={`top-nav-direct ${page==='dashboard'?'active':''}`} onClick={()=>navigate('dashboard')}>Tableau de bord</button>}
+      {visible(dashboardItem)&&<button className={`top-nav-direct ${page==='dashboard'?'active':''}`} onClick={()=>navigate('dashboard')}>Tableau de bord</button>}{visible(vendorHomeItem)&&<button className={`top-nav-direct ${page==='vendor-home'?'active':''}`} onClick={()=>navigate('vendor-home')}>{vendorHomeItem.label}</button>}
       {visible(journalItem)&&<button className={`top-nav-direct ${page==='journal'?'active':''}`} onClick={()=>navigate('journal')}>Ce qui s’est passé</button>}
       {primary.map(group=><div className="top-nav-dropdown" key={group.id}>
         <button className={`top-nav-trigger ${groupActive(group)?'active':''}`} onClick={()=>setOpen(open===group.id?null:group.id)} aria-expanded={open===group.id} aria-haspopup="menu">{group.label}<ChevronDown/></button>
@@ -46,7 +48,7 @@ export default function TopNavigation({user,page,onPage}:Props){
       <button className="mobile-top-toggle" onClick={()=>setMobileOpen(value=>!value)} aria-expanded={mobileOpen} aria-label="Ouvrir la navigation">{mobileOpen?<X/>:<Menu/>}</button>
     </div>
     {mobileOpen&&<div className="mobile-top-menu">
-      {visible(dashboardItem)&&<button className={page==='dashboard'?'active':''} onClick={()=>navigate('dashboard')}><dashboardItem.icon/>Tableau de bord</button>}
+      {visible(dashboardItem)&&<button className={page==='dashboard'?'active':''} onClick={()=>navigate('dashboard')}><dashboardItem.icon/>Tableau de bord</button>}{visible(vendorHomeItem)&&<button className={page==='vendor-home'?'active':''} onClick={()=>navigate('vendor-home')}><vendorHomeItem.icon/>{vendorHomeItem.label}</button>}
       {visible(journalItem)&&<button className={page==='journal'?'active':''} onClick={()=>navigate('journal')}><journalItem.icon/>Ce qui s’est passé</button>}
       {groups.map(group=>{const items=group.items.filter(visible);return items.length?<section key={group.id}><h3><group.icon/>{group.label}</h3>{items.map(item=><button key={item.id} className={page===item.id?'active':''} onClick={()=>navigate(item.id)}><item.icon/>{item.label}</button>)}</section>:null})}
     </div>}

@@ -413,6 +413,7 @@ func renderPDF(doc pdfDocument) ([]byte, error) {
 	// isolee.
 	first := true
 	pdf.SetHeaderFunc(func() {
+		drawDoodles(pdf)
 		if first {
 			first = false
 			return
@@ -528,9 +529,6 @@ func drawFullHeader(pdf *fpdf.Fpdf, font string, tr func(string) string, doc pdf
 	// Date, puis ce que la piece a de particulier : reglement pour une
 	// facture, validite pour un devis, etat pour un bon de livraison.
 	lines := [][2]string{{"Date :", frenchDate(doc.IssuedAt)}}
-	for _, meta := range doc.Meta {
-		lines = append(lines, [2]string{strings.Title(strings.ToLower(meta.Label)) + " :", meta.Value})
-	}
 	y = numberTop + 13
 	for _, line := range lines {
 		setInk(pdf, brandBlue)
@@ -596,6 +594,22 @@ func drawParties(pdf *fpdf.Fpdf, font string, tr func(string) string, doc pdfDoc
 	}
 
 	bottom := block(left, recipient, brandBlue, [3]int{255, 255, 255}, doc.CustomerRow)
+
+	// La moitie droite de cette rangee etait vide, et le filet partait dans le
+	// blanc. L'etat de la piece — reglement pour une facture, validite pour un
+	// devis — s'y installe : il equilibre la rangee, et il allege le cartouche
+	// du haut ou il tenait sur trois lignes serrees.
+	if len(doc.Meta) > 0 {
+		state := []string{}
+		for _, meta := range doc.Meta {
+			if strings.TrimSpace(meta.Value) != "" {
+				state = append(state, meta.Value)
+			}
+		}
+		label := strings.ToUpper(doc.Meta[0].Label) + " :"
+		right := block(left+column+8, label, brandYellow, brandInk, state)
+		bottom = maxFloat(bottom, right)
+	}
 	// Le modele prevoit un second bloc « livrer a ». Il n'est pose que si une
 	// adresse de livraison distincte existe : l'application n'en tient pas de
 	// separee, et recopier l'adresse de facturation sous une autre etiquette
@@ -773,7 +787,7 @@ func drawSummary(pdf *fpdf.Fpdf, font string, tr, latin func(string) string, doc
 		setInk(pdf, brandBlue)
 		pdf.SetFont(font, "B", 11)
 		pdf.SetXY(rightX, y)
-		pdf.CellFormat(columnWidth-44, 10, tr("TOTAL TTC"), "", 0, "L", false, 0, "")
+		pdf.CellFormat(columnWidth-46, 10, tr("TOTAL TTC"), "", 0, "L", false, 0, "")
 		setFill(pdf, brandYellow)
 		pdf.RoundedRect(right-44, y, 44, 10, 3, "1234", "F")
 		setInk(pdf, brandInk)
@@ -828,12 +842,29 @@ func drawSummary(pdf *fpdf.Fpdf, font string, tr, latin func(string) string, doc
 
 	// ---- Colonne de gauche : conditions, banque, remerciement.
 	y = top
-	note := func(title, body string) {
+	note := func(icon, title, body string) {
 		if strings.TrimSpace(body) == "" {
 			return
 		}
 		setFill(pdf, brandBlue)
 		pdf.RoundedRect(left, y, 7, 7, 2, "1234", "F")
+		pdf.SetDrawColor(255, 255, 255)
+		pdf.SetLineWidth(0.35)
+		switch icon {
+		case "card":
+			// Une carte : rectangle et bande magnétique.
+			pdf.Rect(left+1.5, y+2.2, 4, 2.8, "D")
+			pdf.Line(left+1.5, y+3.2, left+5.5, y+3.2)
+		default:
+			// Une banque : fronton et colonnes.
+			pdf.Line(left+1.3, y+2.6, left+3.5, y+1.5)
+			pdf.Line(left+3.5, y+1.5, left+5.7, y+2.6)
+			pdf.Line(left+1.5, y+5.4, left+5.5, y+5.4)
+			for _, dx := range []float64{2.1, 3.5, 4.9} {
+				pdf.Line(left+dx, y+3.1, left+dx, y+5.1)
+			}
+		}
+		pdf.SetLineWidth(0.2)
 		setInk(pdf, brandBlue)
 		pdf.SetFont(font, "B", 8.5)
 		pdf.SetXY(left+10, y)
@@ -844,8 +875,8 @@ func drawSummary(pdf *fpdf.Fpdf, font string, tr, latin func(string) string, doc
 		pdf.MultiCell(columnWidth-10, 4.4, tr(body), "", "L", false)
 		y = pdf.GetY() + 5
 	}
-	note("Conditions de paiement", doc.Company.PaymentTerms)
-	note("Informations bancaires", doc.Company.BankDetails)
+	note("card", "Conditions de paiement", doc.Company.PaymentTerms)
+	note("bank", "Informations bancaires", doc.Company.BankDetails)
 
 	if title := strings.TrimSpace(doc.Company.ThankYouTitle); title != "" {
 		setInk(pdf, brandBlue)
@@ -976,4 +1007,103 @@ func abs64(value int64) int64 {
 		return -value
 	}
 	return value
+}
+
+// ---------- décor ----------
+
+// drawDoodles pose les dessins de fond du papier a en-tete : avion, valises,
+// passeport, panneau, et les trajectoires en pointilles.
+//
+// Ils etaient absents du PDF parce que fpdf ne dessine pas de SVG. Ils sont
+// donc redessines au trait, en primitives que fpdf connait — lignes, courbes,
+// arcs, rectangles arrondis. C'est plus long a ecrire qu'un fichier importe,
+// mais c'est ce qui permet a l'ecran et au PDF de porter le meme decor.
+//
+// Tout est trace en gris tres clair, sous le contenu : un decor qui se
+// remarque cesse d'etre un decor et devient une gene a la lecture.
+func drawDoodles(pdf *fpdf.Fpdf) {
+	// Transparence forte : au premier essai les dessins passaient devant les
+	// montants du tableau et on lisait « 163 000 » a travers une valise. Un
+	// decor qui gene la lecture n'est plus un decor.
+	pdf.SetAlpha(0.10, "Normal")
+	defer pdf.SetAlpha(1, "Normal")
+	pdf.SetDrawColor(120, 132, 148)
+	pdf.SetLineWidth(0.4)
+	pdf.SetLineCapStyle("round")
+	pdf.SetLineJoinStyle("round")
+
+	// Avion, en haut a gauche, au-dessus du logo.
+	plane := func(x, y, s float64) {
+		pdf.MoveTo(x, y+7*s)
+		pdf.CurveBezierCubicTo(x+11*s, y+4*s, x+18*s, y+2*s, x+27*s, y+1.5*s)
+		pdf.LineTo(x+34*s, y-5*s)
+		pdf.LineTo(x+37*s, y-4*s)
+		pdf.LineTo(x+31*s, y+2*s)
+		pdf.LineTo(x+45*s, y+5.5*s)
+		pdf.LineTo(x+53*s, y+2*s)
+		pdf.LineTo(x+57*s, y+3*s)
+		pdf.LineTo(x+49*s, y+8*s)
+		pdf.LineTo(x+45*s, y+14*s)
+		pdf.LineTo(x+42*s, y+13.5*s)
+		pdf.LineTo(x+44*s, y+8.5*s)
+		pdf.LineTo(x+28*s, y+6.5*s)
+		pdf.LineTo(x+19*s, y+12.5*s)
+		pdf.LineTo(x+16*s, y+11.5*s)
+		pdf.LineTo(x+20.5*s, y+4*s)
+		pdf.LineTo(x, y+7*s)
+		pdf.DrawPath("D")
+	}
+	// Valise : caisse arrondie et poignee.
+	suitcase := func(x, y, s float64) {
+		pdf.RoundedRect(x, y+7*s, 26*s, 24*s, 2.5*s, "1234", "D")
+		pdf.MoveTo(x+8*s, y+7*s)
+		pdf.LineTo(x+8*s, y+2*s)
+		pdf.CurveBezierCubicTo(x+8*s, y-1*s, x+18*s, y-1*s, x+18*s, y+2*s)
+		pdf.LineTo(x+18*s, y+7*s)
+		pdf.DrawPath("D")
+		pdf.Line(x+6*s, y+13*s, x+6*s, y+25*s)
+		pdf.Line(x+20*s, y+13*s, x+20*s, y+25*s)
+	}
+	// Passeport : rectangle, ligne de titre, globe schematique.
+	passport := func(x, y, s float64) {
+		pdf.RoundedRect(x, y, 24*s, 33*s, 2*s, "1234", "D")
+		pdf.Line(x+4*s, y+7*s, x+20*s, y+7*s)
+		pdf.Circle(x+12*s, y+20*s, 7*s, "D")
+		pdf.Line(x+5*s, y+20*s, x+19*s, y+20*s)
+		pdf.MoveTo(x+12*s, y+13*s)
+		pdf.CurveBezierCubicTo(x+7*s, y+17*s, x+7*s, y+23*s, x+12*s, y+27*s)
+		pdf.CurveBezierCubicTo(x+17*s, y+23*s, x+17*s, y+17*s, x+12*s, y+13*s)
+		pdf.DrawPath("D")
+	}
+	// Panneau de direction.
+	signpost := func(x, y, s float64) {
+		pdf.Line(x+13*s, y+4*s, x+13*s, y+40*s)
+		pdf.Circle(x+13*s, y+2*s, 1.5*s, "D")
+		pdf.MoveTo(x+13*s, y+7*s)
+		pdf.LineTo(x+2*s, y+7*s)
+		pdf.LineTo(x+5*s, y+3*s)
+		pdf.LineTo(x+13*s, y+3*s)
+		pdf.DrawPath("D")
+		pdf.MoveTo(x+13*s, y+15*s)
+		pdf.LineTo(x+25*s, y+15*s)
+		pdf.LineTo(x+21*s, y+11*s)
+		pdf.LineTo(x+13*s, y+11*s)
+		pdf.DrawPath("D")
+	}
+	// Trajectoires : arcs en pointilles, comme sur une carte de vol.
+	pdf.SetDashPattern([]float64{1.6, 2.2}, 0)
+	pdf.Arc(150, 96, 44, 20, 20, 190, 350, "D")
+	pdf.Arc(55, 244, 58, 18, 8, 200, 340, "D")
+	pdf.SetDashPattern([]float64{}, 0)
+
+	// Positions choisies dans les zones que le contenu laisse libres : la
+	// bande sous le tableau, les marges laterales, le blanc du bas de page.
+	plane(120, 20, 0.55)
+	passport(180, 60, 0.7)
+	signpost(2, 150, 0.7)
+	suitcase(2, 214, 0.7)
+	suitcase(184, 196, 0.65)
+
+	pdf.SetLineWidth(0.2)
+	setStroke(pdf, brandLine)
 }

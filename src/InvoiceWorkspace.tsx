@@ -2,6 +2,7 @@ import {FormEvent,useEffect,useMemo,useRef,useState} from 'react';
 import {Ban,ChevronDown,Download,FileCheck2,ImagePlus,Link2,Mail,MessageCircle,PackagePlus,Pencil,Plus,Printer,Receipt,RotateCcw,Search,Trash2,Truck,UserRound,X} from 'lucide-react';
 import {printDocument} from './print';
 import type {InvoiceDefaults} from './CheckoutSettings';
+import DocumentDecor from './DocumentDecor';
 import {api,apiForm,Entity,money,openFile,printFile} from './api';
 
 type Kind='invoice'|'quote'|'delivery';
@@ -114,8 +115,7 @@ export default function InvoiceWorkspace(props:Props){
       if(signed)await props.onUpdate({companySignatureUrl:asset.url});
     }catch(reason){refreshError(reason)}finally{setSaving(false)}};
   const paperTitle=`${({invoice:'Facture',quote:'Devis',delivery:'Bon-livraison'} as const)[props.kind]}-${String(doc.reference)}`;
-  const paperFooter=`${title} ${String(doc.reference)} · ${invoiceInfo.companyName} · ${invoiceInfo.address} · ${invoiceInfo.phone}`;
-  const print=()=>{void printDocument('business-document-print',paperTitle,paperFooter)};
+  const print=()=>{void printDocument('business-document-print',paperTitle)};
   const download=print;
   const email=()=>{const message=`Bonjour ${String(customer.name??'')}, voici votre ${title.toLowerCase()} ${doc.reference}.`;window.location.href=`mailto:${String(customer.email??'')}?subject=${encodeURIComponent(`${title} ${doc.reference}`)}&body=${encodeURIComponent(message)}`};
   const openSend=()=>{setSendTo(String(customer.phone??''));setSendBody('');setSendState({busy:false,note:'',error:''});setSendOpen(true)};
@@ -136,7 +136,7 @@ export default function InvoiceWorkspace(props:Props){
       <div className="business-main">
         <header className="invoice-actions"><div><span className={`invoice-status ${props.kind==='invoice'&&remaining===0||doc.status==='accepted'||doc.status==='delivered'?'paid':props.kind==='invoice'&&Number(doc.paid)===0?'pending':'partial'}`}>{status}</span><small>{title} · {doc.reference}</small></div><div><button onClick={print}><Printer/>Imprimer</button><button onClick={download} title="Enregistrer en PDF — choisissez « Enregistrer au format PDF » comme destination"><Download/>PDF</button><button onClick={openPdf} title="Ouvrir le PDF généré par le serveur, identique à celui envoyé au client"><Download/>PDF serveur</button><button onClick={()=>void printFile(`/api/documents/${props.kind}/${doc.id}/receipt`).catch(refreshError)} title="Imprimer un ticket 80 mm sur l’imprimante de caisse"><Receipt/>Reçu</button><button onClick={openSend}><MessageCircle/>Envoyer</button><button onClick={email}><Mail/>E-mail</button><button className="close-invoice" onClick={props.onClose} aria-label="Fermer"><X/></button></div></header>
         <div className="invoice-scroll"><article className="invoice-paper" id="business-document-print">
-          <div className="invoice-brand-bar"><img className="invoice-logo-mark" src="/api/public/branding/logo" alt="" onError={event=>{(event.target as HTMLImageElement).style.display='none'}}/><button className={`invoice-brand-details document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}><strong>{invoiceInfo.companyName}</strong><small>{invoiceInfo.tagline}</small></button><button className={`invoice-brand-contact document-editable${brandingEditable?'':' is-static'}`} disabled={!brandingEditable} onClick={()=>openEdit('branding')}>{invoiceInfo.phone}<br/>{invoiceInfo.address}</button></div>
+          <DocumentDecor/>
           {/* En-tête : logo, coordonnées, cartouche du document. Chaque bloc
               reste une zone modifiable — c'est ce qui permet de corriger la
               pièce sans quitter la fiche. */}
@@ -232,7 +232,6 @@ export default function InvoiceWorkspace(props:Props){
           <footer className="doc-band">
             <span><i>{invoiceInfo.companyName},</i> votre compagnon de voyage !</span>
           </footer>
-          <footer className="invoice-signatures"><div className="signature-slot"><span>Signature client</span><i/></div><button className="document-editable" onClick={()=>openEdit('signatures')}><span>Pour {invoiceInfo.companyName}</span>{invoiceInfo.companySignatureUrl?<img src={invoiceInfo.companySignatureUrl} alt="Signature entreprise"/>:<i/>}</button>{legalLine(invoiceInfo)&&<b className="invoice-legal">{legalLine(invoiceInfo)}</b>}<small>Document généré le {longDate(new Date())} · Vendeur : {String(user.name??'SenValise')}</small></footer>
         </article></div>
         {(props.isAdmin||props.canSettle)&&<footer className="invoice-manager-actions"><span>{props.isAdmin?'Cliquez sur le client, le règlement, les montants ou une ligne pour les modifier.':'Cliquez sur le client ou le règlement pour les modifier.'}</span><div>{props.isAdmin&&props.onConvert&&<button className="primary" onClick={props.onConvert} disabled={Boolean(doc.convertedSaleId)}><FileCheck2/>{doc.convertedSaleId?'Déjà converti':'Créer la facture'}</button>}{props.isAdmin&&props.onGenerateDelivery&&<button className="primary" onClick={props.onGenerateDelivery} disabled={Boolean(doc.deliveryNote)}><Truck/>{doc.deliveryNote?'Bon déjà généré':'Générer le bon'}</button>}{props.kind==='invoice'&&remaining>0&&<button className="primary" onClick={()=>openEdit('payment')}><Plus/>Encaisser un règlement</button>}<button onClick={()=>openEdit('general')}><Pencil/>Modifier</button>{props.isAdmin&&<button className="invoice-delete" onClick={props.onDelete}>Supprimer</button>}</div></footer>}
       </div>

@@ -1796,3 +1796,19 @@ img.invoice-logo-mark{width:auto;height:52px;max-width:150px;object-fit:contain;
    thermique ne le rendrait pas du tout. Le PDF du serveur, lui, le porte. */
 @media print{.doc-decor{display:none!important}}
 @media screen and (max-width:860px){.doc-decor{display:none}}
+
+/* Le panier ne s'enferme plus dans la hauteur de l'écran.
+   ------------------------------------------------------------------------
+   Il était plafonné à la hauteur de la fenêtre, et la liste des articles
+   défilait dans une zone interne d'à peine 125 px. Depuis que le bas du panier
+   s'est allongé — remise, TVA, totaux, règlement, pavé de coupures — cette
+   zone se retrouvait écrasée : avec cinq articles au panier, on en voyait un
+   et demi, dans une barre de défilement minuscule que personne ne cherche.
+
+   Le panier fait donc la hauteur de son contenu et descend avec la page. On
+   perd le panier qui reste collé pendant qu'on parcourt le catalogue ; on
+   gagne de voir ce qu'on vend, ce qui compte davantage — et un panier plus
+   haut que l'écran, collé en haut, aurait de toute façon rendu son bas
+   inatteignable. */
+.pos>.enhanced-cart{position:static;max-height:none;min-height:0}
+.enhanced-cart .cart-lines{overflow:visible;max-height:none;min-height:0}
